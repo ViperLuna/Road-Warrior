@@ -101,3 +101,9 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 4. (DONE) Progression: spawns, colors, goals, reward menu, game over, menu/maps, bridges + shop.
 5. (DONE) Specials: roundabout, traffic light, one-way streets, hills + tunnels (bridge done in M4).
 6. (DONE) Highways: 4-lane, taper, side-street ramps, overpass.
+
+## Fix round after M6 (playtest feedback)
+- **Shop** is a bottom sheet above the toolbar (never covers Shop/Menu buttons) with its own Close button; border-box sized so it fits narrow phones.
+- **Green-light queues**: the no-box-blocking rule ignores a leader that is rolling (v > 1 and gap > 0.22); only a (nearly) stopped leader counts as spillback, so a platoon flows through a green.
+- **Roundabouts** yield only to cars already circulating or about to enter (within 0.3 of the line), never to cars merely approaching; a car whose merge point the ring car has cleared falls in behind it.
+- **Spawn budget**: `buildCost()` (0-1 BFS, existing roads free) makes new houses/pairs spawn only where the player's held road inventory can connect them. Still TODO: houses do not yet get impatient when unconnected.

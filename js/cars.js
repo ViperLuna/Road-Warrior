@@ -183,6 +183,9 @@ function analyse(g, occ) {
       if (o !== car && !(car.ignoreT > 0 && o.id === car.ignoreId) && pieceConflict(q, o.route[o.idx], o.s)) { blocked = true; car.why = 'inside:' + o.id; break; }
     }
     if (!blocked) for (const o of waiting.get(key) || []) {
+      // A roundabout only yields to traffic already circulating (the 'inside' check above) or about to enter right now,
+      // never to a car that is merely on its way: that would make it behave like a stop sign.
+      if (J.round && !o.commit && o.entry.dist - STOP_OFFSET > 0.3) continue;
       if (o !== car && (!(car.force > 0) || o.commit) && pieceConflict(q, o.entry.q, 0) && outranks(o, car, J)) { blocked = true; car.why = 'outranked:' + o.id; break; }
     }
     // Never end up waiting *inside* a junction: the whole chain of junction/lot pieces ahead must be
@@ -210,7 +213,13 @@ function analyse(g, occ) {
         }
         total += X.len;
       }
-      if (!blocked && leaderGap(car, occ) < total + 0.08) { blocked = true; car.why = 'box:' + (lastLeader ? lastLeader.id : 0); }
+      // Room beyond the junction? A leader that is rolling will clear the space by the time we get there, so only a
+      // (nearly) stopped one counts as real spillback. Otherwise a platoon would creep through a green one car at a time.
+      if (!blocked) {
+        const gap = leaderGap(car, occ);
+        const rolling = lastLeader && lastLeader.v > 1.0 && gap > 0.22;
+        if (gap < total + 0.08 && !rolling) { blocked = true; car.why = 'box:' + (lastLeader ? lastLeader.id : 0); }
+      }
     }
     car.hold = blocked && !car.commit;
     // Patience: stuck a long time purely because waiting for a downstream light (nothing physical in the way)? Stop deferring to it for a moment.

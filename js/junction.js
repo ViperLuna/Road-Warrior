@@ -33,6 +33,13 @@ export function pieceConflict(a, b, sb) {
     if (!a.round && !a.taper && !b.taper) return false;          // (plain paths split at once; ring paths and tapers separate slowly, so use the geometry)
   }
   if (a.kind === 'lot_in' && b.kind === 'lot_in' && a.ent === b.ent && sb < CAR_LEN + 0.12) return true;   // two cars entering by the same gate
+  // Two ring paths share an arc. If the car already circulating has cleared my merge point, I simply fall in behind it.
+  if (a.round && b.round && a.xy.length > 7) {
+    const E = a.xy[7];
+    let jBest = -1, dBest = 1e9;
+    for (let j = 0; j < b.xy.length; j++) { const d = Math.hypot(b.xy[j][0] - E[0], b.xy[j][1] - E[1]); if (d < dBest) { dBest = d; jBest = j; } }
+    if (dBest < 0.15 && sb - CAR_LEN / 2 > b.lut[jBest] + 0.12) return false;
+  }
   // Parking-lot moves get a wider margin (cars there are swinging around); so do highway lanes, where cars cut diagonally
   // across a neighbouring lane. Two cars making the *same* movement in side-by-side lanes simply travel together.
   const lot = a.kind !== 'road' || b.kind !== 'road';

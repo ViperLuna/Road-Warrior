@@ -32,6 +32,7 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
   $('oneway-btn').addEventListener('click', () => { setOneWay(!game.oneway); toast(game.oneway ? 'One-way on: drag along a road to set its direction.' : 'One-way off: dragging along a road makes it two-way.'); });
   $('menu-btn').addEventListener('click', () => setMode('pause'));
   $('shop-btn').addEventListener('click', () => { $('shop').hidden = !$('shop').hidden; render(); });
+  $('shop-close').addEventListener('click', () => { $('shop').hidden = true; });
   $('resume').addEventListener('click', () => setMode('play'));
   $('restart').addEventListener('click', onRestart);
   $('again').addEventListener('click', onRestart);
@@ -122,18 +123,19 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
     $('goal-text').textContent = `Goal ${game.goalCount + 1}: ${game.trips}/${game.nextGoalAt} trips`;
 
     // shop
-    const shop = $('shop');
+    const shop = $('shop'), box = $('shop-items');
+    if (mode !== 'play') shop.hidden = true;
     if (!shop.hidden) {
-      shop.innerHTML = '';
+      box.innerHTML = '';
       const items = prog.specials.filter(s => s.enabled && s.cost && !(s.unlock && game.unlocks[s.id]));
-      if (!items.length) shop.textContent = 'Nothing for sale yet.';
+      if (!items.length) box.textContent = 'Nothing for sale yet.';
       for (const s of items) {
         const row = document.createElement('div'); row.className = 'row';
         row.innerHTML = `<div>${s.name}<small>${s.description}</small></div>`;
         const b = document.createElement('button');
         b.textContent = '$' + s.cost; b.disabled = game.money < s.cost; b.className = game.money >= s.cost ? 'afford' : '';
         b.addEventListener('click', () => { if (buy(s.id)) toast(`Bought a ${s.name}.`); });
-        row.appendChild(b); shop.appendChild(row);
+        row.appendChild(b); box.appendChild(row);
       }
     }
     $('shop-btn').classList.toggle('afford', prog.specials.some(s => s.enabled && s.cost && game.money >= s.cost && !(s.unlock && game.unlocks[s.id])));

@@ -32,6 +32,27 @@ function roadsNeeded(g, from, targets, blocked, limit) {
   return Infinity;
 }
 
+// How many NEW road pieces it takes to connect `from` to any tile in `targets` over land: existing roads are free,
+// other land costs one piece each. (0-1 breadth-first search.) Infinity if it needs more than `limit`.
+export function buildCost(g, from, targets, blocked, limit = Infinity) {
+  const start = from[1] * g.cols + from[0];
+  const best = new Map([[start, g.roads.has(start) ? 0 : 1]]);
+  const dq = [start];
+  while (dq.length) {
+    const k = dq.shift(), c = best.get(k);
+    if (targets.has(k)) return c <= limit ? c : Infinity;
+    if (c > limit) continue;
+    const x = k % g.cols, y = (k / g.cols) | 0;
+    for (const [dx, dy] of DIR) {
+      const nx = x + dx, ny = y + dy, nk = ny * g.cols + nx;
+      if (!passable(g, nx, ny, blocked)) continue;
+      const nc = c + (g.roads.has(nk) ? 0 : 1);
+      if (nc < (best.get(nk) ?? Infinity)) { best.set(nk, nc); if (nc === c) dq.unshift(nk); else dq.push(nk); }
+    }
+  }
+  return Infinity;
+}
+
 export function spawnInitial(g, color) {
   const st = g.terrain.start;
   return spawnPair(g, color, {
@@ -71,6 +92,7 @@ export function spawnPair(g, color, opts = {}) {
       if (!passable(g, hex, hey, blocked)) continue;
       const n = roadsNeeded(g, [hex, hey], exitSet, blocked, maxR);
       if (n < minR || n > maxR) continue;
+      if (opts.budget !== undefined && buildCost(g, [hex, hey], exitSet, blocked, opts.budget) > opts.budget) continue;   // can the player afford the road?
       addBuilding(g, 'dest', color, ax, ay, rot);
       const house = addBuilding(g, 'house', color, hx, hy, hrot);
       g.cars.push(createCar(house));
@@ -97,6 +119,7 @@ export function spawnHouse(g, color, opts = {}) {
     const exits = new Set([0, 1].map(i => { const [x, y] = lotTile(d, i); return (y + DIR[d.rot][1]) * g.cols + x + DIR[d.rot][0]; }));
     const n = roadsNeeded(g, [hex, hey], exits, blocked, maxR);
     if (n < minR || n > maxR) continue;
+    if (opts.budget !== undefined && buildCost(g, [hex, hey], exits, blocked, opts.budget) > opts.budget) continue;       // can the player afford the road?
     const house = addBuilding(g, 'house', color, hx, hy, hrot);
     g.cars.push(createCar(house));
     return house;

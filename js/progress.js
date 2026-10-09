@@ -49,7 +49,7 @@ function doSpawn(g) {
     let made = 0, over = null;
     for (let k = 0; k < Math.min(sp.housesPerSpawn, room); k++) {
       if (Math.random() < p) { const r = spawnHouseAcross(g, color, across()); if (r) { made++; over = over || r; continue; } }
-      if (spawnHouse(g, color, { roads: sp.roadsNeeded })) made++;
+      if (spawnHouse(g, color, { roads: sp.roadsNeeded, budget: g.inv.road })) made++;
     }
     return made ? { kind, color, n: made, across: !!over, needsBridge: !!(over && over.needsBridge) } : null;
   }
@@ -59,7 +59,7 @@ function doSpawn(g) {
   }
   for (let widen = 0; widen < 3; widen++) {
     const anchor = anchorNear(g); anchor.rMax += widen * 3;
-    if (spawnPair(g, color, { anchor, roads: sp.roadsNeeded })) {
+    if (spawnPair(g, color, { anchor, roads: sp.roadsNeeded, budget: g.inv.road })) {
       if (kind === 'newColor') g.colorsUsed++;
       return { kind, color, n: 2 };
     }
