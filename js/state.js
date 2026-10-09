@@ -1,5 +1,5 @@
 // Game state + the rules for placing/removing things. No drawing or input in here.
-import { generateTerrain, WATER } from './terrain.js';
+import { generateTerrain, WATER, HILL, LAND } from './terrain.js';
 import { clearPieceCache } from './lanes.js';
 import { rotateBuilding } from './buildings.js';
 import { spawnInitial, spawnPair } from './spawn.js';
@@ -27,6 +27,8 @@ export const game = {
   buildings: [], buildingAt: new Map(), ports: new Map(), nextId: 1,
   cars: [], trips: 0, money: 0, time: 0,
   reward: null, over: null,
+  unlocks: {},              // permanent unlocks (e.g. { oneway: true })
+  oneway: false,            // one-way toggle: drags mark streets one-way
 };
 
 const listeners = new Set(), evListeners = new Set();
@@ -47,7 +49,7 @@ export function newGame(seed, map = maps[0]) {
   game.terrain = generateTerrain(game.seed, game.cols, game.rows);
   game.roads = new Map(); game.bridges = new Map(); game.nextBridge = 1;
   game.inv = { ...START_INVENTORY };
-  game.mode = 'play'; game.reward = null; game.over = null;
+  game.mode = 'play'; game.reward = null; game.over = null; game.unlocks = {}; game.oneway = false;
   game.buildings = []; game.buildingAt = new Map(); game.ports = new Map(); game.nextId = 1;
   game.cars = []; game.trips = 0; game.money = 0; game.time = 0;
   clearPieceCache();
@@ -57,6 +59,31 @@ export function newGame(seed, map = maps[0]) {
 }
 
 export function setPalette(p) { game.palette = p; }
+
+export function setOneWay(on) { game.oneway = !!on && !!game.unlocks.oneway; emit(); }
+
+// Make the street between adjacent road tiles (ax,ay) -> (bx,by) one-way (travel a to b only), or two-way again.
+// Stored as blocked exits: b may not exit back towards a.
+const SIDES = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+export function setEdge(ax, ay, bx, by, oneWay) {
+  const d = SIDES.findIndex(([dx, dy]) => ax + dx === bx && ay + dy === by);
+  if (d < 0 || !hasRoad(ax, ay) || !hasRoad(bx, by)) return false;
+  const A = game.roads.get(tileIndex(ax, ay)), B = game.roads.get(tileIndex(bx, by));
+  if (A.bridge || B.bridge || A.tunnel || B.tunnel) return false;
+
+  A.noExit = (A.noExit || 0) & ~(1 << d);
+  B.noExit = oneWay ? (B.noExit || 0) | (1 << ((d + 2) % 4)) : (B.noExit || 0) & ~(1 << ((d + 2) % 4));
+  emit();
+  return true;
+}
+
+// Forget one-way flags that point at a tile that no longer has a road.
+function clearEdgesTowards(x, y) {
+  SIDES.forEach(([dx, dy], d) => {
+    const n = game.roads.get(tileIndex(x + dx, y + dy));
+    if (n && inBounds(x + dx, y + dy)) n.noExit = (n.noExit || 0) & ~(1 << ((d + 2) % 4));
+  });
+}
 
 export function setMode(mode) { game.mode = mode; emit(); }
 
@@ -92,24 +119,40 @@ export function isUnlocked(map) { return !map.unlock || bestFor(map.unlock.map) 
 export function buy(id) {
   const info = specialInfo(id);
   if (!info || !info.enabled || !info.cost || game.money < info.cost) return false;
+  if (info.unlock && game.unlocks[id]) return false;
   game.money -= info.cost;
-  game.inv[id] = (game.inv[id] || 0) + 1;
+  if (info.unlock) game.unlocks[id] = true;
+  else game.inv[id] = (game.inv[id] || 0) + 1;
   emit();
   return true;
 }
 
-// ---- bridges: one item covers any straight run of water ----
-// from: shore road tile; tiles: the water tiles in order; end: the far-bank tile. Returns 'ok' | 'nobridge' | 'badend'.
-export function buildBridge(from, tiles, end) {
-  if ((game.inv.bridge || 0) <= 0) return 'nobridge';
-  if (!inBounds(end.x, end.y) || game.terrain.water[tileIndex(end.x, end.y)] === WATER || game.buildingAt.has(tileIndex(end.x, end.y))) return 'badend';
+// ---- bridges (over water) and tunnels (through hills): one item covers any straight run ----
+// from: the road tile at the near edge; tiles: the span tiles in order; end: the far-side land tile.
+// Returns 'ok' | 'nobridge' | 'notunnel' | 'badend'.
+function buildSpan(kind, from, tiles, end) {
+  const item = kind === 'tunnel' ? 'tunnel' : 'bridge';
+  if ((game.inv[item] || 0) <= 0) return item === 'tunnel' ? 'notunnel' : 'nobridge';
+  if (!inBounds(end.x, end.y) || game.terrain.water[tileIndex(end.x, end.y)] !== LAND || game.buildingAt.has(tileIndex(end.x, end.y))) return 'badend';
   const id = game.nextBridge++;
-  for (const t of tiles) game.roads.set(tileIndex(t.x, t.y), { lanes: 2, bridge: id });
+  const dx = Math.sign(tiles[0].x - from.x), dy = Math.sign(tiles[0].y - from.y);
+  const dirIdx = SIDES.findIndex(([sx, sy]) => sx === dx && sy === dy);
+  tiles.forEach((t, i) => {
+    const entry = { lanes: 2 };
+    if (kind === 'tunnel') {
+      entry.tunnel = id;
+      if (i === 0) entry.portal = (dirIdx + 2) % 4;                // mouth facing back toward the near side
+      if (i === tiles.length - 1) entry.portal = dirIdx;           // mouth facing the far side
+    } else entry.bridge = id;
+    game.roads.set(tileIndex(t.x, t.y), entry);
+  });
   game.bridges.set(id, tiles.map(t => tileIndex(t.x, t.y)));
-  game.inv.bridge--;
+  game.inv[item]--;
   emit();
   return 'ok';
 }
+export const buildBridge = (from, tiles, end) => buildSpan('bridge', from, tiles, end);
+export const buildTunnel = (from, tiles, end) => buildSpan('tunnel', from, tiles, end);
 
 export const buildingAt = (x, y) => (inBounds(x, y) ? game.buildingAt.get(tileIndex(x, y)) || null : null);
 
@@ -162,14 +205,16 @@ export function placeSpecial(id, x, y) {
   return 'ok';
 }
 
-// Returns 'ok' | 'oob' | 'water' | 'blocked' | 'exists' | 'empty'
+// Returns 'ok' | 'oob' | 'water' | 'hill' | 'blocked' | 'exists' | 'empty'
 export function buildRoad(x, y) {
   if (!inBounds(x, y)) return 'oob';
   if (game.terrain.water[tileIndex(x, y)] === WATER) return 'water';
+  if (game.terrain.water[tileIndex(x, y)] === HILL) return 'hill';
   if (game.buildingAt.has(tileIndex(x, y))) return 'blocked';
   if (game.roads.has(tileIndex(x, y))) return 'exists';
   if (game.inv.road <= 0) return 'empty';
   game.roads.set(tileIndex(x, y), { lanes: 2 });
+  clearEdgesTowards(x, y);
   game.inv.road--;
   emit();
   return 'ok';
@@ -179,15 +224,18 @@ export function buildRoad(x, y) {
 export function demolish(x, y) {
   if (!hasRoad(x, y)) return false;
   const r = game.roads.get(tileIndex(x, y));
-  if (r.bridge) {                                   // removing any span tile removes the whole bridge
-    for (const k of game.bridges.get(r.bridge) || []) game.roads.delete(k);
-    game.bridges.delete(r.bridge);
-    game.inv.bridge = (game.inv.bridge || 0) + 1;
+  if (r.bridge || r.tunnel) {                       // removing any span tile removes the whole bridge / tunnel
+    const id = r.bridge || r.tunnel;
+    for (const k of game.bridges.get(id) || []) game.roads.delete(k);
+    game.bridges.delete(id);
+    const item = r.bridge ? 'bridge' : 'tunnel';
+    game.inv[item] = (game.inv[item] || 0) + 1;
     emit();
     return true;
   }
   if (r.special) game.inv[r.special] = (game.inv[r.special] || 0) + 1;      // the roundabout / light comes back too
   game.roads.delete(tileIndex(x, y));
+  clearEdgesTowards(x, y);
   game.inv.road++;
   emit();
   return true;

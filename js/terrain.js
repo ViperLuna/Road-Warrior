@@ -4,6 +4,7 @@ import { mulberry32 } from './rng.js';
 
 export const LAND = 0;
 export const WATER = 1;
+export const HILL = 2;          // raised rock: roads can't be built on it (a tunnel goes through)
 
 const MIN_LAND_PATCH = 10;     // smaller land pockets get flooded
 const START_RADIUS = 3;        // start spot needs (2r+1)^2 open land
@@ -21,7 +22,7 @@ export function generateTerrain(seed, cols, rows) {
 }
 
 export function isWater(t, x, y) {
-  return x < 0 || y < 0 || x >= t.cols || y >= t.rows || t.water[y * t.cols + x] === WATER;
+  return x < 0 || y < 0 || x >= t.cols || y >= t.rows || t.water[y * t.cols + x] !== LAND;
 }
 
 function build(seed, cols, rows) {
@@ -29,7 +30,11 @@ function build(seed, cols, rows) {
   const water = new Uint8Array(cols * rows);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const scale = Math.sqrt((cols * rows) / 704);          // features grow with the map (704 = the 32x22 start map)
-  const set = (x, y) => { if (x >= 0 && y >= 0 && x < cols && y < rows) water[y * cols + x] = WATER; };
+  const set = (x, y, v = WATER) => {
+    if (x < 0 || y < 0 || x >= cols || y >= rows) return;
+    if (v === HILL && water[y * cols + x] !== LAND) return;               // hills never overwrite water
+    water[y * cols + x] = v;
+  };
 
   function river() {
     const horiz = rng() < 0.5;
@@ -45,7 +50,7 @@ function build(seed, cols, rows) {
     }
   }
 
-  function blob(cx, cy, rx, ry) {
+  function blob(cx, cy, rx, ry, v = WATER) {
     const p1 = rng() * 6.283, p2 = rng() * 6.283;
     const a1 = 0.15 + rng() * 0.15, a2 = 0.08 + rng() * 0.1;
     const m = Math.ceil(Math.max(rx, ry) * 1.5);
@@ -53,7 +58,7 @@ function build(seed, cols, rows) {
       for (let x = Math.floor(cx - m); x <= cx + m; x++) {
         const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry;
         const th = Math.atan2(dy, dx);
-        if (Math.hypot(dx, dy) < 1 + a1 * Math.sin(2 * th + p1) + a2 * Math.sin(3 * th + p2)) set(x, y);
+        if (Math.hypot(dx, dy) < 1 + a1 * Math.sin(2 * th + p1) + a2 * Math.sin(3 * th + p2)) set(x, y, v);
       }
     }
   }
@@ -66,11 +71,21 @@ function build(seed, cols, rows) {
     blob(3 + rng() * (cols - 6), 3 + rng() * (rows - 6), (1.6 + rng() * 1.2) * Math.sqrt(scale), (1.4 + rng() * 1.2) * Math.sqrt(scale));
   }
 
+  // Hills (so tunnels have a point): sometimes one or two rocky humps, never covering water.
+  function hills() {
+    const n = rng() < 0.45 ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      const rx = (2.2 + rng() * 1.6) * Math.sqrt(scale), ry = (2.4 + rng() * 2.6) * Math.sqrt(scale);
+      blob(3 + rng() * (cols - 6), 3 + rng() * (rows - 6), rx, ry, HILL);
+    }
+  }
+
   const roll = rng();
   if (roll < 0.35) river();
   else if (roll < 0.65) lake();
   else if (roll < 0.85) { river(); pond(); }
   else { lake(); pond(); }
+  if (rng() < 0.7) hills();
 
   // Label land components; flood the tiny pockets; relabel.
   let { comp, sizes } = label(water, cols, rows);
@@ -78,12 +93,12 @@ function build(seed, cols, rows) {
   ({ comp, sizes } = label(water, cols, rows));
 
   const total = cols * rows;
-  let waterCount = 0;
-  for (let i = 0; i < total; i++) waterCount += water[i];
+  let waterCount = 0, hillCount = 0;
+  for (let i = 0; i < total; i++) { if (water[i] === WATER) waterCount++; else if (water[i] === HILL) hillCount++; }
   let mainId = -1;
   sizes.forEach((s, id) => { if (mainId < 0 || s > sizes[mainId]) mainId = id; });
 
-  const terrain = { cols, rows, water, comp, mainId, start: null, seed, ok: false };
+  const terrain = { cols, rows, water, comp, mainId, start: null, seed, ok: false, hasHill: hillCount >= 6 };
   if (mainId < 0) return terrain;
   const wf = waterCount / total;
   if (wf < WATER_FRAC[0] || wf > WATER_FRAC[1] || sizes[mainId] / total < MAIN_LAND_MIN) return terrain;
@@ -108,7 +123,7 @@ function openBlock(water, comp, mainId, cols, cx, cy, r) {
   for (let y = cy - r; y <= cy + r; y++)
     for (let x = cx - r; x <= cx + r; x++) {
       const i = y * cols + x;
-      if (water[i] === WATER || comp[i] !== mainId) return false;
+      if (water[i] !== LAND || comp[i] !== mainId) return false;
     }
   return true;
 }
@@ -117,7 +132,7 @@ function label(water, cols, rows) {
   const comp = new Int16Array(cols * rows).fill(-1);
   const sizes = [];
   for (let s = 0; s < comp.length; s++) {
-    if (water[s] === WATER || comp[s] !== -1) continue;
+    if (water[s] !== LAND || comp[s] !== -1) continue;
     const id = sizes.length;
     let size = 0;
     const stack = [s];
@@ -132,7 +147,7 @@ function label(water, cols, rows) {
       if (y < rows - 1) push(i + cols);
     }
     sizes.push(size);
-    function push(n) { if (water[n] !== WATER && comp[n] === -1) { comp[n] = id; stack.push(n); } }
+    function push(n) { if (water[n] === LAND && comp[n] === -1) { comp[n] = id; stack.push(n); } }
   }
   return { comp, sizes };
 }

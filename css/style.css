@@ -105,3 +105,6 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .pill.tap { font: inherit; font-size: .9rem; color: #fff; border: 0; cursor: pointer; }
 .pill.tap.on { background: #8a5fd1; box-shadow: 0 0 12px rgba(170, 130, 255, .6); }
 @media (max-width: 600px) { .pill.tap { font-size: .78rem; } }
+
+#toolbar button[hidden] { display: none; }
+#toolbar #oneway-btn.on { background: #d98a1f; box-shadow: 0 0 14px rgba(255, 170, 60, .6); }

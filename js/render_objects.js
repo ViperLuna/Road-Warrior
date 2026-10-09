@@ -116,6 +116,8 @@ export function drawCars(ctx, g) {
   }
   for (const car of g.cars) {
     if (car.state === 'home') continue;
+    const under = g.roads.get(Math.floor(car.y) * g.cols + Math.floor(car.x));
+    if (under && under.tunnel && under.portal === undefined) continue;        // inside the hill: out of sight
     ctx.save();
     ctx.translate(car.x, car.y); ctx.rotate(car.a);
     ctx.fillStyle = 'rgba(0,0,0,.3)'; rrect(ctx, -0.17, -0.08, 0.34, 0.2, 0.05); ctx.fill();

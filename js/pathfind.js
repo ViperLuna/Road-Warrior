@@ -65,8 +65,9 @@ export function findPath(g, sx, sy, sEntry, goalPorts) {
       return { steps, port, cost: gs[goalId] };
     }
     const cell = id >> 2, inS = id & 3, x = cell % g.cols, y = (cell / g.cols) | 0;
+    const noExit = (g.roads.get(cell) || {}).noExit || 0;                 // one-way streets: sides this tile may not be left through
     for (const e of roadConns(g, x, y)) {
-      if (e === inS) continue;
+      if (e === inS || (noExit >> e) & 1) continue;
       const nx = x + DIR[e][0], ny = y + DIR[e][1];
       const cost = gs[id] + 1 + turnCost(inS, e) + (roundAt(g, x, y) ? 0.35 : 0);
       let nid = -1;

@@ -1,5 +1,5 @@
 // DOM overlay: inventory pills, goal bar, shop, toolbar, toasts, and the menu / reward / pause / game-over screens.
-import { game, onChange, onEvent, setTool, setMode, selectSpecial, chooseReward, buy, bestFor, isUnlocked } from './state.js';
+import { game, onChange, onEvent, setTool, setMode, setOneWay, selectSpecial, chooseReward, buy, bestFor, isUnlocked } from './state.js';
 import { maps, prog } from './progression.js';
 
 let toastEl, toastTimer = 0, lastMsg = '', lastAt = 0;
@@ -19,7 +19,7 @@ const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
 
 export function initHud({ onPlay, onRestart, onToMenu }) {
   toastEl = $('toast');
-  const buttons = document.querySelectorAll('#toolbar button');
+  const buttons = document.querySelectorAll('#toolbar button[data-tool]');
   const canvas = $('game');
   const cursors = { build: 'crosshair', destroy: 'not-allowed', pan: 'grab', place: 'cell' };
 
@@ -29,6 +29,7 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
     b.addEventListener('pointerdown', pick);
     b.addEventListener('click', pick);
   });
+  $('oneway-btn').addEventListener('click', () => { setOneWay(!game.oneway); toast(game.oneway ? 'One-way on: drag along a road to set its direction.' : 'One-way off: dragging along a road makes it two-way.'); });
   $('menu-btn').addEventListener('click', () => setMode('pause'));
   $('shop-btn').addEventListener('click', () => { $('shop').hidden = !$('shop').hidden; render(); });
   $('resume').addEventListener('click', () => setMode('play'));
@@ -83,6 +84,8 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
       $('over-stats').innerHTML = `<div><b>${o.trips}</b><small>trips</small></div><div><b>${fmtTime(o.time)}</b><small>survived</small></div><div><b>$${o.money}</b><small>cash</small></div><div><b>${o.best}</b><small>best</small></div>`;
     }
 
+    $('oneway-btn').hidden = !game.unlocks.oneway;
+    $('oneway-btn').classList.toggle('on', game.oneway);
     $('n-road').textContent = game.inv.road;
     $('pill-road').classList.toggle('empty', game.inv.road === 0);
     $('n-trips').textContent = game.trips;
@@ -95,7 +98,7 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
     sp.innerHTML = '';
     for (const s of prog.specials) {
       const n = game.inv[s.id] || 0;
-      if (!s.enabled || (n === 0 && s.id !== 'bridge')) continue;
+      if (!s.enabled || s.unlock || (n === 0 && s.id !== 'bridge')) continue;
       const d = document.createElement(s.placeable ? 'button' : 'div');
       d.className = 'pill' + (s.placeable ? ' tap' : '') + (game.placing === s.id ? ' on' : '');
       d.innerHTML = `${s.name} <b>${n}</b>`;
@@ -118,7 +121,7 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
     const shop = $('shop');
     if (!shop.hidden) {
       shop.innerHTML = '';
-      const items = prog.specials.filter(s => s.enabled && s.cost);
+      const items = prog.specials.filter(s => s.enabled && s.cost && !(s.unlock && game.unlocks[s.id]));
       if (!items.length) shop.textContent = 'Nothing for sale yet.';
       for (const s of items) {
         const row = document.createElement('div'); row.className = 'row';
@@ -129,7 +132,7 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
         row.appendChild(b); shop.appendChild(row);
       }
     }
-    $('shop-btn').classList.toggle('afford', prog.specials.some(s => s.enabled && s.cost && game.money >= s.cost));
+    $('shop-btn').classList.toggle('afford', prog.specials.some(s => s.enabled && s.cost && game.money >= s.cost && !(s.unlock && game.unlocks[s.id])));
   }
 
   onChange(render);

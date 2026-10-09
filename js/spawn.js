@@ -3,15 +3,15 @@ import { DIR } from './lanes.js';
 import { addBuilding, lotTile, reindex } from './buildings.js';
 import { createCar } from './cars.js';
 import { mulberry32 } from './rng.js';
-import { WATER } from './terrain.js';
+import { WATER, HILL, LAND } from './terrain.js';
 
 const free = (g, x, y, blocked) =>
-  x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] !== WATER &&
+  x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] === LAND &&
   !g.buildingAt.has(y * g.cols + x) && !g.roads.has(y * g.cols + x) && !(blocked && blocked.has(y * g.cols + x));
 
 // Land that isn't covered by a building (existing roads are fine to route over).
 const passable = (g, x, y, blocked) =>
-  x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] !== WATER &&
+  x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] === LAND &&
   !g.buildingAt.has(y * g.cols + x) && !(blocked && blocked.has(y * g.cols + x));
 
 // Shortest land path (in road tiles) from `from` to any tile in `targets`, or Infinity.
@@ -109,22 +109,25 @@ export function spawnHouse(g, color, opts = {}) {
 // Spawning across water. Only ever offered when the player could actually connect it (see progress.js).
 // ---------------------------------------------------------------------------------------------------------
 
-// Straight runs of water between two land tiles: every place a bridge could go. `covered` = a bridge already spans it.
+// Straight runs of water (bridge) or hill (tunnel) between two land tiles: every place a span could go.
+// `item` is what it costs the player ('bridge' | 'tunnel'); `covered` = a span already exists there.
 export function findCrossings(g, maxSpan = 10) {
   const out = [];
-  const isWater = (x, y) => x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] === WATER;
-  const landOK = (x, y) => x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] !== WATER && !g.buildingAt.has(y * g.cols + x);
+  const kindAt = (x, y) => (x >= 0 && y >= 0 && x < g.cols && y < g.rows ? g.terrain.water[y * g.cols + x] : -1);
+  const landOK = (x, y) => kindAt(x, y) === LAND && !g.buildingAt.has(y * g.cols + x);
   for (const [dx, dy] of [[1, 0], [0, 1]]) {
     for (let y = 0; y < g.rows; y++) for (let x = 0; x < g.cols; x++) {
       if (!landOK(x, y)) continue;
+      const kind = kindAt(x + dx, y + dy);
+      if (kind !== WATER && kind !== HILL) continue;
       let k = 0;
-      while (k <= maxSpan && isWater(x + dx * (k + 1), y + dy * (k + 1))) k++;
+      while (k <= maxSpan && kindAt(x + dx * (k + 1), y + dy * (k + 1)) === kind) k++;
       if (k < 1 || k > maxSpan) continue;
       const bx = x + dx * (k + 1), by = y + dy * (k + 1);
       if (!landOK(bx, by)) continue;
       let covered = true;
-      for (let i = 1; i <= k; i++) { const r = g.roads.get((y + dy * i) * g.cols + x + dx * i); if (!r || !r.bridge) { covered = false; break; } }
-      out.push({ ax: x, ay: y, bx, by, k, covered });
+      for (let i = 1; i <= k; i++) { const r = g.roads.get((y + dy * i) * g.cols + x + dx * i); if (!r || !(r.bridge || r.tunnel)) { covered = false; break; } }
+      out.push({ ax: x, ay: y, bx, by, k, covered, item: kind === WATER ? 'bridge' : 'tunnel' });
     }
   }
   return out;
@@ -133,13 +136,13 @@ export function findCrossings(g, maxSpan = 10) {
 const shuffled = (arr, rng) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 // One house of `color` on the OTHER bank of a river from a destination of that colour.
-// opts: bridgeItems (unused bridges the player holds), budget (road pieces they can spend), rng.
+// opts: items ({bridge, tunnel} counts the player holds), budget (road pieces they can spend), rng.
 // Both land stretches are sized so the player's roads cover them. Returns the house or null.
 export function spawnHouseAcross(g, color, opts = {}) {
-  const rng = opts.rng || Math.random, budget = opts.budget ?? 0, bridgeItems = opts.bridgeItems ?? 0;
+  const rng = opts.rng || Math.random, budget = opts.budget ?? 0, items = opts.items || { bridge: opts.bridgeItems ?? 0, tunnel: 0 };
   const dests = g.buildings.filter(b => b.kind === 'dest' && b.color.id === color.id);
   if (!dests.length || budget < 8) return null;
-  const spans = shuffled(findCrossings(g).filter(c => c.covered || bridgeItems > 0), rng);
+  const spans = shuffled(findCrossings(g).filter(c => c.covered || (items[c.item] || 0) > 0), rng);
 
   for (const d of shuffled(dests, rng)) {
     const exits = new Set([0, 1].map(i => { const [x, y] = lotTile(d, i); return (y + DIR[d.rot][1]) * g.cols + x + DIR[d.rot][0]; }));
@@ -158,7 +161,7 @@ export function spawnHouseAcross(g, color, opts = {}) {
           if (!Number.isFinite(dFar) || dNear + dFar + 2 > budget) continue;
           const house = addBuilding(g, 'house', color, hx, hy, hrot);
           g.cars.push(createCar(house));
-          return { house, span: c, roads: dNear + dFar, needsBridge: !c.covered };
+          return { house, span: c, roads: dNear + dFar, needsBridge: !c.covered, item: c.item };
         }
       }
     }

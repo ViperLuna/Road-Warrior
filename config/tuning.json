@@ -31,6 +31,6 @@
     "homeCooldownMaxSeconds": 3.5
   },
   "junctions": {
-    "stopSeconds": 1.2
+    "stopSeconds": 1.0
   }
 }

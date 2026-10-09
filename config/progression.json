@@ -27,7 +27,17 @@
       "enabled": true,
       "weight": 1,
       "cost": 40,
-      "description": "Drag a road across water. One bridge spans any straight gap."
+      "description": "Drag a road across water. One bridge spans any straight gap.",
+      "requires": "water"
+    },
+    {
+      "id": "oneway",
+      "name": "One-way streets",
+      "enabled": true,
+      "weight": 1,
+      "cost": 120,
+      "unlock": true,
+      "description": "Unlocks a toolbar toggle: drag along a road to make it one-way."
     },
     {
       "id": "roundabout",
@@ -58,10 +68,11 @@
     {
       "id": "tunnel",
       "name": "Tunnel",
-      "enabled": false,
+      "enabled": true,
       "weight": 1,
-      "cost": null,
-      "description": "Pass straight through raised land."
+      "cost": 60,
+      "description": "Drag a road straight through a hill. One tunnel covers any length.",
+      "requires": "hill"
     }
   ]
 }

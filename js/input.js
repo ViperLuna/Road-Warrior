@@ -1,7 +1,7 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
-import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, hasRoad, inBounds, tileIndex, placeSpecial } from './state.js';
-import { WATER } from './terrain.js';
+import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay } from './state.js';
+import { WATER, HILL } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
 
@@ -14,22 +14,24 @@ let spaceDown = false;
 
 const tileAt = (sx, sy) => { const w = screenToWorld(sx, sy); return { x: Math.floor(w.x), y: Math.floor(w.y) }; };
 
-const isWater = (x, y) => inBounds(x, y) && game.terrain.water[tileIndex(x, y)] === WATER;
+const kindAt = (x, y) => (inBounds(x, y) ? game.terrain.water[tileIndex(x, y)] : -1);
 
-// Building by dragging. Water tiles are collected into a straight "span"; when the drag lands on the far
-// bank, one bridge item is spent and the whole span is built.
+// Building by dragging. Water or hill tiles are collected into a straight "span"; when the drag lands on the far
+// side, one bridge (water) or tunnel (hill) item is spent and the whole span is built.
 function stepBuild(st, x, y) {
   const prev = st.prevTile;
   st.prevTile = { x, y };
-  if (isWater(x, y)) {
+  const kind = kindAt(x, y);
+  if (kind === WATER || kind === HILL) {
+    const item = kind === WATER ? 'bridge' : 'tunnel';
     if (!st.span) {
-      if (!prev || isWater(prev.x, prev.y) || !hasRoad(prev.x, prev.y)) { toast('Start a bridge from a road on the shore.'); return; }
-      if ((game.inv.bridge || 0) <= 0) { toast('You need a bridge to cross water.'); return; }
-      st.span = { dx: x - prev.x, dy: y - prev.y, from: prev, tiles: [{ x, y }] };
+      if (!prev || kindAt(prev.x, prev.y) !== 0 || !hasRoad(prev.x, prev.y)) { toast(`Start a ${item} from a road at the edge.`); return; }
+      if ((game.inv[item] || 0) <= 0) { toast(kind === WATER ? 'You need a bridge to cross water.' : 'You need a tunnel to go through a hill.'); return; }
+      st.span = { kind, item, dx: x - prev.x, dy: y - prev.y, from: prev, tiles: [{ x, y }] };
     } else {
       const last = st.span.tiles[st.span.tiles.length - 1];
-      if (x - last.x === st.span.dx && y - last.y === st.span.dy) st.span.tiles.push({ x, y });
-      else { st.span = null; toast('Bridges must be a straight line.'); }
+      if (kind === st.span.kind && x - last.x === st.span.dx && y - last.y === st.span.dy) st.span.tiles.push({ x, y });
+      else { st.span = null; toast('Bridges and tunnels must be a straight line over one kind of ground.'); }
     }
     return;
   }
@@ -37,13 +39,15 @@ function stepBuild(st, x, y) {
     const sp = st.span, last = sp.tiles[sp.tiles.length - 1];
     st.span = null;
     if (x - last.x === sp.dx && y - last.y === sp.dy) {
-      const r = buildBridge(sp.from, sp.tiles, { x, y });
-      if (r === 'badend') { toast("The far bank isn't clear."); return; }
+      const r = (sp.kind === WATER ? buildBridge : buildTunnel)(sp.from, sp.tiles, { x, y });
+      if (r === 'badend') { toast("The far side isn't clear."); return; }
       if (r !== 'ok') return;
-    } else { toast('Bridges must be a straight line.'); return; }
+    } else { toast('Bridges and tunnels must be a straight line.'); return; }
   }
   const r = buildRoad(x, y);
   if (r === 'empty') toast('Out of road pieces!');
+  // Dragging along roads paints the direction: one-way when the toggle is on, two-way again when it's off.
+  if (prev && (r === 'ok' || r === 'exists') && hasRoad(prev.x, prev.y)) setEdge(prev.x, prev.y, x, y, game.oneway);
 }
 
 const PLACE_MSG = {
@@ -141,7 +145,7 @@ export function initInput(canvas) {
     if (stroke && stroke.bld && !stroke.moved && stroke.mode !== 'pan' && e.type === 'pointerup' && stroke.button !== 2) {
       rotateBuildingAt(stroke.start.x, stroke.start.y);
     }
-    if (stroke && stroke.span) toast('Drag all the way to the far bank to finish the bridge.');
+    if (stroke && stroke.span) toast(`Drag all the way to the far side to finish the ${stroke.span.item}.`);
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
     stroke = null;
@@ -162,6 +166,7 @@ export function initInput(canvas) {
     else if (e.key === 'b') setTool('build');
     else if (e.key === 'd') setTool('destroy');
     else if (e.key === 'm') setTool('pan');
+    else if (e.key === 'o' && game.unlocks.oneway) setOneWay(!game.oneway);
     else if (e.key === 'r' && hover.show) rotateBuildingAt(hover.x, hover.y);
     else if (e.key === 'p') devSpawn();      // dev: spawn an extra pair
   });

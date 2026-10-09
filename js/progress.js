@@ -5,7 +5,7 @@ import { spawnPair, spawnHouse, spawnHouseAcross, spawnPairAcross, findCrossings
 export function initProgress(g) {
   g.spawnCount = 0; g.nextSpawnAt = prog.spawns.firstAtTrips;
   g.goalCount = 0; g.nextGoalAt = prog.goals.firstAtTrips; g.prevGoalAt = 0;
-  g.colorsUsed = 1; g.reward = null;
+  g.colorsUsed = 1; g.reward = null; g.unlocks = {};
 }
 
 const houseCount = g => g.buildings.filter(b => b.kind === 'house').length;
@@ -19,9 +19,9 @@ function anchorNear(g) {
 // How likely a spawn is to land across the water. Only when the player could connect it: a bridge in hand or
 // already built over a gap, plus enough roads to cover the land on both sides. More spare bridges = more separation.
 export function crossChance(g) {
-  const bridges = g.inv.bridge || 0, roads = g.inv.road || 0;
+  const items = (g.inv.bridge || 0) + (g.inv.tunnel || 0), roads = g.inv.road || 0;
   if (roads < 30) return 0;
-  if (bridges > 0) return Math.min(0.6, 0.3 + 0.15 * bridges);
+  if (items > 0) return Math.min(0.6, 0.3 + 0.15 * items);
   return findCrossings(g).some(c => c.covered) ? 0.35 : 0;
 }
 
@@ -42,7 +42,7 @@ function doSpawn(g) {
   const room = sp.maxHousesPerDestination * dests - houses;
   if (kind !== 'newColor') kind = room >= 1 ? 'houses' : 'combo';
 
-  const across = () => ({ bridgeItems: g.inv.bridge || 0, budget: (g.inv.road || 0) - 10 });
+  const across = () => ({ items: { bridge: g.inv.bridge || 0, tunnel: g.inv.tunnel || 0 }, budget: (g.inv.road || 0) - 10 });
   const p = crossChance(g);
 
   if (kind === 'houses') {
@@ -68,8 +68,9 @@ function doSpawn(g) {
 }
 
 // Weighted pick among enabled specials, or null if none are available.
-function pickSpecial() {
-  const list = prog.specials.filter(s => s.enabled);
+function pickSpecial(g) {
+  const hills = !!(g.terrain && g.terrain.hasHill);
+  const list = prog.specials.filter(s => s.enabled && !(s.unlock && g.unlocks[s.id]) && !(s.requires === 'hill' && !hills));
   if (!list.length) return null;
   let r = Math.random() * list.reduce((a, s) => a + (s.weight || 1), 0);
   for (const s of list) if ((r -= s.weight || 1) <= 0) return s;
@@ -87,7 +88,7 @@ export function checkProgress(g, notify) {
     notify({ type: 'spawn', ...r });
   }
   if (g.mode === 'play' && g.trips >= g.nextGoalAt) {
-    const special = pickSpecial();
+    const special = pickSpecial(g);
     g.goalCount++;
     g.prevGoalAt = g.trips;
     g.nextGoalAt = g.trips + Math.max(prog.goals.minIncrement, Math.round(houseCount(g) * prog.goals.tripsPerHouse));
@@ -107,7 +108,10 @@ export function chooseReward(g, optionId) {
   const opt = g.reward && g.reward.options.find(o => o.id === optionId);
   if (!opt) return false;
   g.inv.road += opt.roads;
-  if (opt.special) g.inv[opt.special.id] = (g.inv[opt.special.id] || 0) + 1;
+  if (opt.special) {
+    if (opt.special.unlock) g.unlocks[opt.special.id] = true;                 // permanent unlock (e.g. one-way streets)
+    else g.inv[opt.special.id] = (g.inv[opt.special.id] || 0) + 1;
+  }
   g.reward = null;
   g.mode = 'play';
   return true;

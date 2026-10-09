@@ -28,6 +28,8 @@ All gameplay numbers live in `config/tuning.json`, read at startup (defaults in 
 - **Stop signs:** plain 4-ways and the stem of a T make every car come to a full stop (`junctions.stopSeconds`, default 1.2 s) before going by right of way. Through traffic on a T doesn't stop. This is what makes busy plain junctions a bottleneck, so the specials matter.
 - **Roundabout:** cars circulate counter-clockwise (US) around a central island; entrants yield to circulating cars. Best throughput under load; in an overloaded crossroads it keeps the same trips as a plain junction with far shorter worst waits as traffic climbs.
 - **Traffic light:** fixed timer from `trafficLight.*` in tuning.json, two phases by axis (N/S then E/W), all lights on one shared clock. Right turn on red is allowed when nothing conflicts. Lights can't sit on neighbouring tiles (no room to queue between them), and a car won't enter a plain junction if the light just beyond it isn't green (so nobody parks inside an intersection waiting for the next light). Lights are a stability tool: under heavy load a plain junction can collapse into long stalls while a lit one stays steady, but throughput is lower than a roundabout.
+- **One-way streets:** a permanent unlock (reward or $120 in the Shop) that adds a toolbar toggle (key **O**). With it on, dragging along roads makes each street one-way in the direction you drag (white lane dashes + chevrons); with it off, dragging along roads makes them two-way again. Stored per edge as blocked exits; pathfinding refuses to drive against an arrow and rebuilding a tile clears stale flags.
+- **Hills + tunnels:** about 70% of maps have rocky hills. Roads and buildings can't go on hills; a **tunnel** (reward or $60) is dragged from a road straight through a hill to the far side exactly like a bridge: one item covers any length, hill tiles cost no road pieces, demolishing any tile removes the tunnel and refunds it. Cars vanish inside and reappear at the far mouth. Tunnels are only offered on maps that have hills, and across-water spawning also considers hill crossings.
 - **Smarter spawning across water:** houses/pairs only spawn on the far bank when the player could connect them: an unused bridge in hand or already built over that gap, and enough roads for both land stretches plus a reserve. More spare bridges = more separation.
 
 ## Roads
@@ -69,7 +71,7 @@ All gameplay numbers live in `config/tuning.json`, read at startup (defaults in 
 - Colors: 4 at first, colorblind-safe (Okabe-Ito) + shape glyphs. Defined in `config/colors.json`.
 
 ## Specials
-Highway (10 four-lane pieces), roundabout, traffic light, tunnel (through raised land), one-way (toggle), ramps (count as 1 plain piece each; exit perpendicular or straight ahead as overpass). Overpass needs two layers in a tile - the only exception to one-type-per-tile; scrap it if too costly.
+Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel (through raised land), one-way (toggle), ramps (count as 1 plain piece each; exit perpendicular or straight ahead as overpass). Overpass needs two layers in a tile - the only exception to one-type-per-tile; scrap it if too costly.
 
 ## Game over
 - If **any car** sits stuck too long (generous timer), the game ends. Warning: stuck car / area pulses with a gold shine that intensifies. Then: restart or main menu.
@@ -87,5 +89,5 @@ Highway (10 four-lane pieces), roundabout, traffic light, tunnel (through raised
 2. (DONE) Cars: lane graph, right-hand traffic, pathfinding, round trips, ghost roads.
 3. (DONE) Intersection rules + deadlock detection.
 4. (DONE) Progression: spawns, colors, goals, reward menu, game over, menu/maps, bridges + shop.
-5. Specials: roundabout, traffic light, tunnel, one-way (bridge done in M4).
+5. (DONE) Specials: roundabout, traffic light, one-way streets, hills + tunnels (bridge done in M4).
 6. Highways: 4-lane, taper, ramps, overpass.
