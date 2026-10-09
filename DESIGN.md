@@ -124,3 +124,6 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 ## Known issues (open)
 - **Car parked in a bay and never leaving** (user screenshot, full map, all houses connected, not game-ending). Not reproduced as an isolated case. In bot runs every long-parked car had a local traffic deadlock next to its lot (cycles among `outranked` / `chain-inside` / `chain-earlier` / `box` / `stop` waits that `breakDeadlocks` does not resolve, e.g. a car held at `stop` that never reaches the line because of a stopped leader). That deadlock class already existed at M6 (bot: 6-8 of 10 games ended in gridlock at 25 min). Parked cars never count as "stuck", so they never glow or end the game.
 - Ideas if it shows again: make a parked car that has waited too long for its lot to clear flash gold like a stuck car; extend `breakDeadlocks` to treat `box` / `stop` waits as part of a cycle.
+
+## App icon / install
+- Icon art from the user (blue car on a T-junction), generated into `assets/icons/` (favicon 32/48, apple-touch 180, icon 192/512, maskable 192/512 with extra padding). `manifest.webmanifest` + head tags let Android "Add to Home screen" use it (fullscreen, dark theme colour).
