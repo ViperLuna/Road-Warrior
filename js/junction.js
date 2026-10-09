@@ -13,9 +13,9 @@ export function junctionAt(g, x, y, cache) {
     const tl = tileLanes(g, x, y), edges = c.map(d => edgeLanes(g, x, y, d));
     const taper = c.length >= 2 && Math.min(...edges) !== Math.max(...edges);      // lanes merge / split inside this tile
     const overpass = (g.roads.get(k) || {}).overpass !== undefined;
-    // A house's driveway is not a street: it never makes a 4-way or a T. Only real road legs set the junction type;
+    // A house's driveway or a destination's gate is not a street: it never makes a 4-way or a T. Only real road legs set the junction type;
     // house legs are minor entrances that always yield (see `outranks`) and never have to stop first.
-    const hs = c.filter(d => { const nx = x + DIR[d][0], ny = y + DIR[d][1]; const p = g.ports.get(ny * g.cols + nx); return p && p.kind === 'house' && !g.roads.has(ny * g.cols + nx); });
+    const hs = c.filter(d => { const nx = x + DIR[d][0], ny = y + DIR[d][1]; const p = g.ports.get(ny * g.cols + nx); return p && !g.roads.has(ny * g.cols + nx); });
     const rc = c.filter(d => !hs.includes(d));
     j = { kind: 'road', n: overpass ? 2 : rc.length, houseSides: hs, stem: -1, round: false, light: false, x, y, taper: overpass ? false : taper, junction: overpass ? false : c.length >= 3 || taper, overpass };
     if (rc.length === 3) j.stem = rc.find(d => !rc.includes(OPP[d]));

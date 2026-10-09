@@ -109,5 +109,6 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 - **Spawn budget**: `buildCost()` (0-1 BFS, existing roads free) makes new houses/pairs spawn only where the player's held road inventory can connect them. Still TODO: houses do not yet get impatient when unconnected.
 
 ## Driveways (house legs) - rules agreed in RT
-- A house's connection never counts toward the junction type: house + road + house across the street is a plain through road, not a 4-way. Cars leaving a house always yield to street traffic and don't stop first (`houseSides` in `junctionAt`).
+- A house's connection (and a destination gate, same rule) never counts toward the junction type: house + road + house across the street is a plain through road, not a 4-way. Cars leaving a house always yield to street traffic and don't stop first (`houseSides` in `junctionAt`).
 - Not yet built (future, user-approved shape): a **driveway toggle** piece. Costs a road piece, serves only the one house it starts at, cannot connect to a destination, and the moment it touches a road it stops being a driveway. Drawing a road across a driveway is blocked with a toast. Houses that get angry from long waits are fixed by rotating the house - some things are meant to suck.
+- Destination gates now yield like driveways. Reason (playtest): a destination has 2 adjacent exits and lights can't be adjacent, so a light on one exit was moot. Alternative if yield isn't enough: give destinations a single exit.
