@@ -11,15 +11,18 @@
 
   <div id="hud" hidden>
     <div id="hud-top">
-      <div class="pill" id="pill-road">Roads <b id="n-road">0</b></div>
-      <div id="specials"></div>
-      <div class="pill">Trips <b id="n-trips">0</b></div>
-      <div class="pill">Cash <b id="n-money">$0</b></div>
-      <span class="spacer"></span>
-      <button id="shop-btn" class="chip" type="button">Shop</button>
-      <button id="menu-btn" class="chip" type="button">Menu</button>
+      <div id="stats">
+        <div class="pill" id="pill-road">Roads <b id="n-road">0</b></div>
+        <div id="specials"></div>
+        <div class="pill">Trips <b id="n-trips">0</b></div>
+        <div class="pill">Cash <b id="n-money">$0</b></div>
+      </div>
+      <div id="actions">
+        <button id="shop-btn" class="chip" type="button">Shop</button>
+        <button id="menu-btn" class="chip" type="button">Menu</button>
+      </div>
+      <div id="goal"><div id="goal-bar"><i></i></div><span id="goal-text"></span></div>
     </div>
-    <div id="goal"><div id="goal-bar"><i></i></div><span id="goal-text"></span></div>
     <div id="shop" hidden></div>
     <div id="toast"></div>
     <div id="toolbar">

@@ -1,27 +1,65 @@
 {
-  "_note": "Pacing + rewards. Trip thresholds are cumulative trip counts. Flip a special's \"enabled\" to true once it is built.",
+  "_note": "Pacing + rewards. Trip thresholds scale with the number of houses so the rhythm stays steady as traffic grows: next = trips now + max(min, houses x tripsPerHouse). Flip a special's \"enabled\" to true once it is built.",
   "goals": {
     "firstAtTrips": 10,
-    "increment": 10,
-    "incrementGrowth": 4,
+    "minIncrement": 10,
+    "tripsPerHouse": 8,
     "roadsPlain": 30,
     "roadsWithSpecial": 20
   },
   "spawns": {
     "firstAtTrips": 4,
-    "everyTrips": 6,
-    "everyTripsGrowth": 1,
+    "minEveryTrips": 4,
+    "tripsPerHouse": 2.5,
     "sameColorSpawns": 2,
     "newColorEverySpawns": 3,
     "housesPerSpawn": 2,
     "maxHousesPerDestination": 3,
-    "roadsNeeded": [4, 14]
+    "roadsNeeded": [
+      4,
+      14
+    ]
   },
   "specials": [
-    { "id": "bridge",     "name": "Bridge",     "enabled": true,  "weight": 1, "cost": 40,   "description": "Drag a road across water. One bridge spans any straight gap." },
-    { "id": "roundabout", "name": "Roundabout", "enabled": false, "weight": 1, "cost": null, "description": "Keeps a busy intersection flowing." },
-    { "id": "light",      "name": "Traffic light", "enabled": false, "weight": 1, "cost": null, "description": "Fixed-timer light for a busy intersection." },
-    { "id": "highway",    "name": "Highway x10", "enabled": false, "weight": 1, "cost": null, "description": "Ten 4-lane, faster road pieces." },
-    { "id": "tunnel",     "name": "Tunnel",     "enabled": false, "weight": 1, "cost": null, "description": "Pass straight through raised land." }
+    {
+      "id": "bridge",
+      "name": "Bridge",
+      "enabled": true,
+      "weight": 1,
+      "cost": 40,
+      "description": "Drag a road across water. One bridge spans any straight gap."
+    },
+    {
+      "id": "roundabout",
+      "name": "Roundabout",
+      "enabled": false,
+      "weight": 1,
+      "cost": null,
+      "description": "Keeps a busy intersection flowing."
+    },
+    {
+      "id": "light",
+      "name": "Traffic light",
+      "enabled": false,
+      "weight": 1,
+      "cost": null,
+      "description": "Fixed-timer light for a busy intersection."
+    },
+    {
+      "id": "highway",
+      "name": "Highway x10",
+      "enabled": false,
+      "weight": 1,
+      "cost": null,
+      "description": "Ten 4-lane, faster road pieces."
+    },
+    {
+      "id": "tunnel",
+      "name": "Tunnel",
+      "enabled": false,
+      "weight": 1,
+      "cost": null,
+      "description": "Pass straight through raised land."
+    }
   ]
 }

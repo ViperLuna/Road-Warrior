@@ -1,12 +1,13 @@
 // One car per house. Round trip: house -> destination lot (park, dwell) -> house = 1 trip.
 import { DIR, OPP, CAR_LEN, pointAt, roadPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
+import { lotTile } from './buildings.js';
 import { roadAt, tidx } from './network.js';
 import { findPath } from './pathfind.js';
 import { tuning } from './tuning.js';
 import { junctionAt, pieceConflict, outranks } from './junction.js';
 
 const TURN_RATE = 12;
-const STOP_OFFSET = CAR_LEN / 2 + 0.06;       // where a held car's centre stops, back from the junction edge
+const STOP_OFFSET = CAR_LEN / 2 + 0.12;       // where a held car's centre stops, back from the junction edge
 
 // Target speed (tiles/s) for a piece: lane-count base speed x movement-type factor.
 function pieceSpeed(p) {
@@ -35,32 +36,36 @@ function planOut(g, car) {
   if (!roadAt(g, rx, ry)) return false;
   const dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && d.color.id === b.color.id && d.slots.includes(null)));
   for (const d of dests) {
-    const goals = [];
-    for (const port of g.ports.values()) {
-      if (port.b !== d) continue;
-      if (d.slots[port.lot * 2] === null || d.slots[port.lot * 2 + 1] === null) goals.push(port);
-    }
+    const goals = [...g.ports.values()].filter(port => port.b === d);       // either entrance leads to every bay
     const res = findPath(g, rx, ry, OPP[b.rot], goals);
     if (!res) continue;
-    const base = res.port.lot * 2;
-    const free = [0, 1].filter(p => d.slots[base + p] === null);
-    const par = free[(Math.random() * free.length) | 0];
-    d.slots[base + par] = car;
-    car.dest = d; car.slot = base + par; car.lot = { x: res.port.x, y: res.port.y, rot: d.rot, par };
-    car.route = [houseOutPiece(b.x, b.y, b.rot), ...roadPieces(res.steps), lotInPiece(res.port.x, res.port.y, d.rot, par)];
+    const here = [res.port.lot * 2, res.port.lot * 2 + 1].filter(k => d.slots[k] === null);   // prefer a bay on the entrance's side
+    const open = here.length ? here : d.slots.map((v, k) => (v === null ? k : -1)).filter(k => k >= 0);
+    const k = open[(Math.random() * open.length) | 0];
+    d.slots[k] = car;
+    car.dest = d; car.slot = k;
+    car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: res.port.lot, k };
+    car.route = [houseOutPiece(b.x, b.y, b.rot), ...roadPieces(res.steps), lotInPiece(d.x, d.y, d.rot, res.port.lot, k)];
     return true;
   }
   return false;
 }
 
+// Leave through whichever connected entrance gives the cheapest way home.
 function planBack(g, car) {
   const L = car.lot, D = DIR[L.rot];
-  const rx = L.x + D[0], ry = L.y + D[1];
   const home = g.ports.get(tidx(g, car.house.x, car.house.y));
-  if (!home || !roadAt(g, rx, ry)) return false;
-  const res = findPath(g, rx, ry, OPP[L.rot], [home]);
-  if (!res) return false;
-  car.route = [lotOutPiece(L.x, L.y, L.rot, L.par), ...roadPieces(res.steps), houseInPiece(home.x, home.y, home.b.rot)];
+  if (!home) return false;
+  let best = null, bestEnt = 0;
+  for (const ent of [L.k >> 1, 1 - (L.k >> 1)]) {              // same-side entrance first so ties favour it
+    const [lx, ly] = lotTile({ x: L.bx, y: L.by, rot: L.rot }, ent);
+    const rx = lx + D[0], ry = ly + D[1];
+    if (!roadAt(g, rx, ry)) continue;
+    const res = findPath(g, rx, ry, OPP[L.rot], [home]);
+    if (res && (!best || res.cost < best.cost - 1e-6)) { best = res; bestEnt = ent; }
+  }
+  if (!best) return false;
+  car.route = [lotOutPiece(L.bx, L.by, L.rot, L.k, bestEnt), ...roadPieces(best.steps), houseInPiece(home.x, home.y, home.b.rot)];
   return true;
 }
 
@@ -115,7 +120,8 @@ function breakDeadlocks(g, list) {
   }
 }
 
-const tileKey = p => (p.kind === 'road' || p.kind === 'lot_in' || p.kind === 'lot_out' ? p.tx + ',' + p.ty : null);
+// A parking lot is one space shared by both entrances, so its pieces key on the building, not the tile.
+const tileKey = p => (p.kind === 'road' ? p.tx + ',' + p.ty : p.kind === 'lot_in' || p.kind === 'lot_out' ? 'L' + p.bx + ',' + p.by : null);
 const moving = car => car.state === 'out' || car.state === 'back';
 
 // Work out, for every car about to enter a junction/lot, whether it must hold at the stop line.
@@ -209,9 +215,12 @@ export function updateSim(g, dt) {
     } else if (car.state === 'dwell') {
       car.dwell -= dt;
       if (car.dwell <= 0) {
-        const lk = car.lot.x + ',' + car.lot.y;
+        const lk = 'L' + car.lot.bx + ',' + car.lot.by;
         if ((inside.get(lk) || []).length || claims.has(lk)) car.dwell = 0.1;          // lot is busy or claimed
-        else if (planBack(g, car)) { car.dest.slots[car.slot] = null; car.dest = null; start(car, 'back'); }
+        else if (planBack(g, car)) {
+          car.dest.slots[car.slot] = null; car.dest = null; start(car, 'back');
+          (inside.get(lk) || inside.set(lk, []).get(lk)).push(car);          // lot is busy for the next car this very tick
+        }
         else car.dwell = 0.5;
       }
     } else {

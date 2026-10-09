@@ -54,8 +54,9 @@ export function spawnPair(g, color, opts = {}) {
       const a = opts.anchor, r = ri(opts.anchor.rMin || 3, opts.anchor.rMax || 8), th = rng() * 6.283;
       ax = Math.round(a.x + Math.cos(th) * r); ay = Math.round(a.y + Math.sin(th) * r);
     }
-    const fp = new Set([[ax, ay], [ax + 1, ay], [ax, ay + 1], [ax + 1, ay + 1]].map(([x, y]) => y * g.cols + x));
-    if (![...fp].every(k => free(g, k % g.cols, (k / g.cols) | 0))) continue;
+    const tiles = [[ax, ay], [ax + 1, ay], [ax, ay + 1], [ax + 1, ay + 1]];
+    if (!tiles.every(([x, y]) => free(g, x, y))) continue;            // checks bounds per tile (no row wrap-around)
+    const fp = new Set(tiles.map(([x, y]) => y * g.cols + x));
 
     const rot = ri(0, 3), fake = { x: ax, y: ay, rot };
     const lotExits = [0, 1].map(i => { const [x, y] = lotTile(fake, i); return [x + DIR[rot][0], y + DIR[rot][1]]; });

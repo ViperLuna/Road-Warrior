@@ -40,15 +40,16 @@ function drawDest(ctx, b) {
   ctx.save();
   ctx.translate(b.x + 1, b.y + 1);
   ctx.rotate(rotAngle(b.rot));
-  for (let i = 0; i < 2; i++) {                                   // parking lot tiles (local x 0..1)
-    const y0 = i - 1;
-    ctx.fillStyle = SHOULDER; ctx.fillRect(0.5, y0 + 0.5 - 0.26, 0.5, 0.52);
-    ctx.fillStyle = ASPHALT; ctx.fillRect(0.5, y0 + 0.5 - 0.23, 0.5, 0.46);
-    ctx.fillStyle = '#3c4046'; rrect(ctx, 0.05, y0 + 0.05, 0.9, 0.9, 0.06); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 0.02;
-    ctx.beginPath(); ctx.moveTo(0.08, y0 + 0.5); ctx.lineTo(0.55, y0 + 0.5); ctx.stroke();       // bay divider
-    ctx.beginPath(); ctx.moveTo(0.08, y0 + 0.12); ctx.lineTo(0.08, y0 + 0.88); ctx.stroke();      // curb line
+  for (const y0 of [-0.5, 0.5]) {                                  // an entrance on each end (either one reaches every bay)
+    ctx.fillStyle = SHOULDER; ctx.fillRect(0.5, y0 - 0.26, 0.5, 0.52);
+    ctx.fillStyle = ASPHALT; ctx.fillRect(0.5, y0 - 0.23, 0.5, 0.46);
   }
+  ctx.fillStyle = '#3c4046'; rrect(ctx, 0.05, -0.95, 0.9, 1.9, 0.07); ctx.fill();                  // one lot, two tiles long
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 0.02;
+  for (const y of [-0.5, 0, 0.5]) { ctx.beginPath(); ctx.moveTo(0.08, y); ctx.lineTo(0.6, y); ctx.stroke(); }   // bay dividers
+  ctx.beginPath(); ctx.moveTo(0.08, -0.9); ctx.lineTo(0.08, 0.9); ctx.stroke();                             // curb line
+  ctx.setLineDash([0.07, 0.07]); ctx.strokeStyle = 'rgba(242,201,76,.5)';
+  ctx.beginPath(); ctx.moveTo(0.82, -0.85); ctx.lineTo(0.82, 0.85); ctx.stroke(); ctx.setLineDash([]);     // drive aisle joining the two ends
   ctx.fillStyle = 'rgba(0,0,0,.28)'; rrect(ctx, -0.9, -0.88, 0.84, 1.84, 0.1); ctx.fill();       // building
   ctx.fillStyle = b.color.hex; rrect(ctx, -0.92, -0.92, 0.84, 1.84, 0.1); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,.2)'; rrect(ctx, -0.84, -0.84, 0.68, 1.68, 0.07); ctx.fill();

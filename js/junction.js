@@ -22,8 +22,10 @@ const turnRank = p => (p.turn === 'right' ? 1 : p.turn === 'left' ? 2 : 0);   //
 export function pieceConflict(a, b, sb) {
   if (a === b) return false;                                   // same lane: car-following handles it
   if (a.kind === 'road' && b.kind === 'road' && a.in === b.in) return sb < CAR_LEN + 0.12;   // same entry lane: wait until the car ahead pulls clear
-  if (a.kind === 'lot_in' && b.kind === 'lot_in' && sb < CAR_LEN + 0.12) return true;        // two cars entering one lot tile
-  const thr = tuning.cars.conflictDistance, t2 = thr * thr, from = sb - CAR_LEN / 2;
+  if (a.kind === 'lot_in' && b.kind === 'lot_in' && a.ent === b.ent && sb < CAR_LEN + 0.12) return true;   // two cars entering by the same gate
+  // Parking-lot moves get a wider margin: cars there are swinging around, so their bodies stick out further.
+  const thr = a.kind === 'road' && b.kind === 'road' ? tuning.cars.conflictDistance : tuning.cars.conflictDistance + 0.1;
+  const t2 = thr * thr, from = sb - CAR_LEN / 2;
   for (let j = 0; j < b.xy.length; j++) {
     if (b.lut[j] < from) continue;
     const bx = b.xy[j][0], by = b.xy[j][1];

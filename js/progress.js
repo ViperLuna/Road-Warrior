@@ -8,6 +8,7 @@ export function initProgress(g) {
   g.colorsUsed = 1; g.reward = null;
 }
 
+const houseCount = g => g.buildings.filter(b => b.kind === 'house').length;
 const count = (g, kind, color) => g.buildings.filter(b => b.kind === kind && b.color.id === color.id).length;
 
 function anchorNear(g) {
@@ -63,14 +64,14 @@ export function checkProgress(g, notify) {
     const r = doSpawn(g);
     if (!r) { g.nextSpawnAt += 2; break; }                // no room right now; try again soon
     g.spawnCount++;
-    g.nextSpawnAt += sp.everyTrips + sp.everyTripsGrowth * (g.spawnCount - 1);
+    g.nextSpawnAt = g.trips + Math.max(sp.minEveryTrips, Math.round(houseCount(g) * sp.tripsPerHouse));
     notify({ type: 'spawn', ...r });
   }
   if (g.mode === 'play' && g.trips >= g.nextGoalAt) {
     const special = pickSpecial();
     g.goalCount++;
-    g.prevGoalAt = g.nextGoalAt;
-    g.nextGoalAt += prog.goals.increment + prog.goals.incrementGrowth * (g.goalCount - 1);
+    g.prevGoalAt = g.trips;
+    g.nextGoalAt = g.trips + Math.max(prog.goals.minIncrement, Math.round(houseCount(g) * prog.goals.tripsPerHouse));
     if (!special) { g.inv.road += prog.goals.roadsPlain; notify({ type: 'roads', n: prog.goals.roadsPlain }); return; }
     g.reward = {
       goal: g.goalCount,

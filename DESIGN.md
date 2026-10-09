@@ -7,7 +7,7 @@ A Mini Motorways-style source/destination road-building game. Vanilla JS + Canva
 - Houses (1 tile) and destinations (2x2: 2 building tiles + 2 parking tiles, entrance on the lot) come in matching colors. Buildings can be **rotated, never moved**. One exit side each; a road touching the exit auto-connects.
 - Player drags to build roads (left-click / create button), right-click / destroy button to demolish. Drag-build any time.
 - Each house owns **1 car** of its color. Car picks a random same-color destination, drives there, returns. A full round trip = **1 trip**.
-- Destination holds max **4** cars (2 lots x 2). House reserves a slot on departure; if none free, the car waits in the house queue. Marker per inbound car shown on the destination.
+- Destination holds max **4** cars (2 lot tiles x 2 bays, any gate reaches any bay). House reserves a slot on departure; if none free, the car waits in the house queue. Marker per inbound car shown on the destination.
 - Spawn logic must keep houses:destinations balanced (about 4 houses per destination).
 
 ## Controls
@@ -33,7 +33,7 @@ All gameplay numbers live in `config/tuning.json`, read at startup (defaults in 
 - **Conflicts are geometric:** two movements conflict if their lane curves come within a car width (`cars.conflictDistance`). Crossings, merges and left turns fall out of the geometry; a right turn into your own lane conflicts only with traffic merging into that same lane.
 - **T-junction:** through road beats the stem; left turns yield to oncoming straight. **4-way:** first-come-first-served, ties yield to the car on the right. A car already past its stop line always finishes.
 - **Never wait inside a junction:** a car won't enter unless the whole chain of junction/lot pieces ahead is free and there is room beyond the last one (no box-blocking). Cars inside a junction outrank cars outside it.
-- **Parking lots:** one mover per lot tile; a car about to leave a lot yields to anyone who has claimed it.
+- **Parking lots are one connected space** (2 tiles x 2 bays): a car entering by either gate can park in any of the 4 bays, so a single road to one gate is enough (connecting both is optional). It leaves by whichever connected gate is cheapest. The lot is one mover-at-a-time zone with a wider safety margin; a car about to leave yields to anyone who has claimed it.
 - **Deadlock breaking:** every hold records who it waits on. A closed loop of stopped cars gets a short priority override on one member (soft rule holds only; never through a committed car or a physically blocked path).
 - **Gridlock:** a car stopped for `gridlock.warnAfterSeconds` gets a gold shine that builds up; at `gameOverAfterSeconds` it's game over (screen arrives in M4). Roundabouts / traffic lights arrive in M5 using the same framework.
 - Headless stress test results: 8 houses sharing roads, 60 maps x 240 s: 1,145 junction tiles, 6,000+ trips, 0 car overlaps, worst stall 3.5 s. A deliberately absurd 11-house tangle still showed a rare brief overlap.
@@ -47,7 +47,8 @@ All gameplay numbers live in `config/tuning.json`, read at startup (defaults in 
 - **Game over = gridlock:** any car stopped for `gridlock.gameOverAfterSeconds` ends the run (gold shine warns first). Screen shows trips, time survived, cash and best, with Play again / Main menu.
 
 ## Progression (config/progression.json)
-- **Spawns** are trip-triggered (`firstAtTrips`, then `everyTrips` + growth). The first `sameColorSpawns` reuse the starting colour; then every `newColorEverySpawns`-th spawn introduces a new colour as a destination + house pair. Otherwise a colour gets extra houses until it has `maxHousesPerDestination` per destination, then a new destination + house. New buildings land near existing ones, reachable over land within `roadsNeeded` road tiles, never on roads/buildings (an exit may touch an existing road and auto-connect). They pop in with a ring.
+- **Pacing scales with traffic:** next goal/spawn = trips now + max(min, houses x `tripsPerHouse`), so the rhythm stays steady as houses (and trips/second) grow instead of snowballing. Goals ~every 8 trips per house, spawns ~every 2.5.
+- **Spawns** are trip-triggered (`firstAtTrips`, then as above). The first `sameColorSpawns` reuse the starting colour; then every `newColorEverySpawns`-th spawn introduces a new colour as a destination + house pair. Otherwise a colour gets extra houses until it has `maxHousesPerDestination` per destination, then a new destination + house. New buildings land near existing ones, reachable over land within `roadsNeeded` road tiles, never on roads/buildings (an exit may touch an existing road and auto-connect). They pop in with a ring.
 - **Goals** every N trips (growing). The reward menu offers `roadsPlain` (30) roads OR `roadsWithSpecial` (20) roads + one random *enabled* special. Specials not built yet are listed with `"enabled": false` and flip on when finished.
 - **Cash** (slim, per trip) buys specials that have a `cost` in the Shop (bridge $40).
 

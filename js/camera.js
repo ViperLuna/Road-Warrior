@@ -1,5 +1,5 @@
 // Camera: cam.x/cam.y are the world (tile-unit) coords at the viewport's top-left, cam.z is px per tile.
-const HUD_TOP = 60, HUD_BOTTOM = 96, KEEP_PX = 120;
+const HUD_TOP = 88, HUD_BOTTOM = 96, KEEP_PX = 120;       // HUD_TOP leaves room for the (wrapping) top bar + goal row
 
 export const cam = { x: 0, y: 0, z: 20, minZ: 8, maxZ: 120, W: 1, H: 1, cols: 1, rows: 1 };
 
