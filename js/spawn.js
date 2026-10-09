@@ -7,7 +7,7 @@ import { WATER } from './terrain.js';
 
 const free = (g, x, y, blocked) =>
   x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] !== WATER &&
-  !g.buildingAt.has(y * g.cols + x) && !(blocked && blocked.has(y * g.cols + x));
+  !g.buildingAt.has(y * g.cols + x) && !g.roads.has(y * g.cols + x) && !(blocked && blocked.has(y * g.cols + x));
 
 // Shortest land path (in road tiles) from `from` to any tile in `targets`, or Infinity.
 function roadsNeeded(g, from, targets, blocked, limit) {

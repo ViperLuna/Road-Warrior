@@ -1,6 +1,7 @@
 // Draws buildings, ghost pieces and cars (tile units, same transform as render.js).
 import { DIR } from './lanes.js';
 import { pieceValid } from './network.js';
+import { tuning } from './tuning.js';
 
 const ASPHALT = '#45494f', SHOULDER = '#2b2e33';
 const rotAngle = rot => rot * Math.PI / 2 - Math.PI / 2;   // local +x points along the exit direction
@@ -87,6 +88,17 @@ export function drawGhosts(ctx, g) {
 }
 
 export function drawCars(ctx, g) {
+  const { warnAfterSeconds, gameOverAfterSeconds } = tuning.gridlock;
+  for (const car of g.cars) {                       // gold shine that builds as a car stays stuck
+    if (car.state === 'home' || car.state === 'dwell' || car.stuck < warnAfterSeconds) continue;
+    const k = Math.min(1, (car.stuck - warnAfterSeconds) / (gameOverAfterSeconds - warnAfterSeconds));
+    const pulse = 0.55 + 0.45 * Math.sin(g.time * (4 + 8 * k));
+    const r = 0.38 + 0.25 * k;
+    const grad = ctx.createRadialGradient(car.x, car.y, 0.05, car.x, car.y, r);
+    grad.addColorStop(0, `rgba(255,215,64,${0.55 * pulse + 0.2 * k})`);
+    grad.addColorStop(1, 'rgba(255,215,64,0)');
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(car.x, car.y, r, 0, 6.2832); ctx.fill();
+  }
   for (const car of g.cars) {
     if (car.state === 'home') continue;
     ctx.save();

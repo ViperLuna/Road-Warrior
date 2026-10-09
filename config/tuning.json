@@ -16,7 +16,12 @@
   "cars": {
     "acceleration": 5,
     "braking": 11,
-    "minGapTiles": 0.1
+    "minGapTiles": 0.1,
+    "conflictDistance": 0.205
+  },
+  "gridlock": {
+    "warnAfterSeconds": 12,
+    "gameOverAfterSeconds": 40
   },
   "trips": {
     "parkedSeconds": 1.6,

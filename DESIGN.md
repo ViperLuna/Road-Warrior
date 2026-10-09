@@ -29,8 +29,14 @@ All gameplay numbers live in `config/tuning.json`, read at startup (defaults in 
 - Initial inventory: 20 two-lane pieces + 1 bridge (unused until the city grows toward water). First pair is spawned on open land within range of the piece count.
 - **Demolish always refunds the piece immediately.** A demolished road in use by a car persists as a **ghost road** until its cars finish, even if rebuilt over; new cars use the new path. Rotating a connected building leaves a ghost connector the same way.
 
-## Intersections
-- T: stem yields to through traffic. Right turn into own lane never waits. 4-way: first-come-first-served. Roundabouts / traffic lights (fixed timer) improve flow. Must detect deadlock rings.
+## Intersections (implemented in `js/junction.js` + `js/cars.js`)
+- **Conflicts are geometric:** two movements conflict if their lane curves come within a car width (`cars.conflictDistance`). Crossings, merges and left turns fall out of the geometry; a right turn into your own lane conflicts only with traffic merging into that same lane.
+- **T-junction:** through road beats the stem; left turns yield to oncoming straight. **4-way:** first-come-first-served, ties yield to the car on the right. A car already past its stop line always finishes.
+- **Never wait inside a junction:** a car won't enter unless the whole chain of junction/lot pieces ahead is free and there is room beyond the last one (no box-blocking). Cars inside a junction outrank cars outside it.
+- **Parking lots:** one mover per lot tile; a car about to leave a lot yields to anyone who has claimed it.
+- **Deadlock breaking:** every hold records who it waits on. A closed loop of stopped cars gets a short priority override on one member (soft rule holds only; never through a committed car or a physically blocked path).
+- **Gridlock:** a car stopped for `gridlock.warnAfterSeconds` gets a gold shine that builds up; at `gameOverAfterSeconds` it's game over (screen arrives in M4). Roundabouts / traffic lights arrive in M5 using the same framework.
+- Headless stress test results: 8 houses sharing roads, 60 maps x 240 s: 1,145 junction tiles, 6,000+ trips, 0 car overlaps, worst stall 3.5 s. A deliberately absurd 11-house tangle still showed a rare brief overlap.
 
 ## Water
 - Bridge: drag a road across water; it auto-builds, straight line only, any length, consumes one bridge item. Inherits 2- or 4-lane from the road being dragged. Bought with money.
@@ -57,8 +63,8 @@ Highway (10 four-lane pieces), roundabout, traffic light, tunnel (through raised
 
 ## Milestones
 1. (DONE)  Foundation: grid, terrain gen, drag build/demolish, mobile toggles, inventory.
-2. (DONE, no intersection yielding yet - cars only follow the car ahead) Cars: lane graph, right-hand traffic, pathfinding, round trips, ghost roads.
-3. Intersection rules + deadlock detection.
+2. (DONE) Cars: lane graph, right-hand traffic, pathfinding, round trips, ghost roads.
+3. (DONE) Intersection rules + deadlock detection.
 4. Progression: spawns, colors, goals, reward menu, game over.
 5. Specials: roundabout, traffic light, bridge, tunnel, one-way.
 6. Highways: 4-lane, taper, ramps, overpass.

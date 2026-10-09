@@ -16,15 +16,15 @@ function bez(p0, c1, c2, p3, t) {
 }
 
 function make(key, kind, p0, c1, c2, p3, extra) {
-  const lut = [0];
+  const lut = [0], xy = [p0];
   let prev = p0, len = 0;
   const SEG = 16;
   for (let i = 1; i <= SEG; i++) {
     const q = bez(p0, c1, c2, p3, i / SEG);
     len += Math.hypot(q[0] - prev[0], q[1] - prev[1]);
-    lut.push(len); prev = q;
+    lut.push(len); xy.push(q); prev = q;
   }
-  const p = { key, kind, pts: [p0, c1, c2, p3], len, lut, turn: 'straight', lanes: 2, ...extra };
+  const p = { key, kind, pts: [p0, c1, c2, p3], len, lut, xy, turn: 'straight', lanes: 2, ...extra };
   cache.set(key, p);
   return p;
 }
