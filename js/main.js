@@ -1,4 +1,13 @@
 // Placeholder: proves the Pages pipeline. Real game starts at Milestone 1 (see DESIGN.md).
+import { unlock } from './audio.js';
+
+const splash = document.getElementById('splash');
+document.getElementById('start').addEventListener('click', async () => {
+  await unlock();
+  splash.classList.add('hide');
+  setTimeout(() => splash.remove(), 400);
+});
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const COLS = 24, ROWS = 16;
@@ -18,7 +27,7 @@ function draw() {
   ctx.fillStyle = '#fff';
   ctx.font = '600 24px system-ui, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Road Warrior - under construction', innerWidth / 2, oy - 12 > 20 ? oy - 12 : 28);
+  
 }
 addEventListener('resize', draw);
 draw();

@@ -35,6 +35,9 @@ Highway (10 four-lane pieces), roundabout, traffic light, tunnel (through raised
 - If **any car** sits stuck too long (generous timer), the game ends. Warning: stuck car / area pulses with a gold shine that intensifies. Then: restart or main menu.
 - Maps: fixed size per map; bigger maps at higher levels. A map is played until loss, quit or no room left (TBD).
 
+## Audio
+- Splash screen ("Tap to Start") unlocks the Web Audio context. `js/audio.js` exposes `unlock()`, `play(name)`, mute. Register sounds in its `SOUNDS` map; files go in `assets/sounds/`.
+
 ## Future ideas (parking lot)
 - Harder difficulty: more than 1 car per house.
 - More colors, day/night, sound.
