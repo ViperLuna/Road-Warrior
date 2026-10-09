@@ -64,7 +64,7 @@ function planBack(g, car) {
   const home = g.ports.get(tidx(g, car.house.x, car.house.y));
   if (!home) return false;
   let best = null, bestEnt = 0;
-  for (const ent of [L.k >> 1, 1 - (L.k >> 1)]) {              // same-side entrance first so ties favour it
+  for (const ent of [0]) {                                      // the lot's single gate
     const [lx, ly] = lotTile({ x: L.bx, y: L.by, rot: L.rot }, ent);
     const rx = lx + D[0], ry = ly + D[1];
     if (!roadAt(g, rx, ry)) continue;

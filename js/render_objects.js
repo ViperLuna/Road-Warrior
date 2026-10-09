@@ -40,7 +40,7 @@ function drawDest(ctx, b) {
   ctx.save();
   ctx.translate(b.x + 1, b.y + 1);
   ctx.rotate(rotAngle(b.rot));
-  for (const y0 of [-0.5, 0.5]) {                                  // an entrance on each end (either one reaches every bay)
+  for (const y0 of [-0.5]) {                                       // the single entrance (reaches every bay)
     ctx.fillStyle = SHOULDER; ctx.fillRect(0.5, y0 - 0.26, 0.5, 0.52);
     ctx.fillStyle = ASPHALT; ctx.fillRect(0.5, y0 - 0.23, 0.5, 0.46);
   }
