@@ -102,9 +102,20 @@ export function drawGhosts(ctx, g) {
   }
 }
 
-export function drawCars(ctx, g) {
+// A car counts as "under" while on the street piece beneath a deck, and for the last/first bit of the pieces either side
+// (its nose already pokes under the deck's edge).
+export function isUnder(car) {
+  const p = car.route[car.idx];
+  if (!p) return false;
+  if (p.under) return true;
+  const nx = car.route[car.idx + 1], pv = car.route[car.idx - 1];
+  return (!!nx && !!nx.under && car.s > p.len - 0.2) || (!!pv && !!pv.under && car.s < 0.2);
+}
+
+// layer 'under': cars beneath an overpass (drawn before the deck); 'top': everyone else.
+export function drawCars(ctx, g, layer = 'top') {
   const { warnAfterSeconds, gameOverAfterSeconds } = tuning.gridlock;
-  for (const car of g.cars) {                       // gold shine that builds as a car stays stuck
+  if (layer === 'top') for (const car of g.cars) {                       // gold shine that builds as a car stays stuck
     if (car.state === 'home' || car.state === 'dwell' || car.stuck < warnAfterSeconds) continue;
     const k = Math.min(1, (car.stuck - warnAfterSeconds) / (gameOverAfterSeconds - warnAfterSeconds));
     const pulse = 0.55 + 0.45 * Math.sin(g.time * (4 + 8 * k));
@@ -116,6 +127,7 @@ export function drawCars(ctx, g) {
   }
   for (const car of g.cars) {
     if (car.state === 'home') continue;
+    if ((layer === 'under') !== isUnder(car)) continue;
     const under = g.roads.get(Math.floor(car.y) * g.cols + Math.floor(car.x));
     if (under && under.tunnel && under.portal === undefined) continue;        // inside the hill: out of sight
     ctx.save();

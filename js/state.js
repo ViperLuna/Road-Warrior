@@ -6,7 +6,7 @@ import { spawnInitial, spawnPair } from './spawn.js';
 import { updateSim } from './cars.js';
 import { initProgress, checkProgress, chooseReward as pickReward } from './progress.js';
 import { prog, maps, specialInfo } from './progression.js';
-import { roadConns } from './network.js';
+import { roadConns, tileLanes } from './network.js';
 import { tuning } from './tuning.js';
 
 export const START_INVENTORY = { road: 20, bridge: 1 };
@@ -29,6 +29,7 @@ export const game = {
   reward: null, over: null,
   unlocks: {},              // permanent unlocks (e.g. { oneway: true })
   oneway: false,            // one-way toggle: drags mark streets one-way
+  build4: false,            // highway mode: the Build tool lays 4-lane road from the highway stock
 };
 
 const listeners = new Set(), evListeners = new Set();
@@ -49,7 +50,7 @@ export function newGame(seed, map = maps[0]) {
   game.terrain = generateTerrain(game.seed, game.cols, game.rows);
   game.roads = new Map(); game.bridges = new Map(); game.nextBridge = 1;
   game.inv = { ...START_INVENTORY };
-  game.mode = 'play'; game.reward = null; game.over = null; game.unlocks = {}; game.oneway = false;
+  game.mode = 'play'; game.reward = null; game.over = null; game.unlocks = {}; game.oneway = false; game.build4 = false;
   game.buildings = []; game.buildingAt = new Map(); game.ports = new Map(); game.nextId = 1;
   game.cars = []; game.trips = 0; game.money = 0; game.time = 0;
   clearPieceCache();
@@ -59,6 +60,8 @@ export function newGame(seed, map = maps[0]) {
 }
 
 export function setPalette(p) { game.palette = p; }
+
+export function setBuild4(on) { game.build4 = !!on && (game.inv.highway || 0) > 0; if (game.build4 && game.tool !== 'build') game.tool = 'build'; emit(); }
 
 export function setOneWay(on) { game.oneway = !!on && !!game.unlocks.oneway; emit(); }
 
@@ -122,7 +125,7 @@ export function buy(id) {
   if (info.unlock && game.unlocks[id]) return false;
   game.money -= info.cost;
   if (info.unlock) game.unlocks[id] = true;
-  else game.inv[id] = (game.inv[id] || 0) + 1;
+  else game.inv[id] = (game.inv[id] || 0) + (info.grant || 1);
   emit();
   return true;
 }
@@ -138,7 +141,7 @@ function buildSpan(kind, from, tiles, end) {
   const dx = Math.sign(tiles[0].x - from.x), dy = Math.sign(tiles[0].y - from.y);
   const dirIdx = SIDES.findIndex(([sx, sy]) => sx === dx && sy === dy);
   tiles.forEach((t, i) => {
-    const entry = { lanes: 2 };
+    const entry = { lanes: game.build4 ? 4 : 2 };           // bridges/tunnels take the lane count of the road you drag
     if (kind === 'tunnel') {
       entry.tunnel = id;
       if (i === 0) entry.portal = (dirIdx + 2) % 4;                // mouth facing back toward the near side
@@ -184,14 +187,26 @@ export function selectSpecial(id) {
 }
 
 // Put a roundabout / traffic light on an intersection (a road tile with 3+ connections).
-// Returns 'ok' | 'none' | 'badtile' | 'taken' | 'notjunction' | 'toonear' | 'empty'
+// Returns 'ok' | 'none' | 'badtile' | 'taken' | 'notjunction' | 'notcrossing' | 'highway' | 'toonear' | 'empty'
 export function placeSpecial(id, x, y) {
   if (!hasRoad(x, y)) return 'none';
   const r = game.roads.get(tileIndex(x, y));
   if (r.bridge || r.tunnel) return 'badtile';
-  if (r.special) return 'taken';
+  if (r.special || r.overpass !== undefined) return 'taken';
   if ((game.inv[id] || 0) <= 0) return 'empty';
+  if (id === 'overpass') {                                      // a highway crossing a street, with nothing else joining
+    const c = roadConns(game, x, y), lanesAt = d => { const n = game.roads.get(tileIndex(x + SIDES[d][0], y + SIDES[d][1])); return n ? (n.lanes || 2) : 0; };
+    if (c.length !== 4 || (r.lanes || 2) !== 4) return 'notcrossing';
+    const axis = [0, 1].find(a => lanesAt(a) === 4 && lanesAt(a + 2) === 4 && lanesAt(1 - a) === 2 && lanesAt(1 - a + 2) === 2);
+    if (axis === undefined) return 'notcrossing';
+    r.overpass = axis;
+    game.inv[id]--;
+    if (game.inv[id] <= 0) { game.tool = 'build'; game.placing = null; }
+    emit();
+    return 'ok';
+  }
   if (roadConns(game, x, y).length < 3) return 'notjunction';
+  if (id === 'roundabout' && (r.lanes || 2) === 4) return 'highway';
   // Lights need room to queue between them: with no gap, a car cleared by one light can end up stuck inside
   // the intersection waiting for the next, blocking everyone. So no two lights on neighbouring tiles.
   if (id === 'light') for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
@@ -205,17 +220,30 @@ export function placeSpecial(id, x, y) {
   return 'ok';
 }
 
-// Returns 'ok' | 'oob' | 'water' | 'hill' | 'blocked' | 'exists' | 'empty'
+// Returns 'ok' | 'upgraded' | 'oob' | 'water' | 'hill' | 'blocked' | 'exists' | 'empty'
+// In highway mode this lays 4-lane road from the highway stock (and upgrades a street it is dragged over).
 export function buildRoad(x, y) {
   if (!inBounds(x, y)) return 'oob';
-  if (game.terrain.water[tileIndex(x, y)] === WATER) return 'water';
-  if (game.terrain.water[tileIndex(x, y)] === HILL) return 'hill';
-  if (game.buildingAt.has(tileIndex(x, y))) return 'blocked';
-  if (game.roads.has(tileIndex(x, y))) return 'exists';
-  if (game.inv.road <= 0) return 'empty';
-  game.roads.set(tileIndex(x, y), { lanes: 2 });
+  const idx = tileIndex(x, y), terrainKind = game.terrain.water[idx];
+  if (terrainKind === WATER) return 'water';
+  if (terrainKind === HILL) return 'hill';
+  if (game.buildingAt.has(idx)) return 'blocked';
+  const four = game.build4 && (game.inv.highway || 0) > 0;
+  const have = game.roads.get(idx);
+  if (have) {
+    if (four && (have.lanes || 2) === 2 && !have.bridge && !have.tunnel && have.special !== 'roundabout') {   // widen a street in place
+      have.lanes = 4;
+      game.inv.highway--; game.inv.road++;
+      if (game.inv.highway <= 0) game.build4 = false;
+      emit();
+      return 'upgraded';
+    }
+    return 'exists';
+  }
+  if (four) { game.inv.highway--; if (game.inv.highway <= 0) game.build4 = false; }
+  else { if (game.inv.road <= 0) return 'empty'; game.inv.road--; }
+  game.roads.set(idx, { lanes: four ? 4 : 2 });
   clearEdgesTowards(x, y);
-  game.inv.road--;
   emit();
   return 'ok';
 }
@@ -234,9 +262,10 @@ export function demolish(x, y) {
     return true;
   }
   if (r.special) game.inv[r.special] = (game.inv[r.special] || 0) + 1;      // the roundabout / light comes back too
+  if (r.overpass !== undefined) game.inv.overpass = (game.inv.overpass || 0) + 1;
   game.roads.delete(tileIndex(x, y));
   clearEdgesTowards(x, y);
-  game.inv.road++;
+  if ((r.lanes || 2) === 4) game.inv.highway = (game.inv.highway || 0) + 1; else game.inv.road++;      // each kind of piece comes back as itself
   emit();
   return true;
 }

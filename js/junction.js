@@ -1,6 +1,6 @@
 // Intersection rules: which movements conflict, and who has priority.
 import { CAR_LEN, DIR, OPP, rt } from './lanes.js';
-import { roadConns } from './network.js';
+import { roadConns, tileLanes, edgeLanes } from './network.js';
 import { tuning } from './tuning.js';
 import { lightGroups } from './signals.js';
 
@@ -10,7 +10,10 @@ export function junctionAt(g, x, y, cache) {
   let j = cache.get(k);
   if (!j) {
     const c = roadConns(g, x, y), special = (g.roads.get(k) || {}).special;
-    j = { kind: 'road', n: c.length, stem: -1, round: false, light: false, x, y };
+    const tl = tileLanes(g, x, y), edges = c.map(d => edgeLanes(g, x, y, d));
+    const taper = c.length >= 2 && Math.min(...edges) !== Math.max(...edges);      // lanes merge / split inside this tile
+    const overpass = (g.roads.get(k) || {}).overpass !== undefined;
+    j = { kind: 'road', n: overpass ? 2 : c.length, stem: -1, round: false, light: false, x, y, taper: overpass ? false : taper, junction: overpass ? false : c.length >= 3 || taper, overpass };
     if (c.length === 3) j.stem = c.find(d => !c.includes(OPP[d]));
     if (c.length >= 3 && special === 'roundabout') j.round = true;
     if (c.length >= 3 && special === 'light') { j.light = true; j.groups = lightGroups(c); }
@@ -24,14 +27,18 @@ const turnRank = p => (p.turn === 'right' ? 1 : p.turn === 'left' ? 2 : 0);   //
 // Would piece `a` (about to start) collide with a car on piece `b` currently `sb` along it?
 export function pieceConflict(a, b, sb) {
   if (a === b) return false;                                   // same lane: car-following handles it
-  if (a.kind === 'road' && b.kind === 'road' && a.in === b.in) {
+  if (!!a.under !== !!b.under) return false;                   // one passes over the other: different layers never meet
+  if (a.kind === 'road' && b.kind === 'road' && a.in === b.in && (a.li ?? 0) === (b.li ?? 0)) {   // (parallel lanes don't wait on each other)
     if (sb < CAR_LEN + 0.12) return true;                        // same entry lane: wait until the car ahead pulls clear
-    if (!a.round) return false;                                  // (plain paths split at once; ring paths share a long arc, so fall through to geometry)
+    if (!a.round && !a.taper && !b.taper) return false;          // (plain paths split at once; ring paths and tapers separate slowly, so use the geometry)
   }
   if (a.kind === 'lot_in' && b.kind === 'lot_in' && a.ent === b.ent && sb < CAR_LEN + 0.12) return true;   // two cars entering by the same gate
-  // Parking-lot moves get a wider margin: cars there are swinging around, so their bodies stick out further.
-  const thr = a.kind === 'road' && b.kind === 'road' ? tuning.cars.conflictDistance : tuning.cars.conflictDistance + 0.1;
-  const t2 = thr * thr, from = sb - CAR_LEN / 2;
+  // Parking-lot moves get a wider margin (cars there are swinging around); so do highway lanes, where cars cut diagonally
+  // across a neighbouring lane. Two cars making the *same* movement in side-by-side lanes simply travel together.
+  const lot = a.kind !== 'road' || b.kind !== 'road';
+  if (!lot && a.in === b.in && a.out === b.out && (a.li ?? 0) !== (b.li ?? 0) && (a.lo ?? 0) !== (b.lo ?? 0) && a.tl === b.tl) return false;
+  const wide = !lot && (a.tl === 4 || b.tl === 4);
+  const thr = tuning.cars.conflictDistance + (lot ? 0.1 : wide ? 0.05 : 0), t2 = thr * thr, from = sb - CAR_LEN / 2;
   for (let j = 0; j < b.xy.length; j++) {
     if (b.lut[j] < from) continue;
     const bx = b.xy[j][0], by = b.xy[j][1];

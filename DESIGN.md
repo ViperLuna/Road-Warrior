@@ -32,6 +32,16 @@ All gameplay numbers live in `config/tuning.json`, read at startup (defaults in 
 - **Hills + tunnels:** about 70% of maps have rocky hills. Roads and buildings can't go on hills; a **tunnel** (reward or $60) is dragged from a road straight through a hill to the far side exactly like a bridge: one item covers any length, hill tiles cost no road pieces, demolishing any tile removes the tunnel and refunds it. Cars vanish inside and reappear at the far mouth. Tunnels are only offered on maps that have hills, and across-water spawning also considers hill crossings.
 - **Smarter spawning across water:** houses/pairs only spawn on the far bank when the player could connect them: an unused bridge in hand or already built over that gap, and enough roads for both land stretches plus a reserve. More spare bridges = more separation.
 
+## Highways (M6)
+- **A reward (10 pieces) or $90 in the Shop.** Tap the Highway pill to switch the Build tool to 4-lane road; dragging over a street widens it in place (one highway piece in, one street piece refunded). Demolishing returns the right kind of piece. Bridges and tunnels inherit the lane count of the road you're dragging.
+- **Lanes:** two per direction (inner/outer, 0.11/0.33 from the median). Each car picks a lane per trip, so there is no mid-road lane changing. Speeds are separate in tuning.json (`speed.twoLane` 2.4, `speed.fourLane` 3.6).
+- **Joining streets and highways:** every tile edge has a lane count = the smaller of its two neighbours (2 where it meets a driveway or gate). A highway tile next to a street tapers inside itself, drawn as a flare; where two lanes merge into one the tile acts as a junction and the usual conflict logic does the merging. A side street onto a highway is just a normal T.
+- **Slowing for junctions:** everyone eases to `speed.junctionApproach` (2.2) when approaching a junction, so a fast road never outruns its stopping distance. This one change removed ~96% of highway collisions.
+- **Roundabouts only fit on regular streets.** Traffic lights work on either.
+- **Overpass (placeable special, $80):** put it on a 4-way where a highway crosses a street and nothing else joins. The tile becomes two independent layers: the street runs underneath, the highway passes over, no turns, no interaction. In the crossing test it moves ~12% more trips than the same crossing at ground level, with shorter waits. Cars are drawn under the deck, then the deck, then everyone else. Only offered as a reward once you own highways.
+- **Ramps:** side streets joining a highway at ground level serve as on/off ramps (each is just a normal street piece).
+- **Known rough edge:** in dense layouts with many highway/street mixes, car bodies can briefly graze (about 1 second per 2.7 hours of simulated driving in stress tests).
+
 ## Roads
 - Tile holds either 2-lane or 4-lane road (one-way is a build toggle). Edges stay visually clear except where road ends / driveways meet.
 - US right-hand traffic.
@@ -90,4 +100,4 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 3. (DONE) Intersection rules + deadlock detection.
 4. (DONE) Progression: spawns, colors, goals, reward menu, game over, menu/maps, bridges + shop.
 5. (DONE) Specials: roundabout, traffic light, one-way streets, hills + tunnels (bridge done in M4).
-6. Highways: 4-lane, taper, ramps, overpass.
+6. (DONE) Highways: 4-lane, taper, side-street ramps, overpass.

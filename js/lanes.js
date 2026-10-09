@@ -2,7 +2,9 @@
 // house driveway, parking-lot entry/exit). Traffic is US right-hand: lanes sit LANE to the car's right.
 export const DIR = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // N E S W (screen coords, y down)
 export const OPP = [2, 3, 0, 1];
-export const LANE = 0.115;       // lane centre offset from road centre
+export const LANE = 0.115;       // lane centre offset from road centre (2-lane road)
+export const LANE4 = [0.11, 0.33];   // 4-lane road: inner and outer lane centres, each side of the median
+export const laneOffset = (edgeLanes, idx) => (edgeLanes === 4 ? LANE4[idx] : LANE);
 export const CAR_LEN = 0.34;
 export const rt = v => [-v[1], v[0]];                   // right-hand side of heading v
 const mad = (a, d, k) => [a[0] + d[0] * k, a[1] + d[1] * k];
@@ -66,22 +68,31 @@ export function pointAt(p, s, out) {
 }
 
 // Car crosses road tile (x,y) entering from side `inS`, leaving through side `outS`.
-export function roadPiece(x, y, inS, outS) {
-  const key = `r:${x},${y}:${inS}>${outS}`;
+// o: tl = the tile's lane count, ei/eo = lane count at the entry/exit edge (the smaller of the two neighbours),
+// li/lo = which lane (0 inner, 1 outer) the car uses at each edge. Where edge counts differ the piece tapers.
+export function roadPiece(x, y, inS, outS, o = {}) {
+  const tl = o.tl ?? 2, ei = o.ei ?? 2, eo = o.eo ?? 2, li = o.li ?? 0, lo = o.lo ?? 0;
+  const under = !!o.under;                                       // the street passing beneath an overpass
+  const plain = tl === 2 && ei === 2 && eo === 2 && li === 0 && lo === 0 && !under;
+  const key = plain ? `r:${x},${y}:${inS}>${outS}` : `r:${x},${y}:${inS}>${outS}|${tl}${ei}${eo}${li}${lo}${under ? 'u' : ''}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const c = [x + 0.5, y + 0.5];
   const h0 = [-DIR[inS][0], -DIR[inS][1]], h1 = DIR[outS];
-  const p0 = mad(mad(c, DIR[inS], 0.5), rt(h0), LANE);
-  const p3 = mad(mad(c, h1, 0.5), rt(h1), LANE);
-  const extra = { tx: x, ty: y, in: inS, out: outS };
-  if (outS === OPP[inS]) return line(key, 'road', p0, p3, extra);
+  const offIn = laneOffset(ei, li), offOut = laneOffset(eo, lo);
+  const p0 = mad(mad(c, DIR[inS], 0.5), rt(h0), offIn);
+  const p3 = mad(mad(c, h1, 0.5), rt(h1), offOut);
+  const extra = { tx: x, ty: y, in: inS, out: outS, tl, ei, eo, li, lo, lanes: tl, under };
+  if (outS === OPP[inS]) {
+    if (Math.abs(offIn - offOut) < 1e-9) return line(key, 'road', p0, p3, extra);
+    return make(key, 'road', p0, mad(p0, h0, 0.4), mad(p3, h1, -0.4), p3, { ...extra, taper: true });   // S-curve between widths
+  }
   const dot = (p3[0] - p0[0]) * h0[0] + (p3[1] - p0[1]) * h0[1];
   const q = mad(p0, h0, dot);
   const right = h0[0] * h1[1] - h0[1] * h1[0] > 0;
   const k = 2 / 3;
   return make(key, 'road', p0, mad(p0, [q[0] - p0[0], q[1] - p0[1]], k), mad(p3, [q[0] - p3[0], q[1] - p3[1]], k), p3,
-    { ...extra, turn: right ? 'right' : 'left' });
+    { ...extra, turn: right ? 'right' : 'left', taper: Math.abs(offIn - offOut) > 1e-9 });
 }
 
 // ---- Roundabout: cars circulate counter-clockwise (US) around a central island ----

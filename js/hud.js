@@ -1,5 +1,5 @@
 // DOM overlay: inventory pills, goal bar, shop, toolbar, toasts, and the menu / reward / pause / game-over screens.
-import { game, onChange, onEvent, setTool, setMode, setOneWay, selectSpecial, chooseReward, buy, bestFor, isUnlocked } from './state.js';
+import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, buy, bestFor, isUnlocked } from './state.js';
 import { maps, prog } from './progression.js';
 
 let toastEl, toastTimer = 0, lastMsg = '', lastAt = 0;
@@ -99,10 +99,14 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
     for (const s of prog.specials) {
       const n = game.inv[s.id] || 0;
       if (!s.enabled || s.unlock || (n === 0 && s.id !== 'bridge')) continue;
-      const d = document.createElement(s.placeable ? 'button' : 'div');
-      d.className = 'pill' + (s.placeable ? ' tap' : '') + (game.placing === s.id ? ' on' : '');
+      const tappable = s.placeable || s.toggle;
+      const d = document.createElement(tappable ? 'button' : 'div');
+      d.className = 'pill' + (tappable ? ' tap' : '') + ((game.placing === s.id) || (s.toggle === 'build4' && game.build4) ? ' on' : '');
       d.innerHTML = `${s.name} <b>${n}</b>`;
-      if (s.placeable) {
+      if (s.toggle === 'build4') {
+        d.type = 'button';
+        d.addEventListener('click', () => { setBuild4(!game.build4); toast(game.build4 ? 'Highway mode: drag to lay 4-lane road (or widen a street).' : 'Back to regular roads.'); });
+      } else if (s.placeable) {
         d.type = 'button';
         d.addEventListener('click', () => {
           if (game.placing === s.id) setTool('build');

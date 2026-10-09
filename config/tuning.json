@@ -7,7 +7,9 @@
     "leftTurnFactor": 0.65,
     "roundaboutFactor": 0.7,
     "drivewayFactor": 0.6,
-    "parkingLotFactor": 0.55
+    "parkingLotFactor": 0.55,
+    "taperFactor": 0.75,
+    "junctionApproach": 2.2
   },
   "trafficLight": {
     "greenSeconds": 6,

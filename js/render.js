@@ -1,7 +1,7 @@
 // Draws everything in tile units (1 tile = 1 unit); the camera transform does the scaling.
 import { WATER, HILL } from './terrain.js';
 import { hasRoad, tileIndex, inBounds, buildingAt } from './state.js';
-import { roadConns } from './network.js';
+import { roadConns, edgeLanes } from './network.js';
 import { lightGroups, lightColor } from './signals.js';
 import { RING_R } from './lanes.js';
 import { drawBuildings, drawGhosts, drawCars } from './render_objects.js';
@@ -96,7 +96,12 @@ export function render(ctx, W, H, dpr, game, cam, hover) {
 
   drawGhosts(ctx, game);
   drawBuildings(ctx, game);
-  drawCars(ctx, game);
+  drawCars(ctx, game, 'under');                                        // cars beneath an overpass go first...
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {      // ...then the deck covers them
+    const r = game.roads.get(tileIndex(x, y));
+    if (r && r.overpass !== undefined) drawDeck(ctx, game, x, y, r);
+  }
+  drawCars(ctx, game, 'top');
 
   if (hover.show && inBounds(hover.x, hover.y)) {
     const w = isWaterAt(hover.x, hover.y) && !hasRoad(hover.x, hover.y), road = hasRoad(hover.x, hover.y), bld = buildingAt(hover.x, hover.y);
@@ -143,6 +148,8 @@ function drawRoad(ctx, game, tx, ty) {
 
   const road = game.roads.get(tileIndex(tx, ty));
   if (road.tunnel) { drawTunnel(ctx, road, cx, cy, conns, mid); return; }
+  if (road.overpass !== undefined) { drawUnderStreet(ctx, game, tx, ty, road); return; }
+  if ((road.lanes || 2) === 4 && road.special !== 'roundabout') { drawWide(ctx, game, tx, ty, conns, road); return; }
   const bridge = !!road.bridge;
   const round = road.special === 'roundabout' && conns.length >= 3;
   const pass = (width, color) => {
@@ -160,15 +167,7 @@ function drawRoad(ctx, game, tx, ty) {
   pass(ROAD_W + 0.06, bridge ? '#6d5d49' : COL.shoulder);
   pass(ROAD_W, bridge ? '#6a6f76' : COL.asphalt);
 
-  // One-way streets: white lane dashes + chevrons showing the direction of travel along each one-way edge.
-  const flows = [];
-  for (const d of conns) {
-    const nb = game.roads.get(tileIndex(tx + DIRS[d][0], ty + DIRS[d][1]));
-    if (!nb || !inBounds(tx + DIRS[d][0], ty + DIRS[d][1])) continue;
-    const outBlocked = ((road.noExit || 0) >> d) & 1, inBlocked = ((nb.noExit || 0) >> ((d + 2) % 4)) & 1;
-    if (outBlocked && !inBlocked) flows.push([d, -1]);                  // traffic flows into this tile from side d
-    else if (!outBlocked && inBlocked) flows.push([d, 1]);              // traffic flows out of this tile through side d
-  }
+  const flows = computeFlows(game, tx, ty, conns, road);
   if (conns.length >= 1) {
     ctx.strokeStyle = flows.length ? '#ffffff' : COL.line;
     ctx.lineWidth = 0.025;
@@ -177,17 +176,8 @@ function drawRoad(ctx, game, tx, ty) {
     ctx.stroke();
     ctx.setLineDash([]);
   }
-  if (road.special === 'light' && conns.length >= 3) drawLights(ctx, game, tx, ty, conns);
-  for (const [d, sign] of flows) {                                       // chevron along the arm, pointing the way traffic goes
-    const dx = DIRS[d][0] * sign, dy = DIRS[d][1] * sign, px = cx + DIRS[d][0] * 0.3, py = cy + DIRS[d][1] * 0.3;
-    ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 0.035; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(px - dx * 0.06 - dy * 0.08, py - dy * 0.06 + dx * 0.08); ctx.lineTo(px + dx * 0.07, py + dy * 0.07);
-    ctx.lineTo(px - dx * 0.06 + dy * 0.08, py - dy * 0.06 - dx * 0.08); ctx.stroke();
-    ctx.lineCap = 'butt';
-  }
+  drawTail(ctx, game, tx, ty, conns, road, flows);
 }
-
 
 function drawRing(ctx, cx, cy, conns, path, pass) {
   pass(ROAD_W + 0.06, COL.shoulder);
@@ -218,7 +208,7 @@ function drawLights(ctx, game, tx, ty, conns) {
 // A tunnel tile: the road runs under the hill (faint dashed outline), with a stone-rimmed mouth at each end.
 function drawTunnel(ctx, road, cx, cy, conns, mid) {
   ctx.lineCap = 'butt';
-  ctx.strokeStyle = 'rgba(30,26,20,.35)'; ctx.lineWidth = ROAD_W;
+  ctx.strokeStyle = 'rgba(30,26,20,.35)'; ctx.lineWidth = (road.lanes || 2) === 4 ? 0.88 : ROAD_W;
   ctx.beginPath();
   for (const d of conns) { const m = mid(d); ctx.moveTo(cx, cy); ctx.lineTo(m[0], m[1]); }
   ctx.stroke();
@@ -234,4 +224,132 @@ function drawTunnel(ctx, road, cx, cy, conns, mid) {
     ctx.fillStyle = '#1d1a16'; ctx.beginPath(); ctx.roundRect(-0.09, -0.26, 0.2, 0.52, 0.09); ctx.fill();      // dark opening
     ctx.restore();
   }
+}
+
+
+// One-way streets: which sides of this tile carry flow ([side, +1 out | -1 in]).
+function computeFlows(game, tx, ty, conns, road) {
+  const flows = [];
+  for (const d of conns) {
+    const nb = game.roads.get(tileIndex(tx + DIRS[d][0], ty + DIRS[d][1]));
+    if (!nb || !inBounds(tx + DIRS[d][0], ty + DIRS[d][1])) continue;
+    const outBlocked = ((road.noExit || 0) >> d) & 1, inBlocked = ((nb.noExit || 0) >> ((d + 2) % 4)) & 1;
+    if (outBlocked && !inBlocked) flows.push([d, -1]);                  // traffic flows into this tile from side d
+    else if (!outBlocked && inBlocked) flows.push([d, 1]);              // traffic flows out of this tile through side d
+  }
+  return flows;
+}
+
+// Signal heads and one-way chevrons, drawn on top of the road body.
+function drawTail(ctx, game, tx, ty, conns, road, flows) {
+  const cx = tx + 0.5, cy = ty + 0.5;
+  if (road.special === 'light' && conns.length >= 3) drawLights(ctx, game, tx, ty, conns);
+  for (const [d, sign] of flows) {                                       // chevron along the arm, pointing the way traffic goes
+    const dx = DIRS[d][0] * sign, dy = DIRS[d][1] * sign, px = cx + DIRS[d][0] * 0.3, py = cy + DIRS[d][1] * 0.3;
+    ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 0.035; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(px - dx * 0.06 - dy * 0.08, py - dy * 0.06 + dx * 0.08); ctx.lineTo(px + dx * 0.07, py + dy * 0.07);
+    ctx.lineTo(px - dx * 0.06 + dy * 0.08, py - dy * 0.06 - dx * 0.08); ctx.stroke();
+    ctx.lineCap = 'butt';
+  }
+}
+
+// ---- 4-lane roads (highways): a wide ribbon that flares back to street width wherever it meets a 2-lane road ----
+const HW = 0.44;                                   // half-width of a 4-lane road body
+
+function ribbon(ctx, pts, hws, grow, color) {
+  const n = pts.length, L = [], Rr = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    const w = hws[i] + grow;
+    L.push([pts[i][0] - dy * w, pts[i][1] + dx * w]); Rr.push([pts[i][0] + dy * w, pts[i][1] - dx * w]);
+  }
+  ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(L[0][0], L[0][1]);
+  for (const q of L) ctx.lineTo(q[0], q[1]);
+  for (let i = n - 1; i >= 0; i--) ctx.lineTo(Rr[i][0], Rr[i][1]);
+  ctx.closePath(); ctx.fill();
+}
+
+function offsetLine(pts, d) {
+  const n = pts.length;
+  return pts.map((p, i) => {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    return [p[0] - dy * d, p[1] + dx * d];
+  });
+}
+
+function strokePts(ctx, pts) { ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.stroke(); }
+
+function drawWide(ctx, game, tx, ty, conns, road) {
+  const cx = tx + 0.5, cy = ty + 0.5;
+  const mid = d => [cx + DIRS[d][0] * 0.5, cy + DIRS[d][1] * 0.5];
+  const hwEdge = d => (edgeLanes(game, tx, ty, d) === 4 ? HW : 0.23);
+  const bridge = !!road.bridge || road.overpass !== undefined;           // an overpass deck gets bridge-style rails
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const shapes = [];                                              // { pts, hws, mark: which points get lane markings }
+  const N = 14;
+  if (conns.length === 2) {                                       // straight or curved through-tile
+    const [d0, d1] = conns, a = mid(d0), b = mid(d1), curve = d1 - d0 !== 2, pts = [], hws = [], mark = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, u = 1 - t;
+      pts.push(curve ? [u * u * a[0] + 2 * u * t * cx + t * t * b[0], u * u * a[1] + 2 * u * t * cy + t * t * b[1]] : [lerp(a[0], b[0], t), lerp(a[1], b[1], t)]);
+      hws.push(t < 0.5 ? lerp(hwEdge(d0), HW, t * 2) : lerp(HW, hwEdge(d1), (t - 0.5) * 2));
+      mark.push(hws[i] >= HW - 0.02);
+    }
+    shapes.push({ pts, hws, mark });
+  } else {                                                        // junction / dead end: one arm per connection
+    for (const d of conns) {
+      const m = mid(d), pts = [], hws = [], mark = [];
+      for (let i = 0; i <= N; i++) {
+        const s = i / N;
+        pts.push([lerp(cx, m[0], s), lerp(cy, m[1], s)]);
+        hws.push(s < 0.5 ? HW : lerp(HW, hwEdge(d), (s - 0.5) * 2));
+        mark.push(conns.length < 3 || (s > 0.66 && hws[i] >= HW - 0.02));      // no markings across a junction's middle
+      }
+      shapes.push({ pts, hws, mark });
+    }
+  }
+  const body = (grow, color) => {
+    for (const sh of shapes) ribbon(ctx, sh.pts, sh.hws, grow, color);
+    ctx.fillStyle = color;
+    if (conns.length >= 3) ctx.fillRect(cx - HW - grow, cy - HW - grow, 2 * (HW + grow), 2 * (HW + grow));
+    else if (conns.length <= 1) { ctx.beginPath(); ctx.arc(cx, cy, HW + grow, 0, 6.2832); ctx.fill(); }
+  };
+  if (bridge) body(0.1, '#cdbb9a');
+  body(0.035, bridge ? '#6d5d49' : COL.shoulder);
+  body(0, bridge ? '#6a6f76' : COL.asphalt);
+  ctx.lineCap = 'butt';
+  for (const sh of shapes) {                                      // markings on the 4-lane stretches only
+    const runs = []; let cur = [];
+    sh.pts.forEach((p, i) => { if (sh.mark[i]) cur.push(p); else if (cur.length) { runs.push(cur); cur = []; } });
+    if (cur.length) runs.push(cur);
+    for (const run of runs) {
+      if (run.length < 2) continue;
+      ctx.setLineDash([]); ctx.strokeStyle = COL.line; ctx.lineWidth = 0.02;
+      strokePts(ctx, offsetLine(run, 0.022)); strokePts(ctx, offsetLine(run, -0.022));     // double yellow median
+      ctx.setLineDash([0.1, 0.1]); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 0.018;
+      strokePts(ctx, offsetLine(run, 0.22)); strokePts(ctx, offsetLine(run, -0.22));        // white lane dividers
+      ctx.setLineDash([]);
+    }
+  }
+  drawTail(ctx, game, tx, ty, conns, road, computeFlows(game, tx, ty, conns, road));
+}
+
+
+// ---- Overpass: a street runs underneath, the highway deck passes over it ----
+function drawUnderStreet(ctx, game, tx, ty, road) {
+  const cx = tx + 0.5, cy = ty + 0.5, street = road.overpass === 0 ? [3, 1] : [0, 2];     // the street runs across the highway's axis
+  const a = [cx + DIRS[street[0]][0] * 0.5, cy + DIRS[street[0]][1] * 0.5], b = [cx + DIRS[street[1]][0] * 0.5, cy + DIRS[street[1]][1] * 0.5];
+  ctx.lineCap = 'butt';
+  for (const [w, col] of [[ROAD_W + 0.06, COL.shoulder], [ROAD_W, COL.asphalt]]) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+  ctx.strokeStyle = COL.line; ctx.lineWidth = 0.025; ctx.setLineDash([0.125, 0.125]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); ctx.setLineDash([]);
+}
+
+function drawDeck(ctx, game, tx, ty, road) {
+  const cx = tx + 0.5, cy = ty + 0.5, hw = road.overpass === 0 ? [0, 2] : [3, 1];
+  ctx.fillStyle = 'rgba(0,0,0,.30)';                                                       // shadow cast on the street below
+  if (road.overpass === 0) ctx.fillRect(cx - HW - 0.06, ty, 2 * HW + 0.16, 1); else ctx.fillRect(tx, cy - HW - 0.06 + 0.04, 1, 2 * HW + 0.16);
+  drawWide(ctx, game, tx, ty, hw, road);
 }

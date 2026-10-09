@@ -2,7 +2,7 @@
 import { DIR, OPP, CAR_LEN, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
 import { lightColor } from './signals.js';
 import { lotTile } from './buildings.js';
-import { roadAt, roundAt, tidx } from './network.js';
+import { roadAt, roundAt, tidx, tileLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
 import { findPath } from './pathfind.js';
 import { tuning } from './tuning.js';
 import { junctionAt, pieceConflict, outranks } from './junction.js';
@@ -14,7 +14,7 @@ const STOP_OFFSET = CAR_LEN / 2 + 0.12;       // where a held car's centre stops
 function pieceSpeed(p) {
   const sp = tuning.speed;
   if (p.kind === 'road') {
-    const base = p.lanes === 4 ? sp.fourLane : sp.twoLane;
+    const base = (p.lanes === 4 ? sp.fourLane : sp.twoLane) * (p.taper ? sp.taperFactor : 1);
     return base * (p.turn === 'right' ? sp.rightTurnFactor : p.turn === 'left' ? sp.leftTurnFactor : p.turn === 'round' ? sp.roundaboutFactor : 1);
   }
   return sp.twoLane * (p.kind.startsWith('house') ? sp.drivewayFactor : sp.parkingLotFactor);
@@ -29,7 +29,13 @@ export function createCar(house) {
 }
 
 const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
-const roadPieces = (g, steps) => steps.map(s => (roundAt(g, s.x, s.y) ? roundPiece(s.x, s.y, s.in, s.out) : roadPiece(s.x, s.y, s.in, s.out)));
+// Route pieces for the road tiles of a path. `lane` (0 inner, 1 outer) is this trip's lane on 4-lane roads; on 2-lane edges it collapses to the one lane.
+const roadPieces = (g, steps, lane) => steps.map(s => {
+  if (roundAt(g, s.x, s.y)) return roundPiece(s.x, s.y, s.in, s.out);
+  const ei = edgeLanes(g, s.x, s.y, s.in), eo = edgeLanes(g, s.x, s.y, s.out);
+  const ov = overpassAxis(g, s.x, s.y), under = ov >= 0 && axisOf(s.in) !== ov;          // on an overpass tile, the street runs underneath
+  return roadPiece(s.x, s.y, s.in, s.out, { tl: under ? 2 : tileLanes(g, s.x, s.y), ei, eo, li: Math.min(lane, ei / 2 - 1), lo: Math.min(lane, eo / 2 - 1), under });
+});
 
 function planOut(g, car) {
   const b = car.house, D = DIR[b.rot];
@@ -46,7 +52,7 @@ function planOut(g, car) {
     d.slots[k] = car;
     car.dest = d; car.slot = k;
     car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: res.port.lot, k };
-    car.route = [houseOutPiece(b.x, b.y, b.rot), ...roadPieces(g, res.steps), lotInPiece(d.x, d.y, d.rot, res.port.lot, k)];
+    car.route = [houseOutPiece(b.x, b.y, b.rot), ...roadPieces(g, res.steps, Math.random() < 0.5 ? 0 : 1), lotInPiece(d.x, d.y, d.rot, res.port.lot, k)];
     return true;
   }
   return false;
@@ -66,7 +72,7 @@ function planBack(g, car) {
     if (res && (!best || res.cost < best.cost - 1e-6)) { best = res; bestEnt = ent; }
   }
   if (!best) return false;
-  car.route = [lotOutPiece(L.bx, L.by, L.rot, L.k, bestEnt), ...roadPieces(g, best.steps), houseInPiece(home.x, home.y, home.b.rot)];
+  car.route = [lotOutPiece(L.bx, L.by, L.rot, L.k, bestEnt), ...roadPieces(g, best.steps, Math.random() < 0.5 ? 0 : 1), houseInPiece(home.x, home.y, home.b.rot)];
   return true;
 }
 
@@ -144,9 +150,9 @@ function analyse(g, occ) {
     if (car.ignoreT > 0) car.ignoreT -= 1 / 60;
     if (!moving(car)) { car.arrKey = null; continue; }
     const cur = car.route[car.idx], nxt = car.route[car.idx + 1];
-    car.inJ = cur.kind === 'road' && junctionAt(g, cur.tx, cur.ty, jc).n >= 3;
+    car.inJ = cur.kind === 'road' && junctionAt(g, cur.tx, cur.ty, jc).junction;
     let J = null;
-    if (nxt && nxt.kind === 'road') { const j = junctionAt(g, nxt.tx, nxt.ty, jc); if (j.n >= 3) J = j; }
+    if (nxt && nxt.kind === 'road') { const j = junctionAt(g, nxt.tx, nxt.ty, jc); if (j.junction) J = j; }
     else if (nxt && nxt.kind === 'lot_in') J = { kind: 'lot', n: 0 };
     if (!J) { car.arrKey = null; continue; }
     const dist = cur.len - car.s, stopDist = car.v * car.v / (2 * braking);
@@ -187,7 +193,7 @@ function analyse(g, occ) {
         const X = car.route[car.idx + j];
         if (!X) break;
         let XJ = X.kind === 'lot_in', lit = null;
-        if (X.kind === 'road') { const jx = junctionAt(g, X.tx, X.ty, jc); XJ = jx.n >= 3; if (jx.light) lit = jx; }
+        if (X.kind === 'road') { const jx = junctionAt(g, X.tx, X.ty, jc); XJ = jx.junction; if (jx.light) lit = jx; }
         if (!XJ) break;
         // A signal further on: don't enter this tile unless that light will still be green when we reach it,
         // otherwise we'd end up parked inside this junction waiting on it and block the cross traffic.
@@ -249,6 +255,7 @@ export function updateSim(g, dt) {
       let p = car.route[car.idx];
       const gap = leaderGap(car, occ);
       let target = Math.min(pieceSpeed(p), Math.sqrt(2 * braking * Math.max(0, gap - minGapTiles)));
+      if (car.entry) target = Math.min(target, tuning.speed.junctionApproach);     // everyone slows for a junction, so a fast road never outruns its stopping distance
       if (car.hold && car.entry) target = Math.min(target, Math.sqrt(2 * braking * Math.max(0, car.entry.dist - STOP_OFFSET)));
       if (car.needsStop && car.entry && car.v < 0.15 && car.entry.dist - STOP_OFFSET < 0.12) car.stopT += dt;   // standing at the line
       car.v += Math.max(-braking * dt, Math.min(acceleration * dt, target - car.v));

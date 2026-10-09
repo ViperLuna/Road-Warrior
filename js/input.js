@@ -47,13 +47,15 @@ function stepBuild(st, x, y) {
   const r = buildRoad(x, y);
   if (r === 'empty') toast('Out of road pieces!');
   // Dragging along roads paints the direction: one-way when the toggle is on, two-way again when it's off.
-  if (prev && (r === 'ok' || r === 'exists') && hasRoad(prev.x, prev.y)) setEdge(prev.x, prev.y, x, y, game.oneway);
+  if (prev && (r === 'ok' || r === 'upgraded' || r === 'exists') && hasRoad(prev.x, prev.y)) setEdge(prev.x, prev.y, x, y, game.oneway);
 }
 
 const PLACE_MSG = {
   none: 'Tap a road tile.', badtile: "Can't go on a bridge or tunnel.", taken: 'That intersection already has one.',
   notjunction: 'Needs an intersection: 3 or more roads meeting.', empty: 'None left.',
   toonear: 'Too close to another light. Leave at least one tile between lights.',
+  highway: 'Roundabouts only fit on regular streets.',
+  notcrossing: 'An overpass needs a highway crossing a street (4 roads meeting).',
 };
 
 function apply(mode, x, y, st) {

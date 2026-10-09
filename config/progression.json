@@ -59,11 +59,13 @@
     },
     {
       "id": "highway",
-      "name": "Highway x10",
-      "enabled": false,
+      "name": "Highway",
+      "enabled": true,
       "weight": 1,
-      "cost": null,
-      "description": "Ten 4-lane, faster road pieces."
+      "cost": 90,
+      "description": "Ten 4-lane road pieces: faster, and room for two lanes each way. Tap its pill to build with it.",
+      "grant": 10,
+      "toggle": "build4"
     },
     {
       "id": "tunnel",
@@ -73,6 +75,16 @@
       "cost": 60,
       "description": "Drag a road straight through a hill. One tunnel covers any length.",
       "requires": "hill"
+    },
+    {
+      "id": "overpass",
+      "name": "Overpass",
+      "enabled": true,
+      "weight": 1,
+      "cost": 80,
+      "placeable": true,
+      "requires": "highway",
+      "description": "Lets a highway cross a street without joining it. Place it on a highway crossing a street."
     }
   ]
 }

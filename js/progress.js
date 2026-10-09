@@ -70,7 +70,7 @@ function doSpawn(g) {
 // Weighted pick among enabled specials, or null if none are available.
 function pickSpecial(g) {
   const hills = !!(g.terrain && g.terrain.hasHill);
-  const list = prog.specials.filter(s => s.enabled && !(s.unlock && g.unlocks[s.id]) && !(s.requires === 'hill' && !hills));
+  const list = prog.specials.filter(s => s.enabled && !(s.unlock && g.unlocks[s.id]) && !(s.requires === 'hill' && !hills) && !(s.requires === 'highway' && !((g.inv.highway || 0) > 0 || [...g.roads.values()].some(r => r.lanes === 4))));
   if (!list.length) return null;
   let r = Math.random() * list.reduce((a, s) => a + (s.weight || 1), 0);
   for (const s of list) if ((r -= s.weight || 1) <= 0) return s;
@@ -110,7 +110,7 @@ export function chooseReward(g, optionId) {
   g.inv.road += opt.roads;
   if (opt.special) {
     if (opt.special.unlock) g.unlocks[opt.special.id] = true;                 // permanent unlock (e.g. one-way streets)
-    else g.inv[opt.special.id] = (g.inv[opt.special.id] || 0) + 1;
+    else g.inv[opt.special.id] = (g.inv[opt.special.id] || 0) + (opt.special.grant || 1);
   }
   g.reward = null;
   g.mode = 'play';
