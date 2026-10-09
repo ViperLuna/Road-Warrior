@@ -120,3 +120,7 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 - A 2-lane road piece costs `economy.roadCost` ($2) once the spare stock runs out. Spare stock = the 20 starting pieces + anything refunded by demolishing (refunds still instant, still go to stock). 4-lane pieces still come from Highway grants.
 - The road pill shows `roadsAvailable` = stock + floor(cash / cost). Spawn budgets use the same number.
 - Cash is still plentiful ($5/trip); raise `roadCost` or lower `rewardPerTrip` if road never feels like a decision.
+
+## Known issues (open)
+- **Car parked in a bay and never leaving** (user screenshot, full map, all houses connected, not game-ending). Not reproduced as an isolated case. In bot runs every long-parked car had a local traffic deadlock next to its lot (cycles among `outranked` / `chain-inside` / `chain-earlier` / `box` / `stop` waits that `breakDeadlocks` does not resolve, e.g. a car held at `stop` that never reaches the line because of a stopped leader). That deadlock class already existed at M6 (bot: 6-8 of 10 games ended in gridlock at 25 min). Parked cars never count as "stuck", so they never glow or end the game.
+- Ideas if it shows again: make a parked car that has waited too long for its lot to clear flash gold like a stuck car; extend `breakDeadlocks` to treat `box` / `stop` waits as part of a cycle.
