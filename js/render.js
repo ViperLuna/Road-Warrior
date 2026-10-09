@@ -2,6 +2,8 @@
 import { WATER } from './terrain.js';
 import { hasRoad, tileIndex, inBounds, buildingAt } from './state.js';
 import { roadConns } from './network.js';
+import { lightGroups, lightColor } from './signals.js';
+import { RING_R } from './lanes.js';
 import { drawBuildings, drawGhosts, drawCars } from './render_objects.js';
 
 const COL = {
@@ -82,6 +84,10 @@ export function render(ctx, W, H, dpr, game, cam, hover) {
     if (bld) ok = game.tool !== 'pan';                       // click rotates
     else if (game.tool === 'destroy') ok = road;
     else if (game.tool === 'build') ok = !w && !road && game.inv.road > 0;
+    else if (game.tool === 'place') {
+      const r = game.roads.get(tileIndex(hover.x, hover.y));
+      ok = !!r && !r.bridge && !r.tunnel && !r.special && roadConns(game, hover.x, hover.y).length >= 3;
+    }
     ctx.strokeStyle = game.tool === 'pan' ? 'rgba(255,255,255,.5)' : ok ? 'rgba(255,255,255,.95)' : 'rgba(255,90,80,.95)';
     ctx.lineWidth = 2.5 / cam.z;
     ctx.strokeRect(hover.x + 0.04, hover.y + 0.04, 0.92, 0.92);
@@ -115,14 +121,20 @@ function drawRoad(ctx, game, tx, ty) {
     }
   };
 
-  const bridge = !!game.roads.get(tileIndex(tx, ty)).bridge;
+  const road = game.roads.get(tileIndex(tx, ty));
+  const bridge = !!road.bridge;
+  const round = road.special === 'roundabout' && conns.length >= 3;
   const pass = (width, color) => {
     ctx.strokeStyle = color; ctx.fillStyle = color;
     ctx.lineWidth = width; ctx.lineCap = 'butt'; ctx.lineJoin = 'round';
-    path(0); ctx.stroke();
+    path(round ? RING_R : 0); ctx.stroke();
     if (conns.length <= 1) { ctx.beginPath(); ctx.arc(cx, cy, width / 2, 0, 6.2832); ctx.fill(); }
-    else if (conns.length >= 3) ctx.fillRect(cx - width / 2, cy - width / 2, width, width);
+    else if (conns.length >= 3 && !round) ctx.fillRect(cx - width / 2, cy - width / 2, width, width);
   };
+  if (round) {                                              // circular road around a grass island
+    drawRing(ctx, cx, cy, conns, path, pass);
+    return;
+  }
   if (bridge) pass(ROAD_W + 0.16, '#cdbb9a');             // bridge rails
   pass(ROAD_W + 0.06, bridge ? '#6d5d49' : COL.shoulder);
   pass(ROAD_W, bridge ? '#6a6f76' : COL.asphalt);
@@ -134,5 +146,32 @@ function drawRoad(ctx, game, tx, ty) {
     path(ROAD_W / 2 + 0.06);
     ctx.stroke();
     ctx.setLineDash([]);
+  }
+  if (road.special === 'light' && conns.length >= 3) drawLights(ctx, game, tx, ty, conns);
+}
+
+
+function drawRing(ctx, cx, cy, conns, path, pass) {
+  pass(ROAD_W + 0.06, COL.shoulder);
+  pass(ROAD_W, COL.asphalt);
+  for (const [w, col] of [[0.34, COL.shoulder], [0.28, COL.asphalt]]) {
+    ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(cx, cy, RING_R, 0, 6.2832); ctx.stroke();
+  }
+  ctx.fillStyle = '#6f9d5b'; ctx.beginPath(); ctx.arc(cx, cy, RING_R - 0.15, 0, 6.2832); ctx.fill();   // island
+  ctx.strokeStyle = '#a9c79a'; ctx.lineWidth = 0.02; ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 0.014; ctx.setLineDash([0.06, 0.06]);
+  ctx.beginPath(); ctx.arc(cx, cy, RING_R, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
+}
+
+// Signal heads sit at each approach, on the driver's right, showing the live colour.
+function drawLights(ctx, game, tx, ty, conns) {
+  const cx = tx + 0.5, cy = ty + 0.5, groups = lightGroups(conns);
+  for (const d of conns) {
+    const col = lightColor(game.time, groups, d);
+    const hx = -DIRS[d][0], hy = -DIRS[d][1], rx = -hy, ry = hx;        // approach heading + its right-hand side
+    const px = cx + DIRS[d][0] * 0.4 + rx * 0.3, py = cy + DIRS[d][1] * 0.4 + ry * 0.3;
+    ctx.fillStyle = '#15181c'; ctx.beginPath(); ctx.arc(px, py, 0.075, 0, 6.2832); ctx.fill();
+    const c = col === 'green' ? '#37d67a' : col === 'yellow' ? '#ffd23f' : '#ff4d4d';
+    ctx.fillStyle = c; ctx.beginPath(); ctx.arc(px, py, 0.052, 0, 6.2832); ctx.fill();
   }
 }

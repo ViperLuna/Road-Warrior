@@ -5,6 +5,7 @@
     "fourLane": 3.6,
     "rightTurnFactor": 0.8,
     "leftTurnFactor": 0.65,
+    "roundaboutFactor": 0.7,
     "drivewayFactor": 0.6,
     "parkingLotFactor": 0.55
   },
@@ -28,5 +29,8 @@
     "rewardPerTrip": 5,
     "homeCooldownMinSeconds": 1.5,
     "homeCooldownMaxSeconds": 3.5
+  },
+  "junctions": {
+    "stopSeconds": 1.2
   }
 }

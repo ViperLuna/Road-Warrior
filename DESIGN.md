@@ -23,6 +23,13 @@ All gameplay numbers live in `config/tuning.json`, read at startup (defaults in 
 - A car's route is a list of pieces. A piece the map no longer supports (demolished road, rotated building) is drawn as a faded **ghost** until the car is done with it; no extra bookkeeping.
 - Dev hotkeys: **R** rotate hovered building, **P** spawn an extra pair (temporary, until real spawning in M4). Click/tap a building to rotate it.
 
+## Specials in play (M5)
+- **Placing:** tap a special's pill in the top bar (Roundabout / Traffic light), then tap an intersection (a road tile with 3+ connections). Demolishing the tile returns the special. Both are rewards and also sold in the Shop.
+- **Stop signs:** plain 4-ways and the stem of a T make every car come to a full stop (`junctions.stopSeconds`, default 1.2 s) before going by right of way. Through traffic on a T doesn't stop. This is what makes busy plain junctions a bottleneck, so the specials matter.
+- **Roundabout:** cars circulate counter-clockwise (US) around a central island; entrants yield to circulating cars. Best throughput under load; in an overloaded crossroads it keeps the same trips as a plain junction with far shorter worst waits as traffic climbs.
+- **Traffic light:** fixed timer from `trafficLight.*` in tuning.json, two phases by axis (N/S then E/W), all lights on one shared clock. Right turn on red is allowed when nothing conflicts. Lights can't sit on neighbouring tiles (no room to queue between them), and a car won't enter a plain junction if the light just beyond it isn't green (so nobody parks inside an intersection waiting for the next light). Lights are a stability tool: under heavy load a plain junction can collapse into long stalls while a lit one stays steady, but throughput is lower than a roundabout.
+- **Smarter spawning across water:** houses/pairs only spawn on the far bank when the player could connect them: an unused bridge in hand or already built over that gap, and enough roads for both land stretches plus a reserve. More spare bridges = more separation.
+
 ## Roads
 - Tile holds either 2-lane or 4-lane road (one-way is a build toggle). Edges stay visually clear except where road ends / driveways meet.
 - US right-hand traffic.

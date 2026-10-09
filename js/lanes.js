@@ -34,12 +34,27 @@ function line(key, kind, p0, p3, extra) {
   return make(key, kind, p0, mad(p0, d, 1), mad(p0, d, 2), p3, extra);
 }
 
+// A piece made of sampled points (used for roundabout rings, which are longer than one Bezier handles well).
+function makePoly(key, kind, pts, extra) {
+  const lut = [0];
+  for (let i = 1; i < pts.length; i++) lut.push(lut[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const p = { key, kind, poly: true, len: lut[lut.length - 1], lut, xy: pts, turn: 'straight', lanes: 2, ...extra };
+  cache.set(key, p);
+  return p;
+}
+
 // Position + heading angle at distance s along a piece.
 export function pointAt(p, s, out) {
   s = Math.max(0, Math.min(p.len, s));
   const lut = p.lut;
   let i = 0;
   while (i < lut.length - 2 && lut[i + 1] < s) i++;
+  if (p.poly) {
+    const a = p.xy[i], b = p.xy[i + 1], seg = lut[i + 1] - lut[i], f = seg > 0 ? (s - lut[i]) / seg : 0;
+    out.x = a[0] + (b[0] - a[0]) * f; out.y = a[1] + (b[1] - a[1]) * f;
+    out.a = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    return out;
+  }
   const seg = lut[i + 1] - lut[i];
   const t = (i + (seg > 0 ? (s - lut[i]) / seg : 0)) / (lut.length - 1);
   const [p0, c1, c2, p3] = p.pts;
@@ -67,6 +82,59 @@ export function roadPiece(x, y, inS, outS) {
   const k = 2 / 3;
   return make(key, 'road', p0, mad(p0, [q[0] - p0[0], q[1] - p0[1]], k), mad(p3, [q[0] - p3[0], q[1] - p3[1]], k), p3,
     { ...extra, turn: right ? 'right' : 'left' });
+}
+
+// ---- Roundabout: cars circulate counter-clockwise (US) around a central island ----
+export const RING_R = 0.26;                       // ring centre-line radius
+const TAU = Math.PI * 2;
+const wrap = a => ((a % TAU) + TAU) % TAU;
+
+// Angle where a lane line (point p, heading h) first meets the ring, searching along `dir` (+1 forward, -1 backward).
+function ringMeet(c, p, h, dir) {
+  const q = [p[0] - c[0], p[1] - c[1]], d = [h[0] * dir, h[1] * dir];
+  const b = q[0] * d[0] + q[1] * d[1], disc = b * b - (q[0] * q[0] + q[1] * q[1]) + RING_R * RING_R;
+  const t = -b - Math.sqrt(Math.max(0, disc));
+  return Math.atan2(q[1] + d[1] * t, q[0] + d[0] * t);
+}
+
+const onRing = (c, a) => [c[0] + Math.cos(a) * RING_R, c[1] + Math.sin(a) * RING_R];
+const ringTan = a => [Math.sin(a), -Math.cos(a)];          // direction of travel when the angle is decreasing (counter-clockwise on screen)
+
+// Intersection of lines p + s*u and q + t*v (falls back to the midpoint if they are parallel).
+function meetLines(p, u, q, v) {
+  const det = u[0] * -v[1] - u[1] * -v[0];
+  if (Math.abs(det) < 1e-4) return [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  const dx = q[0] - p[0], dy = q[1] - p[1];
+  const s = (dx * -v[1] - dy * -v[0]) / det;
+  return mad(p, u, s);
+}
+
+function quad(a, c, b, n) {
+  const pts = [];
+  for (let i = 1; i <= n; i++) { const t = i / n, u = 1 - t; pts.push([u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]]); }
+  return pts;
+}
+
+// Cross roundabout tile (x,y): enter from side inS, circle to side outS.
+export function roundPiece(x, y, inS, outS) {
+  const key = `rb:${x},${y}:${inS}>${outS}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const c = [x + 0.5, y + 0.5];
+  const h0 = [-DIR[inS][0], -DIR[inS][1]], h1 = DIR[outS];
+  const p0 = mad(mad(c, DIR[inS], 0.5), rt(h0), LANE), p3 = mad(mad(c, h1, 0.5), rt(h1), LANE);
+  const aIn = ringMeet(c, p0, h0, 1), aOut = ringMeet(c, p3, h1, -1);
+  const span = wrap(aIn - aOut);                                   // how far round the ring (counter-clockwise)
+  const d = Math.min(0.44, span / 3);
+  const aE = aIn - d, aL = aOut + d;
+  const E = onRing(c, aE), L = onRing(c, aL);
+  const pts = [p0];
+  pts.push(...quad(p0, meetLines(p0, h0, E, ringTan(aE)), E, 7));
+  const steps = Math.max(2, Math.ceil(wrap(aE - aL) / 0.1));
+  for (let i = 1; i < steps; i++) pts.push(onRing(c, aE - (wrap(aE - aL) * i) / steps));
+  pts.push(L);
+  pts.push(...quad(L, meetLines(L, ringTan(aL), p3, h1), p3, 7));
+  return makePoly(key, 'road', pts, { tx: x, ty: y, in: inS, out: outS, round: true, turn: 'round' });
 }
 
 // Driveway from the house body out to the road (house tile x,y facing rot).

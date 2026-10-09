@@ -17,12 +17,18 @@ export function roadConns(g, x, y) {
   return res;
 }
 
+// Is road tile (x,y) a working roundabout (a roundabout piece placed on a tile that still has 3+ connections)?
+export function roundAt(g, x, y) {
+  const r = g.roads.get(tidx(g, x, y));
+  return !!r && r.special === 'roundabout' && roadConns(g, x, y).length >= 3;
+}
+
 // A piece is "live" if the map still supports it. Dead pieces still carry cars (ghosts).
 export function pieceValid(g, p) {
   if (p.kind === 'road') {
     if (!roadAt(g, p.tx, p.ty)) return false;
     const c = roadConns(g, p.tx, p.ty);
-    return c.includes(p.in) && c.includes(p.out);
+    return c.includes(p.in) && c.includes(p.out) && !!p.round === roundAt(g, p.tx, p.ty);
   }
   const b = g.buildingAt.get(tidx(g, p.tx, p.ty));
   return !!b && b.rot === p.rot;

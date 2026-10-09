@@ -101,3 +101,7 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   #goal-bar { width: 42vw; }
   #toolbar button { min-width: 78px; min-height: 48px; }
 }
+
+.pill.tap { font: inherit; font-size: .9rem; color: #fff; border: 0; cursor: pointer; }
+.pill.tap.on { background: #8a5fd1; box-shadow: 0 0 12px rgba(170, 130, 255, .6); }
+@media (max-width: 600px) { .pill.tap { font-size: .78rem; } }

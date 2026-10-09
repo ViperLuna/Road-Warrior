@@ -1,5 +1,5 @@
 // DOM overlay: inventory pills, goal bar, shop, toolbar, toasts, and the menu / reward / pause / game-over screens.
-import { game, onChange, onEvent, setTool, setMode, chooseReward, buy, bestFor, isUnlocked } from './state.js';
+import { game, onChange, onEvent, setTool, setMode, selectSpecial, chooseReward, buy, bestFor, isUnlocked } from './state.js';
 import { maps, prog } from './progression.js';
 
 let toastEl, toastTimer = 0, lastMsg = '', lastAt = 0;
@@ -21,7 +21,7 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
   toastEl = $('toast');
   const buttons = document.querySelectorAll('#toolbar button');
   const canvas = $('game');
-  const cursors = { build: 'crosshair', destroy: 'not-allowed', pan: 'grab' };
+  const cursors = { build: 'crosshair', destroy: 'not-allowed', pan: 'grab', place: 'cell' };
 
   // pointerdown for instant response on touch; click keeps keyboard activation working.
   buttons.forEach(b => {
@@ -88,7 +88,7 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
     $('n-trips').textContent = game.trips;
     $('n-money').textContent = '$' + game.money;
     buttons.forEach(b => b.classList.toggle('active', b.dataset.tool === game.tool));
-    canvas.style.cursor = { build: 'crosshair', destroy: 'not-allowed', pan: 'grab' }[game.tool];
+    canvas.style.cursor = cursors[game.tool];
 
     // one pill per special you own (the bridge is always shown)
     const sp = $('specials');
@@ -96,8 +96,16 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
     for (const s of prog.specials) {
       const n = game.inv[s.id] || 0;
       if (!s.enabled || (n === 0 && s.id !== 'bridge')) continue;
-      const d = document.createElement('div');
-      d.className = 'pill'; d.innerHTML = `${s.name} <b>${n}</b>`;
+      const d = document.createElement(s.placeable ? 'button' : 'div');
+      d.className = 'pill' + (s.placeable ? ' tap' : '') + (game.placing === s.id ? ' on' : '');
+      d.innerHTML = `${s.name} <b>${n}</b>`;
+      if (s.placeable) {
+        d.type = 'button';
+        d.addEventListener('click', () => {
+          if (game.placing === s.id) setTool('build');
+          else { selectSpecial(s.id); toast(`Tap an intersection to place the ${s.name.toLowerCase()}.`); }
+        });
+      }
       sp.appendChild(d);
     }
 
@@ -128,7 +136,8 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
   onEvent(e => {
     if (e.type === 'spawn') {
       const name = e.color.id;
-      if (e.kind === 'newColor') toast(`New ${name} house and destination!`);
+      if (e.across) toast(e.needsBridge ? `New ${name} house across the water. You'll need a bridge.` : `New ${name} house across the river (bridge already built).`);
+      else if (e.kind === 'newColor') toast(`New ${name} house and destination!`);
       else if (e.kind === 'combo') toast(`New ${name} destination and house.`);
       else toast(e.n > 1 ? `${e.n} new ${name} houses.` : `New ${name} house.`);
     }

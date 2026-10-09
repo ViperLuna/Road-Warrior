@@ -1,6 +1,6 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
-import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, hasRoad, inBounds, tileIndex } from './state.js';
+import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, hasRoad, inBounds, tileIndex, placeSpecial } from './state.js';
 import { WATER } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
@@ -46,9 +46,16 @@ function stepBuild(st, x, y) {
   if (r === 'empty') toast('Out of road pieces!');
 }
 
+const PLACE_MSG = {
+  none: 'Tap a road tile.', badtile: "Can't go on a bridge or tunnel.", taken: 'That intersection already has one.',
+  notjunction: 'Needs an intersection: 3 or more roads meeting.', empty: 'None left.',
+  toonear: 'Too close to another light. Leave at least one tile between lights.',
+};
+
 function apply(mode, x, y, st) {
   if (mode === 'build') stepBuild(st, x, y);
   else if (mode === 'destroy') demolish(x, y);
+  else if (mode === 'place') { const r = placeSpecial(game.placing, x, y); if (r !== 'ok') toast(PLACE_MSG[r]); }
 }
 
 // 4-connected walk from a to b (excludes a, includes b) so fast drags never leave gaps.

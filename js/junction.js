@@ -2,15 +2,18 @@
 import { CAR_LEN, DIR, OPP, rt } from './lanes.js';
 import { roadConns } from './network.js';
 import { tuning } from './tuning.js';
+import { lightGroups } from './signals.js';
 
 // Per-step cache of junction info: { n: connection count, stem: side of the T's stem or -1 }.
 export function junctionAt(g, x, y, cache) {
   const k = y * g.cols + x;
   let j = cache.get(k);
   if (!j) {
-    const c = roadConns(g, x, y);
-    j = { kind: 'road', n: c.length, stem: -1 };
+    const c = roadConns(g, x, y), special = (g.roads.get(k) || {}).special;
+    j = { kind: 'road', n: c.length, stem: -1, round: false, light: false, x, y };
     if (c.length === 3) j.stem = c.find(d => !c.includes(OPP[d]));
+    if (c.length >= 3 && special === 'roundabout') j.round = true;
+    if (c.length >= 3 && special === 'light') { j.light = true; j.groups = lightGroups(c); }
     cache.set(k, j);
   }
   return j;
@@ -21,7 +24,10 @@ const turnRank = p => (p.turn === 'right' ? 1 : p.turn === 'left' ? 2 : 0);   //
 // Would piece `a` (about to start) collide with a car on piece `b` currently `sb` along it?
 export function pieceConflict(a, b, sb) {
   if (a === b) return false;                                   // same lane: car-following handles it
-  if (a.kind === 'road' && b.kind === 'road' && a.in === b.in) return sb < CAR_LEN + 0.12;   // same entry lane: wait until the car ahead pulls clear
+  if (a.kind === 'road' && b.kind === 'road' && a.in === b.in) {
+    if (sb < CAR_LEN + 0.12) return true;                        // same entry lane: wait until the car ahead pulls clear
+    if (!a.round) return false;                                  // (plain paths split at once; ring paths share a long arc, so fall through to geometry)
+  }
   if (a.kind === 'lot_in' && b.kind === 'lot_in' && a.ent === b.ent && sb < CAR_LEN + 0.12) return true;   // two cars entering by the same gate
   // Parking-lot moves get a wider margin: cars there are swinging around, so their bodies stick out further.
   const thr = a.kind === 'road' && b.kind === 'road' ? tuning.cars.conflictDistance : tuning.cars.conflictDistance + 0.1;
@@ -40,9 +46,16 @@ export function pieceConflict(a, b, sb) {
 // Does waiting car `b` have right of way over waiting car `a` at junction `J`?
 export function outranks(b, a, J) {
   const qa = a.entry.q, qb = b.entry.q;
+  // Same lane approaching the same junction: the car in front goes first, whatever the timestamps say.
+  if (a.route[a.idx] === b.route[b.idx]) return b.s > a.s;
   if (b.commit !== a.commit) return b.commit;                  // already past the point of no return
   if (b.inJ !== a.inJ) return b.inJ;                           // already inside the previous junction: let it clear the tile it's blocking
   if (J.kind === 'lot') return before(b, a);
+  if (J.round) return before(b, a);                            // roundabout: cars already circulating win (handled as 'inside'); entrants go in arrival order
+  if (J.light) {                                               // both are on green: straight beats right beats left, then arrival
+    const ra = turnRank(qa), rb = turnRank(qb);
+    return ra !== rb ? rb < ra : before(b, a);
+  }
   if (J.n === 3) {                                             // T: through road beats the stem
     const ca = qa.in === J.stem ? 1 : 0, cb = qb.in === J.stem ? 1 : 0;
     if (ca !== cb) return cb < ca;

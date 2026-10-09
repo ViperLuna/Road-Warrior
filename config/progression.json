@@ -32,18 +32,20 @@
     {
       "id": "roundabout",
       "name": "Roundabout",
-      "enabled": false,
+      "enabled": true,
       "weight": 1,
-      "cost": null,
-      "description": "Keeps a busy intersection flowing."
+      "cost": 70,
+      "description": "Replaces an intersection with a circle. Keeps heavy traffic flowing.",
+      "placeable": true
     },
     {
       "id": "light",
       "name": "Traffic light",
-      "enabled": false,
+      "enabled": true,
       "weight": 1,
-      "cost": null,
-      "description": "Fixed-timer light for a busy intersection."
+      "cost": 55,
+      "description": "Fixed-timer signal for an intersection. Needs a tile of gap between lights.",
+      "placeable": true
     },
     {
       "id": "highway",

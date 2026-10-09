@@ -92,8 +92,9 @@ export function drawGhosts(ctx, g) {
       const p = car.route[j];
       if (seen.has(p.key) || pieceValid(g, p)) continue;
       seen.add(p.key);
-      const [a, b, c, d] = p.pts;
-      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.bezierCurveTo(b[0], b[1], c[0], c[1], d[0], d[1]);
+      ctx.beginPath();
+      if (p.poly) { ctx.moveTo(p.xy[0][0], p.xy[0][1]); for (const q of p.xy) ctx.lineTo(q[0], q[1]); }
+      else { const [a, b, c, d] = p.pts; ctx.moveTo(a[0], a[1]); ctx.bezierCurveTo(b[0], b[1], c[0], c[1], d[0], d[1]); }
       ctx.strokeStyle = 'rgba(180,190,200,.35)'; ctx.lineWidth = 0.46; ctx.stroke();
       ctx.setLineDash([0.08, 0.08]); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 0.03; ctx.stroke();
       ctx.setLineDash([]);

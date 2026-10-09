@@ -6,6 +6,7 @@ import { spawnInitial, spawnPair } from './spawn.js';
 import { updateSim } from './cars.js';
 import { initProgress, checkProgress, chooseReward as pickReward } from './progress.js';
 import { prog, maps, specialInfo } from './progression.js';
+import { roadConns } from './network.js';
 import { tuning } from './tuning.js';
 
 export const START_INVENTORY = { road: 20, bridge: 1 };
@@ -20,7 +21,8 @@ export const game = {
   roads: new Map(),         // tile index -> { lanes: 2, bridge?: id }
   bridges: new Map(), nextBridge: 1,
   inv: { ...START_INVENTORY },
-  tool: 'build',            // 'build' | 'destroy' | 'pan'
+  tool: 'build',            // 'build' | 'destroy' | 'pan' | 'place'
+  placing: null,            // special being placed when tool === 'place'
   palette: [],              // [{id, hex, glyph}] from config/colors.json
   buildings: [], buildingAt: new Map(), ports: new Map(), nextId: 1,
   cars: [], trips: 0, money: 0, time: 0,
@@ -129,7 +131,36 @@ export function devSpawn() {
   return !!r;
 }
 
-export function setTool(tool) { game.tool = tool; emit(); }
+export function setTool(tool) { game.tool = tool; if (tool !== 'place') game.placing = null; emit(); }
+
+// Pick a placeable special (roundabout / light) from the inventory; taps on road tiles then place it.
+export function selectSpecial(id) {
+  if ((game.inv[id] || 0) <= 0) return;
+  game.tool = 'place'; game.placing = id;
+  emit();
+}
+
+// Put a roundabout / traffic light on an intersection (a road tile with 3+ connections).
+// Returns 'ok' | 'none' | 'badtile' | 'taken' | 'notjunction' | 'toonear' | 'empty'
+export function placeSpecial(id, x, y) {
+  if (!hasRoad(x, y)) return 'none';
+  const r = game.roads.get(tileIndex(x, y));
+  if (r.bridge || r.tunnel) return 'badtile';
+  if (r.special) return 'taken';
+  if ((game.inv[id] || 0) <= 0) return 'empty';
+  if (roadConns(game, x, y).length < 3) return 'notjunction';
+  // Lights need room to queue between them: with no gap, a car cleared by one light can end up stuck inside
+  // the intersection waiting for the next, blocking everyone. So no two lights on neighbouring tiles.
+  if (id === 'light') for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+    const n = game.roads.get(tileIndex(x + dx, y + dy));
+    if (inBounds(x + dx, y + dy) && n && n.special === 'light') return 'toonear';
+  }
+  r.special = id;
+  game.inv[id]--;
+  if (game.inv[id] <= 0) { game.tool = 'build'; game.placing = null; }
+  emit();
+  return 'ok';
+}
 
 // Returns 'ok' | 'oob' | 'water' | 'blocked' | 'exists' | 'empty'
 export function buildRoad(x, y) {
@@ -155,6 +186,7 @@ export function demolish(x, y) {
     emit();
     return true;
   }
+  if (r.special) game.inv[r.special] = (game.inv[r.special] || 0) + 1;      // the roundabout / light comes back too
   game.roads.delete(tileIndex(x, y));
   game.inv.road++;
   emit();
