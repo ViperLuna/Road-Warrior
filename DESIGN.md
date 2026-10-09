@@ -127,3 +127,6 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 
 ## App icon / install
 - Icon art from the user (blue car on a T-junction), generated into `assets/icons/` (favicon 32/48, apple-touch 180, icon 192/512, maskable 192/512 with extra padding). `manifest.webmanifest` + head tags let Android "Add to Home screen" use it (fullscreen, dark theme colour).
+
+## Splash title
+- `assets/title.jpg` (2400 px wide, from the user's banner) replaces the text title on the splash. Background is the banner's green (`#84a077`), image edges are feathered with a CSS mask, and on narrow phones the image is shown 900 px wide and centre-cropped so the title stays big. The `<h1>` keeps the alt text "Road Warrior".
