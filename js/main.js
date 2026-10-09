@@ -1,5 +1,9 @@
-// Placeholder: proves the Pages pipeline. Real game starts at Milestone 1 (see DESIGN.md).
 import { unlock } from './audio.js';
+import { game, newGame } from './state.js';
+import { resizeView, fitView, cam } from './camera.js';
+import { render } from './render.js';
+import { initInput, hover } from './input.js';
+import { initHud } from './hud.js';
 
 const splash = document.getElementById('splash');
 document.getElementById('start').addEventListener('click', async () => {
@@ -10,24 +14,32 @@ document.getElementById('start').addEventListener('click', async () => {
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const COLS = 24, ROWS = 16;
+let W = 0, H = 0, dpr = 1;
 
-function draw() {
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = innerWidth * dpr;
-  canvas.height = innerHeight * dpr;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const size = Math.floor(Math.min(innerWidth / COLS, innerHeight / ROWS));
-  const ox = (innerWidth - size * COLS) / 2, oy = (innerHeight - size * ROWS) / 2;
-  ctx.fillStyle = '#7fae6a';
-  ctx.fillRect(ox, oy, size * COLS, size * ROWS);
-  ctx.strokeStyle = 'rgba(0,0,0,.15)';
-  for (let c = 0; c <= COLS; c++) { ctx.beginPath(); ctx.moveTo(ox + c * size, oy); ctx.lineTo(ox + c * size, oy + ROWS * size); ctx.stroke(); }
-  for (let r = 0; r <= ROWS; r++) { ctx.beginPath(); ctx.moveTo(ox, oy + r * size); ctx.lineTo(ox + COLS * size, oy + r * size); ctx.stroke(); }
-  ctx.fillStyle = '#fff';
-  ctx.font = '600 24px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 3);
+  W = innerWidth; H = innerHeight;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  resizeView(W, H);
 }
-addEventListener('resize', draw);
-draw();
+
+function startMap(seed) {
+  newGame(seed);
+  fitView(game.cols, game.rows);
+  history.replaceState(null, '', '#seed=' + game.seed);
+}
+
+const randomSeed = () => (Math.random() * 1e9) >>> 0;
+const hashSeed = () => { const m = location.hash.match(/seed=(\d+)/); return m ? Number(m[1]) : null; };
+
+initHud({ onNewMap: () => startMap(randomSeed()) });
+initInput(canvas);
+addEventListener('resize', resize);
+resize();
+startMap(hashSeed() ?? randomSeed());
+
+(function frame() {
+  render(ctx, W, H, dpr, game, cam, hover);
+  requestAnimationFrame(frame);
+})();

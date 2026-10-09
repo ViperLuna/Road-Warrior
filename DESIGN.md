@@ -10,6 +10,11 @@ A Mini Motorways-style source/destination road-building game. Vanilla JS + Canva
 - Destination holds max **4** cars (2 lots x 2). House reserves a slot on departure; if none free, the car waits in the house queue. Marker per inbound car shown on the destination.
 - Spawn logic must keep houses:destinations balanced (about 4 houses per destination).
 
+## Controls
+- **Mouse:** left = current tool (Build/Demolish/Move), right = demolish, middle-drag or Space+left-drag = pan, wheel = zoom at cursor. Keys: B / D / M switch tool.
+- **Touch:** toolbar toggles Build / Demolish / Move; one finger uses the lit tool, two fingers always pan + pinch-zoom.
+- Drags are walked tile-by-tile (4-connected), so fast swipes never leave gaps. Seed is in the URL (`#seed=123`) so a map can be replayed/shared.
+
 ## Roads
 - Tile holds either 2-lane or 4-lane road (one-way is a build toggle). Edges stay visually clear except where road ends / driveways meet.
 - US right-hand traffic.
@@ -43,7 +48,7 @@ Highway (10 four-lane pieces), roundabout, traffic light, tunnel (through raised
 - More colors, day/night, sound.
 
 ## Milestones
-1. Foundation: grid, terrain gen, drag build/demolish, mobile toggles, inventory.
+1. (DONE)  Foundation: grid, terrain gen, drag build/demolish, mobile toggles, inventory.
 2. Cars: lane graph, right-hand traffic, pathfinding, round trips, ghost roads.
 3. Intersection rules + deadlock detection.
 4. Progression: spawns, colors, goals, reward menu, game over.

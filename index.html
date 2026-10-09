@@ -2,12 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Road Warrior</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div id="hud-top">
+      <div class="pill" id="pill-road">Roads <b id="n-road">0</b></div>
+      <div class="pill" id="pill-bridge">Bridges <b id="n-bridge">0</b></div>
+      <span class="spacer"></span>
+      <span id="seed"></span>
+      <button id="newmap" type="button">New map</button>
+    </div>
+    <div id="toast"></div>
+    <div id="toolbar">
+      <button type="button" data-tool="build" class="active">Build</button>
+      <button type="button" data-tool="destroy">Demolish</button>
+      <button type="button" data-tool="pan">Move</button>
+    </div>
+  </div>
 
   <div id="splash">
     <h1>Road Warrior</h1>

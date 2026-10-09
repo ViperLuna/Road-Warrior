@@ -1,5 +1,40 @@
-html, body { margin: 0; height: 100%; background: #2b3a2f; overflow: hidden; touch-action: none; font-family: system-ui, sans-serif; }
-canvas { display: block; width: 100%; height: 100%; }
+html, body { margin: 0; height: 100%; background: #16201a; overflow: hidden; touch-action: none; font-family: system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+#hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; color: #fff; }
+#hud > * { pointer-events: auto; }
+#hud-top {
+  position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 8px;
+  padding: calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left));
+  pointer-events: none;
+}
+#hud-top > * { pointer-events: auto; }
+.spacer { flex: 1; pointer-events: none !important; }
+.pill { background: rgba(10, 16, 12, .72); border-radius: 999px; padding: 8px 14px; font-size: .95rem; }
+.pill b { margin-left: 4px; }
+.pill.empty { background: rgba(160, 40, 35, .85); }
+#seed { font-size: .75rem; opacity: .6; }
+#newmap { font: inherit; font-size: .85rem; color: #fff; background: rgba(10, 16, 12, .72); border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+
+#toolbar {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; gap: 8px;
+  background: rgba(10, 16, 12, .72); padding: 8px; border-radius: 18px;
+}
+#toolbar button {
+  font: inherit; font-weight: 600; color: #fff; background: rgba(255, 255, 255, .12);
+  border: 0; border-radius: 12px; min-width: 88px; min-height: 52px; padding: 0 14px; cursor: pointer;
+}
+#toolbar button.active[data-tool="build"]   { background: #2e9e5b; box-shadow: 0 0 14px rgba(70, 220, 130, .6); }
+#toolbar button.active[data-tool="destroy"] { background: #d9534f; box-shadow: 0 0 14px rgba(255, 110, 100, .6); }
+#toolbar button.active[data-tool="pan"]     { background: #3b82c4; box-shadow: 0 0 14px rgba(110, 170, 255, .6); }
+
+#toast {
+  position: absolute; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  background: rgba(10, 16, 12, .85); padding: 8px 16px; border-radius: 999px; font-size: .9rem;
+  opacity: 0; transition: opacity .25s; pointer-events: none !important; white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis;
+}
+#toast.show { opacity: 1; }
 
 #splash {
   position: fixed; inset: 0; z-index: 10;
