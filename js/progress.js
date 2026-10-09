@@ -1,5 +1,5 @@
 // Spawn schedule, goals and rewards. Pure game logic: no DOM.
-import { prog } from './progression.js';
+import { prog, roadsAvailable } from './progression.js';
 import { spawnPair, spawnHouse, spawnHouseAcross, spawnPairAcross, findCrossings } from './spawn.js';
 
 export function initProgress(g) {
@@ -19,7 +19,7 @@ function anchorNear(g) {
 // How likely a spawn is to land across the water. Only when the player could connect it: a bridge in hand or
 // already built over a gap, plus enough roads to cover the land on both sides. More spare bridges = more separation.
 export function crossChance(g) {
-  const items = (g.inv.bridge || 0) + (g.inv.tunnel || 0), roads = g.inv.road || 0;
+  const items = (g.inv.bridge || 0) + (g.inv.tunnel || 0), roads = roadsAvailable(g);
   if (roads < 30) return 0;
   if (items > 0) return Math.min(0.6, 0.3 + 0.15 * items);
   return findCrossings(g).some(c => c.covered) ? 0.35 : 0;
@@ -42,14 +42,14 @@ function doSpawn(g) {
   const room = sp.maxHousesPerDestination * dests - houses;
   if (kind !== 'newColor') kind = room >= 1 ? 'houses' : 'combo';
 
-  const across = () => ({ items: { bridge: g.inv.bridge || 0, tunnel: g.inv.tunnel || 0 }, budget: (g.inv.road || 0) - 10 });
+  const across = () => ({ items: { bridge: g.inv.bridge || 0, tunnel: g.inv.tunnel || 0 }, budget: roadsAvailable(g) - 10 });
   const p = crossChance(g);
 
   if (kind === 'houses') {
     let made = 0, over = null;
     for (let k = 0; k < Math.min(sp.housesPerSpawn, room); k++) {
       if (Math.random() < p) { const r = spawnHouseAcross(g, color, across()); if (r) { made++; over = over || r; continue; } }
-      if (spawnHouse(g, color, { roads: sp.roadsNeeded, budget: g.inv.road })) made++;
+      if (spawnHouse(g, color, { roads: sp.roadsNeeded, budget: roadsAvailable(g) })) made++;
     }
     return made ? { kind, color, n: made, across: !!over, needsBridge: !!(over && over.needsBridge) } : null;
   }
@@ -59,7 +59,7 @@ function doSpawn(g) {
   }
   for (let widen = 0; widen < 3; widen++) {
     const anchor = anchorNear(g); anchor.rMax += widen * 3;
-    if (spawnPair(g, color, { anchor, roads: sp.roadsNeeded, budget: g.inv.road })) {
+    if (spawnPair(g, color, { anchor, roads: sp.roadsNeeded, budget: roadsAvailable(g) })) {
       if (kind === 'newColor') g.colorsUsed++;
       return { kind, color, n: 2 };
     }
@@ -92,12 +92,12 @@ export function checkProgress(g, notify) {
     g.goalCount++;
     g.prevGoalAt = g.trips;
     g.nextGoalAt = g.trips + Math.max(prog.goals.minIncrement, Math.round(houseCount(g) * prog.goals.tripsPerHouse));
-    if (!special) { g.inv.road += prog.goals.roadsPlain; notify({ type: 'roads', n: prog.goals.roadsPlain }); return; }
+    if (!special) { g.money += prog.goals.cashPlain; notify({ type: 'cash', n: prog.goals.cashPlain }); return; }
     g.reward = {
       goal: g.goalCount,
       options: [
-        { id: 'plain', roads: prog.goals.roadsPlain },
-        { id: 'special', roads: prog.goals.roadsWithSpecial, special },
+        { id: 'plain', cash: prog.goals.cashPlain },
+        { id: 'special', cash: prog.goals.cashWithSpecial, special },
       ],
     };
     g.mode = 'reward';
@@ -107,7 +107,7 @@ export function checkProgress(g, notify) {
 export function chooseReward(g, optionId) {
   const opt = g.reward && g.reward.options.find(o => o.id === optionId);
   if (!opt) return false;
-  g.inv.road += opt.roads;
+  g.money += opt.cash;
   if (opt.special) {
     if (opt.special.unlock) g.unlocks[opt.special.id] = true;                 // permanent unlock (e.g. one-way streets)
     else g.inv[opt.special.id] = (g.inv[opt.special.id] || 0) + (opt.special.grant || 1);

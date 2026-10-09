@@ -45,7 +45,7 @@ function stepBuild(st, x, y) {
     } else { toast('Bridges and tunnels must be a straight line.'); return; }
   }
   const r = buildRoad(x, y);
-  if (r === 'empty') toast('Out of road pieces!');
+  if (r === 'empty') toast('Out of road pieces and cash!');
   // Dragging along roads paints the direction: one-way when the toggle is on, two-way again when it's off.
   if (prev && (r === 'ok' || r === 'upgraded' || r === 'exists') && hasRoad(prev.x, prev.y)) setEdge(prev.x, prev.y, x, y, game.oneway);
 }

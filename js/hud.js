@@ -1,6 +1,6 @@
 // DOM overlay: inventory pills, goal bar, shop, toolbar, toasts, and the menu / reward / pause / game-over screens.
 import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, buy, bestFor, isUnlocked } from './state.js';
-import { maps, prog } from './progression.js';
+import { maps, prog, roadsAvailable } from './progression.js';
 
 let toastEl, toastTimer = 0, lastMsg = '', lastAt = 0;
 const $ = id => document.getElementById(id);
@@ -63,8 +63,8 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
       const b = document.createElement('button');
       b.className = 'card'; b.type = 'button';
       b.innerHTML = o.special
-        ? `<div class="big-n">${o.roads} roads</div><h3>+ ${o.special.name}</h3><p>${o.special.description}</p>`
-        : `<div class="big-n">${o.roads} roads</div><h3>Just roads</h3><p>More room to build.</p>`;
+        ? `<div class="big-n">$${o.cash}</div><h3>+ ${o.special.name}</h3><p>${o.special.description}</p>`
+        : `<div class="big-n">$${o.cash}</div><h3>Just cash</h3><p>Roads cost cash now. Spend it on road or the Shop.</p>`;
       b.addEventListener('click', () => chooseReward(o.id));
       box.appendChild(b);
     }
@@ -87,8 +87,8 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
 
     $('oneway-btn').hidden = !game.unlocks.oneway;
     $('oneway-btn').classList.toggle('on', game.oneway);
-    $('n-road').textContent = game.inv.road;
-    $('pill-road').classList.toggle('empty', game.inv.road === 0);
+    $('n-road').textContent = roadsAvailable(game);
+    $('pill-road').classList.toggle('empty', roadsAvailable(game) === 0);
     $('n-trips').textContent = game.trips;
     $('n-money').textContent = '$' + game.money;
     buttons.forEach(b => b.classList.toggle('active', b.dataset.tool === game.tool));
@@ -143,6 +143,7 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
 
   onChange(render);
   onEvent(e => {
+    if (e.type === 'cash') toast(`Goal reached: +$${e.n}.`);
     if (e.type === 'spawn') {
       const name = e.color.id;
       if (e.across) toast(e.needsBridge ? `New ${name} house across the water. You'll need a bridge.` : `New ${name} house across the river (bridge already built).`);

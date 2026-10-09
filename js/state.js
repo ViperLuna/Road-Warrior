@@ -5,7 +5,7 @@ import { rotateBuilding } from './buildings.js';
 import { spawnInitial, spawnPair } from './spawn.js';
 import { updateSim } from './cars.js';
 import { initProgress, checkProgress, chooseReward as pickReward } from './progress.js';
-import { prog, maps, specialInfo } from './progression.js';
+import { prog, maps, specialInfo, roadsAvailable } from './progression.js';
 import { roadConns, tileLanes } from './network.js';
 import { tuning } from './tuning.js';
 
@@ -241,7 +241,9 @@ export function buildRoad(x, y) {
     return 'exists';
   }
   if (four) { game.inv.highway--; if (game.inv.highway <= 0) game.build4 = false; }
-  else { if (game.inv.road <= 0) return 'empty'; game.inv.road--; }
+  else if (game.inv.road > 0) game.inv.road--;                       // spare pieces (start stock, demolish refunds) go first
+  else if (game.money >= prog.economy.roadCost) game.money -= prog.economy.roadCost;       // after that, each road costs cash
+  else return 'empty';
   game.roads.set(idx, { lanes: four ? 4 : 2 });
   clearEdgesTowards(x, y);
   emit();

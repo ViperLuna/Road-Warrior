@@ -114,3 +114,9 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 - Destination gates now yield like driveways. Reason (playtest): a destination has 2 adjacent exits and lights can't be adjacent, so a light on one exit was moot. Alternative if yield isn't enough: give destinations a single exit.
 - **Destinations now have ONE exit** (lot tile 0 only; the second lot tile is parking). Combined with gate-yield this removes the "two adjacent exits make a light moot" problem. `LOT_GATES` in `js/buildings.js`; spawn checks, planBack and drawing follow it.
 - **Fallback if single-exit lots bottleneck (user idea, not built):** let cars phase through each other while on the destination's property (lot pieces only); street and gate rules unchanged.
+
+## Economy change: roads cost cash (playtest: 133 spare roads, plenty of cash)
+- Goals no longer give roads. A goal offers **special + $20** or **just $80** (`goals.cashWithSpecial` / `cashPlain`); if no special is available it auto-grants the cash.
+- A 2-lane road piece costs `economy.roadCost` ($2) once the spare stock runs out. Spare stock = the 20 starting pieces + anything refunded by demolishing (refunds still instant, still go to stock). 4-lane pieces still come from Highway grants.
+- The road pill shows `roadsAvailable` = stock + floor(cash / cost). Spawn budgets use the same number.
+- Cash is still plentiful ($5/trip); raise `roadCost` or lower `rewardPerTrip` if road never feels like a decision.

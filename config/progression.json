@@ -4,8 +4,11 @@
     "firstAtTrips": 10,
     "minIncrement": 10,
     "tripsPerHouse": 8,
-    "roadsPlain": 30,
-    "roadsWithSpecial": 20
+    "cashPlain": 80,
+    "cashWithSpecial": 20
+  },
+  "economy": {
+    "roadCost": 2
   },
   "spawns": {
     "firstAtTrips": 4,
