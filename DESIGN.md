@@ -15,6 +15,14 @@ A Mini Motorways-style source/destination road-building game. Vanilla JS + Canva
 - **Touch:** toolbar toggles Build / Demolish / Move; one finger uses the lit tool, two fingers always pan + pinch-zoom.
 - Drags are walked tile-by-tile (4-connected), so fast swipes never leave gaps. Seed is in the URL (`#seed=123`) so a map can be replayed/shared.
 
+## Tuning (config/tuning.json)
+All gameplay numbers live in `config/tuning.json`, read at startup (defaults in `js/tuning.js`): lane speeds (**`twoLane` / `fourLane` separate**, tiles/s) with turn/driveway/lot factors, **traffic light** green/yellow/all-red seconds, car accel/braking/min gap, parked time, trip reward, home cooldown. Colors live in `config/colors.json`.
+
+## Simulation model
+- Every movement is a Bezier "piece" (road tile in-side -> out-side, driveway, lot in/out) offset into the right-hand lane (`js/lanes.js`). Pathfinding is A* over (tile, entry side) with small turn penalties and no U-turns (`js/pathfind.js`).
+- A car's route is a list of pieces. A piece the map no longer supports (demolished road, rotated building) is drawn as a faded **ghost** until the car is done with it; no extra bookkeeping.
+- Dev hotkeys: **R** rotate hovered building, **P** spawn an extra pair (temporary, until real spawning in M4). Click/tap a building to rotate it.
+
 ## Roads
 - Tile holds either 2-lane or 4-lane road (one-way is a build toggle). Edges stay visually clear except where road ends / driveways meet.
 - US right-hand traffic.
@@ -49,7 +57,7 @@ Highway (10 four-lane pieces), roundabout, traffic light, tunnel (through raised
 
 ## Milestones
 1. (DONE)  Foundation: grid, terrain gen, drag build/demolish, mobile toggles, inventory.
-2. Cars: lane graph, right-hand traffic, pathfinding, round trips, ghost roads.
+2. (DONE, no intersection yielding yet - cars only follow the car ahead) Cars: lane graph, right-hand traffic, pathfinding, round trips, ghost roads.
 3. Intersection rules + deadlock detection.
 4. Progression: spawns, colors, goals, reward menu, game over.
 5. Specials: roundabout, traffic light, bridge, tunnel, one-way.

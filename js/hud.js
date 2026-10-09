@@ -17,6 +17,8 @@ export function initHud({ onNewMap }) {
   toastEl = document.getElementById('toast');
   const nRoad = document.getElementById('n-road');
   const nBridge = document.getElementById('n-bridge');
+  const nTrips = document.getElementById('n-trips');
+  const nMoney = document.getElementById('n-money');
   const seedEl = document.getElementById('seed');
   const buttons = document.querySelectorAll('#toolbar button');
   const canvas = document.getElementById('game');
@@ -33,6 +35,8 @@ export function initHud({ onNewMap }) {
   onChange(() => {
     nRoad.textContent = game.inv.road;
     nBridge.textContent = game.inv.bridge;
+    nTrips.textContent = game.trips;
+    nMoney.textContent = '$' + game.money;
     seedEl.textContent = 'Seed ' + game.seed;
     buttons.forEach(b => b.classList.toggle('active', b.dataset.tool === game.tool));
     canvas.style.cursor = cursors[game.tool];

@@ -1,6 +1,8 @@
 // Draws everything in tile units (1 tile = 1 unit); the camera transform does the scaling.
 import { WATER } from './terrain.js';
-import { hasRoad, tileIndex, inBounds } from './state.js';
+import { hasRoad, tileIndex, inBounds, buildingAt } from './state.js';
+import { roadConns } from './network.js';
+import { drawBuildings, drawGhosts, drawCars } from './render_objects.js';
 
 const COL = {
   bg: '#16201a', grass: '#7fae6a', water: '#4a8fc4', shore: '#8cc7ea', sand: '#d6cc9a',
@@ -68,12 +70,17 @@ export function render(ctx, W, H, dpr, game, cam, hover) {
 
   for (let y = y0; y <= y1; y++)
     for (let x = x0; x <= x1; x++)
-      if (game.roads.has(tileIndex(x, y))) drawRoad(ctx, x, y);
+      if (game.roads.has(tileIndex(x, y))) drawRoad(ctx, game, x, y);
+
+  drawGhosts(ctx, game);
+  drawBuildings(ctx, game);
+  drawCars(ctx, game);
 
   if (hover.show && inBounds(hover.x, hover.y)) {
-    const w = isWaterAt(hover.x, hover.y), road = hasRoad(hover.x, hover.y);
+    const w = isWaterAt(hover.x, hover.y), road = hasRoad(hover.x, hover.y), bld = buildingAt(hover.x, hover.y);
     let ok = true;
-    if (game.tool === 'destroy') ok = road;
+    if (bld) ok = game.tool !== 'pan';                       // click rotates
+    else if (game.tool === 'destroy') ok = road;
     else if (game.tool === 'build') ok = !w && !road && game.inv.road > 0;
     ctx.strokeStyle = game.tool === 'pan' ? 'rgba(255,255,255,.5)' : ok ? 'rgba(255,255,255,.95)' : 'rgba(255,90,80,.95)';
     ctx.lineWidth = 2.5 / cam.z;
@@ -85,9 +92,8 @@ export function render(ctx, W, H, dpr, game, cam, hover) {
   ctx.strokeRect(0, 0, cols, rows);
 }
 
-function drawRoad(ctx, tx, ty) {
-  const conns = [];
-  for (let d = 0; d < 4; d++) if (hasRoad(tx + DIRS[d][0], ty + DIRS[d][1])) conns.push(d);
+function drawRoad(ctx, game, tx, ty) {
+  const conns = roadConns(game, tx, ty);   // neighbouring roads + building driveways facing this tile
   const cx = tx + 0.5, cy = ty + 0.5;
   const mid = d => [cx + DIRS[d][0] * 0.5, cy + DIRS[d][1] * 0.5];
   const isCurve = conns.length === 2 && conns[1] - conns[0] !== 2;

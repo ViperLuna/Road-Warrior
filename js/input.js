@@ -1,6 +1,6 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
-import { game, buildRoad, demolish, setTool } from './state.js';
+import { game, buildRoad, demolish, setTool, buildingAt, rotateBuildingAt, devSpawn } from './state.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
 
@@ -61,7 +61,7 @@ export function initInput(canvas) {
     e.preventDefault();
     const t = tileAt(e.clientX, e.clientY);
     if (e.pointerType === 'mouse') { hover.x = t.x; hover.y = t.y; hover.show = true; }
-    stroke = { mode, last: t, start: t, lx: e.clientX, ly: e.clientY, applied: false, touch: e.pointerType !== 'mouse' };
+    stroke = { mode, button: e.button, bld: buildingAt(t.x, t.y), moved: false, last: t, start: t, lx: e.clientX, ly: e.clientY, applied: false, touch: e.pointerType !== 'mouse' };
     // Touch waits (a 2nd finger may be arriving for a pinch); mouse acts immediately.
     if (mode !== 'pan' && !stroke.touch) { apply(mode, t.x, t.y); stroke.applied = true; }
   });
@@ -90,6 +90,7 @@ export function initInput(canvas) {
     }
     const t = tileAt(e.clientX, e.clientY);
     if (t.x === stroke.last.x && t.y === stroke.last.y) return;
+    stroke.moved = true;
     if (!stroke.applied) { apply(stroke.mode, stroke.start.x, stroke.start.y); stroke.applied = true; }
     for (const step of walk(stroke.last, t)) apply(stroke.mode, step.x, step.y);
     stroke.last = t;
@@ -99,6 +100,10 @@ export function initInput(canvas) {
     if (!pointers.has(e.pointerId)) return;
     if (stroke && stroke.touch && !stroke.applied && stroke.mode !== 'pan' && e.type === 'pointerup') {
       apply(stroke.mode, stroke.start.x, stroke.start.y); // tap
+    }
+    // Click/tap on a building (without dragging) rotates it.
+    if (stroke && stroke.bld && !stroke.moved && stroke.mode !== 'pan' && e.type === 'pointerup' && stroke.button !== 2) {
+      rotateBuildingAt(stroke.start.x, stroke.start.y);
     }
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
@@ -119,6 +124,8 @@ export function initInput(canvas) {
     else if (e.key === 'b') setTool('build');
     else if (e.key === 'd') setTool('destroy');
     else if (e.key === 'm') setTool('pan');
+    else if (e.key === 'r' && hover.show) rotateBuildingAt(hover.x, hover.y);
+    else if (e.key === 'p') devSpawn();      // dev: spawn an extra pair
   });
   addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; });
 }
