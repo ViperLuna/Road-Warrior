@@ -28,12 +28,13 @@ function build(seed, cols, rows) {
   const rng = mulberry32(seed);
   const water = new Uint8Array(cols * rows);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const scale = Math.sqrt((cols * rows) / 704);          // features grow with the map (704 = the 32x22 start map)
   const set = (x, y) => { if (x >= 0 && y >= 0 && x < cols && y < rows) water[y * cols + x] = WATER; };
 
   function river() {
     const horiz = rng() < 0.5;
     const len = horiz ? cols : rows, span = horiz ? rows : cols;
-    const width = rng() < 0.4 ? 3 : 2;
+    const width = (rng() < 0.4 ? 3 : 2) + Math.floor((scale - 1) * 1.5);
     let pos = span * (0.25 + rng() * 0.5), vel = 0, prev = pos;
     for (let i = 0; i < len; i++) {
       vel = vel * 0.8 + (rng() - 0.5);
@@ -58,11 +59,11 @@ function build(seed, cols, rows) {
   }
 
   function lake() {
-    const rx = 4 + rng() * 3, ry = 3 + rng() * 3;
+    const rx = (4 + rng() * 3) * scale, ry = (3 + rng() * 3) * scale;
     blob(rx + 2 + rng() * (cols - 2 * rx - 4), ry + 2 + rng() * (rows - 2 * ry - 4), rx, ry);
   }
   function pond() {
-    blob(3 + rng() * (cols - 6), 3 + rng() * (rows - 6), 1.6 + rng() * 1.2, 1.4 + rng() * 1.2);
+    blob(3 + rng() * (cols - 6), 3 + rng() * (rows - 6), (1.6 + rng() * 1.2) * Math.sqrt(scale), (1.4 + rng() * 1.2) * Math.sqrt(scale));
   }
 
   const roll = rng();

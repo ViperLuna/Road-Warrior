@@ -9,21 +9,54 @@
 <body>
   <canvas id="game"></canvas>
 
-  <div id="hud">
+  <div id="hud" hidden>
     <div id="hud-top">
       <div class="pill" id="pill-road">Roads <b id="n-road">0</b></div>
-      <div class="pill" id="pill-bridge">Bridges <b id="n-bridge">0</b></div>
+      <div id="specials"></div>
       <div class="pill">Trips <b id="n-trips">0</b></div>
       <div class="pill">Cash <b id="n-money">$0</b></div>
       <span class="spacer"></span>
-      <span id="seed"></span>
-      <button id="newmap" type="button">New map</button>
+      <button id="shop-btn" class="chip" type="button">Shop</button>
+      <button id="menu-btn" class="chip" type="button">Menu</button>
     </div>
+    <div id="goal"><div id="goal-bar"><i></i></div><span id="goal-text"></span></div>
+    <div id="shop" hidden></div>
     <div id="toast"></div>
     <div id="toolbar">
       <button type="button" data-tool="build" class="active">Build</button>
       <button type="button" data-tool="destroy">Demolish</button>
       <button type="button" data-tool="pan">Move</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="menu" hidden>
+    <h1>Road Warrior</h1>
+    <p class="tag">Pick a map</p>
+    <div id="map-list"></div>
+  </div>
+
+  <div class="overlay" id="reward" hidden>
+    <h2>Goal reached!</h2>
+    <p class="tag" id="reward-sub">Choose your reward</p>
+    <div id="reward-cards"></div>
+  </div>
+
+  <div class="overlay" id="pause" hidden>
+    <h2>Paused</h2>
+    <div class="stack">
+      <button class="big" id="resume" type="button">Resume</button>
+      <button class="big alt" id="restart" type="button">New map</button>
+      <button class="big alt" id="to-menu" type="button">Main menu</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="over" hidden>
+    <h2>Gridlock!</h2>
+    <p class="tag" id="over-sub"></p>
+    <div id="over-stats"></div>
+    <div class="stack">
+      <button class="big" id="again" type="button">Play again</button>
+      <button class="big alt" id="over-menu" type="button">Main menu</button>
     </div>
   </div>
 

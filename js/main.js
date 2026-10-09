@@ -1,6 +1,7 @@
 import { unlock } from './audio.js';
-import { game, newGame, setPalette, tick } from './state.js';
+import { game, newGame, setPalette, setMode, tick } from './state.js';
 import { setTuning } from './tuning.js';
+import { setProgression, setMaps, maps } from './progression.js';
 import { resizeView, fitView, cam } from './camera.js';
 import { render } from './render.js';
 import { initInput, hover } from './input.js';
@@ -9,7 +10,6 @@ import { initHud } from './hud.js';
 const splash = document.getElementById('splash');
 document.getElementById('start').addEventListener('click', async () => {
   await unlock();
-  game.paused = false;
   splash.classList.add('hide');
   setTimeout(() => splash.remove(), 400);
 });
@@ -26,24 +26,36 @@ function resize() {
   resizeView(W, H);
 }
 
-function startMap(seed) {
-  newGame(seed);
+const randomSeed = () => (Math.random() * 1e9) >>> 0;
+let devSeed = (() => { const m = location.hash.match(/seed=(\d+)/); return m ? Number(m[1]) : null; })();   // #seed=123 replays a map once
+
+function startMap(map) {
+  newGame(devSeed ?? randomSeed(), map);
+  devSeed = null;
   fitView(game.cols, game.rows);
   history.replaceState(null, '', '#seed=' + game.seed);
 }
 
-const randomSeed = () => (Math.random() * 1e9) >>> 0;
-const hashSeed = () => { const m = location.hash.match(/seed=(\d+)/); return m ? Number(m[1]) : null; };
-
 const loadJson = url => fetch(url).then(r => r.json());
 setPalette((await loadJson('config/colors.json')).colors);
-try { setTuning(await loadJson('config/tuning.json')); } catch (e) { console.warn('tuning.json not loaded, using defaults', e); }
+for (const [url, apply] of [['config/tuning.json', setTuning], ['config/progression.json', setProgression], ['config/maps.json', setMaps]]) {
+  try { apply(await loadJson(url)); } catch (e) { console.warn(url + ' not loaded, using defaults', e); }
+}
 
-initHud({ onNewMap: () => startMap(randomSeed()) });
+initHud({
+  onPlay: map => startMap(map),
+  onRestart: () => startMap(game.map),
+  onToMenu: () => setMode('menu'),
+});
 initInput(canvas);
 addEventListener('resize', resize);
 resize();
-startMap(hashSeed() ?? randomSeed());
+
+// A backdrop map behind the menu, then wait for the player to pick one.
+newGame(randomSeed(), maps[0]);
+game.time = 1;                    // let the backdrop's buildings finish their pop-in
+fitView(game.cols, game.rows);
+setMode('menu');
 
 const STEP = 1 / 60;
 let last = performance.now(), acc = 0;

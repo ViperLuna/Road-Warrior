@@ -64,8 +64,21 @@ function drawDest(ctx, b) {
   ctx.restore();
 }
 
+const POP = 0.6;   // seconds for a new building's pop-in
 export function drawBuildings(ctx, g) {
-  for (const b of g.buildings) b.kind === 'house' ? drawHouse(ctx, b) : drawDest(ctx, b);
+  for (const b of g.buildings) {
+    const age = g.time - b.born;
+    if (age >= POP) { b.kind === 'house' ? drawHouse(ctx, b) : drawDest(ctx, b); continue; }
+    const k = Math.max(0, age / POP), c = 1.70158 + 1;
+    const scale = Math.max(0.01, 1 + c * Math.pow(k - 1, 3) + 1.70158 * Math.pow(k - 1, 2));   // easeOutBack
+    const cx = b.x + (b.kind === 'house' ? 0.5 : 1), cy = b.y + (b.kind === 'house' ? 0.5 : 1);
+    ctx.save();
+    ctx.translate(cx, cy); ctx.scale(scale, scale); ctx.translate(-cx, -cy);
+    b.kind === 'house' ? drawHouse(ctx, b) : drawDest(ctx, b);
+    ctx.restore();
+    ctx.strokeStyle = `rgba(255,255,255,${0.8 * (1 - k)})`; ctx.lineWidth = 0.06;       // expanding ping
+    ctx.beginPath(); ctx.arc(cx, cy, (b.kind === 'house' ? 0.5 : 1) + k * 1.4, 0, 6.2832); ctx.stroke();
+  }
 }
 
 // Pieces cars still need but the map no longer supports: faded "ghost" road.

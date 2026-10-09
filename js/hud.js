@@ -1,7 +1,9 @@
-// DOM overlay: inventory pills, tool buttons, toasts.
-import { game, onChange, setTool } from './state.js';
+// DOM overlay: inventory pills, goal bar, shop, toolbar, toasts, and the menu / reward / pause / game-over screens.
+import { game, onChange, onEvent, setTool, setMode, chooseReward, buy, bestFor, isUnlocked } from './state.js';
+import { maps, prog } from './progression.js';
 
 let toastEl, toastTimer = 0, lastMsg = '', lastAt = 0;
+const $ = id => document.getElementById(id);
 
 export function toast(msg) {
   const now = performance.now();
@@ -10,18 +12,15 @@ export function toast(msg) {
   toastEl.textContent = msg;
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
 }
 
-export function initHud({ onNewMap }) {
-  toastEl = document.getElementById('toast');
-  const nRoad = document.getElementById('n-road');
-  const nBridge = document.getElementById('n-bridge');
-  const nTrips = document.getElementById('n-trips');
-  const nMoney = document.getElementById('n-money');
-  const seedEl = document.getElementById('seed');
+const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+export function initHud({ onPlay, onRestart, onToMenu }) {
+  toastEl = $('toast');
   const buttons = document.querySelectorAll('#toolbar button');
-  const canvas = document.getElementById('game');
+  const canvas = $('game');
   const cursors = { build: 'crosshair', destroy: 'not-allowed', pan: 'grab' };
 
   // pointerdown for instant response on touch; click keeps keyboard activation working.
@@ -30,16 +29,109 @@ export function initHud({ onNewMap }) {
     b.addEventListener('pointerdown', pick);
     b.addEventListener('click', pick);
   });
-  document.getElementById('newmap').addEventListener('click', onNewMap);
+  $('menu-btn').addEventListener('click', () => setMode('pause'));
+  $('shop-btn').addEventListener('click', () => { $('shop').hidden = !$('shop').hidden; render(); });
+  $('resume').addEventListener('click', () => setMode('play'));
+  $('restart').addEventListener('click', onRestart);
+  $('again').addEventListener('click', onRestart);
+  $('to-menu').addEventListener('click', onToMenu);
+  $('over-menu').addEventListener('click', onToMenu);
 
-  onChange(() => {
-    nRoad.textContent = game.inv.road;
-    nBridge.textContent = game.inv.bridge;
-    nTrips.textContent = game.trips;
-    nMoney.textContent = '$' + game.money;
-    seedEl.textContent = 'Seed ' + game.seed;
+  function buildMenu() {
+    const list = $('map-list');
+    list.innerHTML = '';
+    for (const m of maps) {
+      const b = document.createElement('button');
+      b.className = 'card'; b.type = 'button';
+      const ok = isUnlocked(m), best = bestFor(m.id);
+      const need = m.unlock ? `Reach ${m.unlock.trips} trips on ${maps.find(x => x.id === m.unlock.map)?.name}` : '';
+      b.disabled = !ok;
+      b.innerHTML = `<h3>${m.name}</h3><p>${m.cols} x ${m.rows} tiles</p><p>${ok ? (best ? `Best: ${best} trips` : 'Not played yet') : 'Locked: ' + need}</p>`;
+      b.addEventListener('click', () => onPlay(m));
+      list.appendChild(b);
+    }
+  }
+
+  function buildReward() {
+    const box = $('reward-cards');
+    box.innerHTML = '';
+    if (!game.reward) return;
+    $('reward-sub').textContent = `Goal ${game.reward.goal}. Choose your reward.`;
+    for (const o of game.reward.options) {
+      const b = document.createElement('button');
+      b.className = 'card'; b.type = 'button';
+      b.innerHTML = o.special
+        ? `<div class="big-n">${o.roads} roads</div><h3>+ ${o.special.name}</h3><p>${o.special.description}</p>`
+        : `<div class="big-n">${o.roads} roads</div><h3>Just roads</h3><p>More room to build.</p>`;
+      b.addEventListener('click', () => chooseReward(o.id));
+      box.appendChild(b);
+    }
+  }
+
+  function render() {
+    const mode = game.mode;
+    $('hud').hidden = mode === 'menu';
+    $('menu').hidden = mode !== 'menu';
+    $('reward').hidden = mode !== 'reward';
+    $('pause').hidden = mode !== 'pause';
+    $('over').hidden = mode !== 'over';
+    if (mode === 'menu') buildMenu();
+    if (mode === 'reward') buildReward();
+    if (mode === 'over' && game.over) {
+      const o = game.over;
+      $('over-sub').innerHTML = o.record ? '<span class="record">New best!</span> Traffic ground to a halt.' : 'Traffic ground to a halt.';
+      $('over-stats').innerHTML = `<div><b>${o.trips}</b><small>trips</small></div><div><b>${fmtTime(o.time)}</b><small>survived</small></div><div><b>$${o.money}</b><small>cash</small></div><div><b>${o.best}</b><small>best</small></div>`;
+    }
+
+    $('n-road').textContent = game.inv.road;
+    $('pill-road').classList.toggle('empty', game.inv.road === 0);
+    $('n-trips').textContent = game.trips;
+    $('n-money').textContent = '$' + game.money;
     buttons.forEach(b => b.classList.toggle('active', b.dataset.tool === game.tool));
-    canvas.style.cursor = cursors[game.tool];
-    document.getElementById('pill-road').classList.toggle('empty', game.inv.road === 0);
+    canvas.style.cursor = { build: 'crosshair', destroy: 'not-allowed', pan: 'grab' }[game.tool];
+
+    // one pill per special you own (the bridge is always shown)
+    const sp = $('specials');
+    sp.innerHTML = '';
+    for (const s of prog.specials) {
+      const n = game.inv[s.id] || 0;
+      if (!s.enabled || (n === 0 && s.id !== 'bridge')) continue;
+      const d = document.createElement('div');
+      d.className = 'pill'; d.innerHTML = `${s.name} <b>${n}</b>`;
+      sp.appendChild(d);
+    }
+
+    // goal progress
+    const span = Math.max(1, game.nextGoalAt - game.prevGoalAt);
+    $('goal-bar').firstElementChild.style.width = Math.min(100, ((game.trips - game.prevGoalAt) / span) * 100) + '%';
+    $('goal-text').textContent = `Goal ${game.goalCount + 1}: ${game.trips}/${game.nextGoalAt} trips`;
+
+    // shop
+    const shop = $('shop');
+    if (!shop.hidden) {
+      shop.innerHTML = '';
+      const items = prog.specials.filter(s => s.enabled && s.cost);
+      if (!items.length) shop.textContent = 'Nothing for sale yet.';
+      for (const s of items) {
+        const row = document.createElement('div'); row.className = 'row';
+        row.innerHTML = `<div>${s.name}<small>${s.description}</small></div>`;
+        const b = document.createElement('button');
+        b.textContent = '$' + s.cost; b.disabled = game.money < s.cost; b.className = game.money >= s.cost ? 'afford' : '';
+        b.addEventListener('click', () => { if (buy(s.id)) toast(`Bought a ${s.name}.`); });
+        row.appendChild(b); shop.appendChild(row);
+      }
+    }
+    $('shop-btn').classList.toggle('afford', prog.specials.some(s => s.enabled && s.cost && game.money >= s.cost));
+  }
+
+  onChange(render);
+  onEvent(e => {
+    if (e.type === 'spawn') {
+      const name = e.color.id;
+      if (e.kind === 'newColor') toast(`New ${name} house and destination!`);
+      else if (e.kind === 'combo') toast(`New ${name} destination and house.`);
+      else toast(e.n > 1 ? `${e.n} new ${name} houses.` : `New ${name} house.`);
+    }
   });
+  render();
 }

@@ -28,7 +28,7 @@ export function reindex(g) {
 }
 
 export function addBuilding(g, kind, color, x, y, rot) {
-  const b = { id: g.nextId++, kind, color, x, y, rot, slots: kind === 'dest' ? new Array(SLOTS).fill(null) : null };
+  const b = { id: g.nextId++, kind, color, x, y, rot, born: g.time, slots: kind === 'dest' ? new Array(SLOTS).fill(null) : null };
   g.buildings.push(b);
   reindex(g);
   return b;

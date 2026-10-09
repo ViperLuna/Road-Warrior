@@ -41,7 +41,20 @@ All gameplay numbers live in `config/tuning.json`, read at startup (defaults in 
 ## Water
 - Bridge: drag a road across water; it auto-builds, straight line only, any length, consumes one bridge item. Inherits 2- or 4-lane from the road being dragged. Bought with money.
 
-## Progression
+## Flow, maps and game over
+- Splash ("Tap to Start", unlocks audio) -> main menu (pick a map) -> play. **Esc** / Menu button pauses (resume, new map, main menu).
+- Maps live in `config/maps.json` (name + size + unlock rule). Bigger maps unlock by reaching N trips on the previous one; bests are saved in `localStorage`. Terrain features scale with map size.
+- **Game over = gridlock:** any car stopped for `gridlock.gameOverAfterSeconds` ends the run (gold shine warns first). Screen shows trips, time survived, cash and best, with Play again / Main menu.
+
+## Progression (config/progression.json)
+- **Spawns** are trip-triggered (`firstAtTrips`, then `everyTrips` + growth). The first `sameColorSpawns` reuse the starting colour; then every `newColorEverySpawns`-th spawn introduces a new colour as a destination + house pair. Otherwise a colour gets extra houses until it has `maxHousesPerDestination` per destination, then a new destination + house. New buildings land near existing ones, reachable over land within `roadsNeeded` road tiles, never on roads/buildings (an exit may touch an existing road and auto-connect). They pop in with a ring.
+- **Goals** every N trips (growing). The reward menu offers `roadsPlain` (30) roads OR `roadsWithSpecial` (20) roads + one random *enabled* special. Specials not built yet are listed with `"enabled": false` and flip on when finished.
+- **Cash** (slim, per trip) buys specials that have a `cost` in the Shop (bridge $40).
+
+## Bridges
+- Drag from a shore road straight across water to the far bank: one bridge item covers any length (even one tile), water tiles cost no road pieces, only the far-bank tile does. Straight line only; inherits 2-lane for now. Demolishing any span tile removes the whole bridge and refunds the item; cars on it keep going on a ghost.
+
+## Progression (older notes)
 - Every X total trips: a **goal** is hit -> reward choice: 20 plain pieces + one special, OR 30 plain pieces. Always offered at least 20 pieces.
 - Spawns after thresholds. First couple of spawns reuse the starting color; then new colors (new color always spawns with a matching house).
 - Every completed round trip pays a **slim** amount of money (game is slightly greedy). Money buys specials not offered by goals (e.g. bridges).
@@ -65,6 +78,6 @@ Highway (10 four-lane pieces), roundabout, traffic light, tunnel (through raised
 1. (DONE)  Foundation: grid, terrain gen, drag build/demolish, mobile toggles, inventory.
 2. (DONE) Cars: lane graph, right-hand traffic, pathfinding, round trips, ghost roads.
 3. (DONE) Intersection rules + deadlock detection.
-4. Progression: spawns, colors, goals, reward menu, game over.
-5. Specials: roundabout, traffic light, bridge, tunnel, one-way.
+4. (DONE) Progression: spawns, colors, goals, reward menu, game over, menu/maps, bridges + shop.
+5. Specials: roundabout, traffic light, tunnel, one-way (bridge done in M4).
 6. Highways: 4-lane, taper, ramps, overpass.

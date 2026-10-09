@@ -1,6 +1,7 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
-import { game, buildRoad, demolish, setTool, buildingAt, rotateBuildingAt, devSpawn } from './state.js';
+import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, hasRoad, inBounds, tileIndex } from './state.js';
+import { WATER } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
 
@@ -13,14 +14,41 @@ let spaceDown = false;
 
 const tileAt = (sx, sy) => { const w = screenToWorld(sx, sy); return { x: Math.floor(w.x), y: Math.floor(w.y) }; };
 
-function apply(mode, x, y) {
-  if (mode === 'build') {
-    const r = buildRoad(x, y);
-    if (r === 'water') toast("Can't build on water. Bridges are coming soon.");
-    else if (r === 'empty') toast('Out of road pieces!');
-  } else if (mode === 'destroy') {
-    demolish(x, y);
+const isWater = (x, y) => inBounds(x, y) && game.terrain.water[tileIndex(x, y)] === WATER;
+
+// Building by dragging. Water tiles are collected into a straight "span"; when the drag lands on the far
+// bank, one bridge item is spent and the whole span is built.
+function stepBuild(st, x, y) {
+  const prev = st.prevTile;
+  st.prevTile = { x, y };
+  if (isWater(x, y)) {
+    if (!st.span) {
+      if (!prev || isWater(prev.x, prev.y) || !hasRoad(prev.x, prev.y)) { toast('Start a bridge from a road on the shore.'); return; }
+      if ((game.inv.bridge || 0) <= 0) { toast('You need a bridge to cross water.'); return; }
+      st.span = { dx: x - prev.x, dy: y - prev.y, from: prev, tiles: [{ x, y }] };
+    } else {
+      const last = st.span.tiles[st.span.tiles.length - 1];
+      if (x - last.x === st.span.dx && y - last.y === st.span.dy) st.span.tiles.push({ x, y });
+      else { st.span = null; toast('Bridges must be a straight line.'); }
+    }
+    return;
   }
+  if (st.span) {
+    const sp = st.span, last = sp.tiles[sp.tiles.length - 1];
+    st.span = null;
+    if (x - last.x === sp.dx && y - last.y === sp.dy) {
+      const r = buildBridge(sp.from, sp.tiles, { x, y });
+      if (r === 'badend') { toast("The far bank isn't clear."); return; }
+      if (r !== 'ok') return;
+    } else { toast('Bridges must be a straight line.'); return; }
+  }
+  const r = buildRoad(x, y);
+  if (r === 'empty') toast('Out of road pieces!');
+}
+
+function apply(mode, x, y, st) {
+  if (mode === 'build') stepBuild(st, x, y);
+  else if (mode === 'destroy') demolish(x, y);
 }
 
 // 4-connected walk from a to b (excludes a, includes b) so fast drags never leave gaps.
@@ -61,9 +89,10 @@ export function initInput(canvas) {
     e.preventDefault();
     const t = tileAt(e.clientX, e.clientY);
     if (e.pointerType === 'mouse') { hover.x = t.x; hover.y = t.y; hover.show = true; }
-    stroke = { mode, button: e.button, bld: buildingAt(t.x, t.y), moved: false, last: t, start: t, lx: e.clientX, ly: e.clientY, applied: false, touch: e.pointerType !== 'mouse' };
+    if (game.mode !== 'play') { pointers.delete(e.pointerId); return; }
+    stroke = { mode, prevTile: null, span: null, button: e.button, bld: buildingAt(t.x, t.y), moved: false, last: t, start: t, lx: e.clientX, ly: e.clientY, applied: false, touch: e.pointerType !== 'mouse' };
     // Touch waits (a 2nd finger may be arriving for a pinch); mouse acts immediately.
-    if (mode !== 'pan' && !stroke.touch) { apply(mode, t.x, t.y); stroke.applied = true; }
+    if (mode !== 'pan' && !stroke.touch) { apply(mode, t.x, t.y, stroke); stroke.applied = true; }
   });
 
   canvas.addEventListener('pointermove', e => {
@@ -91,20 +120,21 @@ export function initInput(canvas) {
     const t = tileAt(e.clientX, e.clientY);
     if (t.x === stroke.last.x && t.y === stroke.last.y) return;
     stroke.moved = true;
-    if (!stroke.applied) { apply(stroke.mode, stroke.start.x, stroke.start.y); stroke.applied = true; }
-    for (const step of walk(stroke.last, t)) apply(stroke.mode, step.x, step.y);
+    if (!stroke.applied) { apply(stroke.mode, stroke.start.x, stroke.start.y, stroke); stroke.applied = true; }
+    for (const step of walk(stroke.last, t)) apply(stroke.mode, step.x, step.y, stroke);
     stroke.last = t;
   });
 
   const end = e => {
     if (!pointers.has(e.pointerId)) return;
     if (stroke && stroke.touch && !stroke.applied && stroke.mode !== 'pan' && e.type === 'pointerup') {
-      apply(stroke.mode, stroke.start.x, stroke.start.y); // tap
+      apply(stroke.mode, stroke.start.x, stroke.start.y, stroke); // tap
     }
     // Click/tap on a building (without dragging) rotates it.
     if (stroke && stroke.bld && !stroke.moved && stroke.mode !== 'pan' && e.type === 'pointerup' && stroke.button !== 2) {
       rotateBuildingAt(stroke.start.x, stroke.start.y);
     }
+    if (stroke && stroke.span) toast('Drag all the way to the far bank to finish the bridge.');
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
     stroke = null;
@@ -120,7 +150,8 @@ export function initInput(canvas) {
   }, { passive: false });
 
   addEventListener('keydown', e => {
-    if (e.code === 'Space') { spaceDown = true; e.preventDefault(); }
+    if (e.code === 'Escape') { if (game.mode === 'play') setMode('pause'); else if (game.mode === 'pause') setMode('play'); }
+    else if (e.code === 'Space') { spaceDown = true; e.preventDefault(); }
     else if (e.key === 'b') setTool('build');
     else if (e.key === 'd') setTool('destroy');
     else if (e.key === 'm') setTool('pan');

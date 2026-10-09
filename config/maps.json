@@ -1,0 +1,8 @@
+{
+  "_note": "Maps (levels). 'unlock' = best trips needed on another map. Sizes are in tiles.",
+  "maps": [
+    { "id": "riverbend", "name": "Riverbend", "cols": 32, "rows": 22, "unlock": null },
+    { "id": "lakeside",  "name": "Lakeside",  "cols": 44, "rows": 30, "unlock": { "map": "riverbend", "trips": 40 } },
+    { "id": "highlands", "name": "Highlands", "cols": 60, "rows": 40, "unlock": { "map": "lakeside",  "trips": 80 } }
+  ]
+}

@@ -115,6 +115,7 @@ function drawRoad(ctx, game, tx, ty) {
     }
   };
 
+  const bridge = !!game.roads.get(tileIndex(tx, ty)).bridge;
   const pass = (width, color) => {
     ctx.strokeStyle = color; ctx.fillStyle = color;
     ctx.lineWidth = width; ctx.lineCap = 'butt'; ctx.lineJoin = 'round';
@@ -122,8 +123,9 @@ function drawRoad(ctx, game, tx, ty) {
     if (conns.length <= 1) { ctx.beginPath(); ctx.arc(cx, cy, width / 2, 0, 6.2832); ctx.fill(); }
     else if (conns.length >= 3) ctx.fillRect(cx - width / 2, cy - width / 2, width, width);
   };
-  pass(ROAD_W + 0.06, COL.shoulder);
-  pass(ROAD_W, COL.asphalt);
+  if (bridge) pass(ROAD_W + 0.16, '#cdbb9a');             // bridge rails
+  pass(ROAD_W + 0.06, bridge ? '#6d5d49' : COL.shoulder);
+  pass(ROAD_W, bridge ? '#6a6f76' : COL.asphalt);
 
   if (conns.length >= 1) {
     ctx.strokeStyle = COL.line;

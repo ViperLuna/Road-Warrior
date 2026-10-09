@@ -9,6 +9,11 @@ const free = (g, x, y, blocked) =>
   x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] !== WATER &&
   !g.buildingAt.has(y * g.cols + x) && !g.roads.has(y * g.cols + x) && !(blocked && blocked.has(y * g.cols + x));
 
+// Land that isn't covered by a building (existing roads are fine to route over).
+const passable = (g, x, y, blocked) =>
+  x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] !== WATER &&
+  !g.buildingAt.has(y * g.cols + x) && !(blocked && blocked.has(y * g.cols + x));
+
 // Shortest land path (in road tiles) from `from` to any tile in `targets`, or Infinity.
 function roadsNeeded(g, from, targets, blocked, limit) {
   const seen = new Set([from[1] * g.cols + from[0]]);
@@ -19,7 +24,7 @@ function roadsNeeded(g, from, targets, blocked, limit) {
       if (targets.has(y * g.cols + x)) return d + 1;
       for (const [dx, dy] of DIR) {
         const nx = x + dx, ny = y + dy, k = ny * g.cols + nx;
-        if (!seen.has(k) && free(g, nx, ny, blocked)) { seen.add(k); next.push([nx, ny]); }
+        if (!seen.has(k) && passable(g, nx, ny, blocked)) { seen.add(k); next.push([nx, ny]); }
       }
     }
     frontier = next;
@@ -54,7 +59,7 @@ export function spawnPair(g, color, opts = {}) {
 
     const rot = ri(0, 3), fake = { x: ax, y: ay, rot };
     const lotExits = [0, 1].map(i => { const [x, y] = lotTile(fake, i); return [x + DIR[rot][0], y + DIR[rot][1]]; });
-    if (!lotExits.every(([x, y]) => free(g, x, y, fp))) continue;
+    if (!lotExits.every(([x, y]) => passable(g, x, y, fp))) continue;
     const exitSet = new Set(lotExits.map(([x, y]) => y * g.cols + x));
 
     for (let h = 0; h < 40; h++) {
@@ -62,7 +67,7 @@ export function spawnPair(g, color, opts = {}) {
       if (!free(g, hx, hy, fp)) continue;
       const hrot = ri(0, 3), hex = hx + DIR[hrot][0], hey = hy + DIR[hrot][1];
       const blocked = new Set([...fp, hk]);
-      if (!free(g, hex, hey, blocked)) continue;
+      if (!passable(g, hex, hey, blocked)) continue;
       const n = roadsNeeded(g, [hex, hey], exitSet, blocked, maxR);
       if (n < minR || n > maxR) continue;
       addBuilding(g, 'dest', color, ax, ay, rot);
@@ -70,6 +75,30 @@ export function spawnPair(g, color, opts = {}) {
       g.cars.push(createCar(house));
       return { dest: g.buildings[g.buildings.length - 2], house, roads: n };
     }
+  }
+  return null;
+}
+
+// Add one house of `color` near an existing destination of that colour (reachable over land within `roads`).
+export function spawnHouse(g, color, opts = {}) {
+  const rng = opts.rng || Math.random;
+  const [minR, maxR] = opts.roads || [4, 14];
+  const dests = g.buildings.filter(b => b.kind === 'dest' && b.color.id === color.id);
+  if (!dests.length) return null;
+  for (let attempt = 0; attempt < 300; attempt++) {
+    const d = dests[Math.floor(rng() * dests.length)];
+    const r = 3 + Math.floor(rng() * 7), th = rng() * 6.283;
+    const hx = Math.round(d.x + 1 + Math.cos(th) * r), hy = Math.round(d.y + 1 + Math.sin(th) * r);
+    if (!free(g, hx, hy)) continue;
+    const hrot = Math.floor(rng() * 4), hex = hx + DIR[hrot][0], hey = hy + DIR[hrot][1];
+    const blocked = new Set([hy * g.cols + hx]);
+    if (!passable(g, hex, hey, blocked)) continue;
+    const exits = new Set([0, 1].map(i => { const [x, y] = lotTile(d, i); return (y + DIR[d.rot][1]) * g.cols + x + DIR[d.rot][0]; }));
+    const n = roadsNeeded(g, [hex, hey], exits, blocked, maxR);
+    if (n < minR || n > maxR) continue;
+    const house = addBuilding(g, 'house', color, hx, hy, hrot);
+    g.cars.push(createCar(house));
+    return house;
   }
   return null;
 }
