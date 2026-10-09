@@ -76,6 +76,18 @@ function planBack(g, car) {
   return true;
 }
 
+// A destination was rotated: put its cars on the new lot. Parked cars sit in their bay on the new layout;
+// cars still driving in finish their (ghost) route and are re-seated on arrival (see updateSim).
+export function reseatCar(car, d) {
+  car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: 0, k: car.slot };
+  const p = lotInPiece(d.x, d.y, d.rot, 0, car.slot);
+  car.route = [p]; car.idx = 0; car.s = p.len; car.v = 0; car.stuck = 0;
+  pointAt(p, p.len, car);
+}
+export function reseatCarsOf(g, d) {
+  for (const car of g.cars) if (car.dest === d && car.state === 'dwell') reseatCar(car, d);
+}
+
 function start(car, state) {
   car.state = state; car.idx = 0; car.s = 0; car.v = 0;
   pointAt(car.route[0], 0, car);
@@ -276,6 +288,7 @@ export function updateSim(g, dt) {
         p = car.route[car.idx];
       }
       if (arrived) {
+        if (car.state === 'out' && car.dest && car.lot.rot !== car.dest.rot) reseatCar(car, car.dest);     // the lot was rotated while we drove in
         const last = car.route[car.route.length - 1];
         pointAt(last, last.len, car);
         car.v = 0; car.route = [last]; car.idx = 0; car.s = last.len; car.stuck = 0; car.hold = false; car.entry = null;

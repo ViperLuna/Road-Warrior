@@ -130,3 +130,6 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 
 ## Splash title
 - `assets/title.jpg` (2400 px wide, from the user's banner) replaces the text title on the splash. Background is the banner's green (`#84a077`), image edges are feathered with a CSS mask, and on narrow phones the image is shown 900 px wide and centre-cropped so the title stays big. The `<h1>` keeps the alt text "Road Warrior".
+
+## Rotating a destination with cars heading in / parked (playtest bug, fixed)
+- Rotating a destination used to leave its cars on the old lot geometry; once the old exit road was changed they could never leave. Now: parked cars are re-seated in their bay on the new layout immediately (`reseatCarsOf`), and cars still driving in finish their route (ghost rule) and are re-seated on arrival. A re-seated car leaves through the new gate and waits in its bay if the new gate has no road yet.

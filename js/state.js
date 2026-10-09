@@ -3,7 +3,7 @@ import { generateTerrain, WATER, HILL, LAND } from './terrain.js';
 import { clearPieceCache } from './lanes.js';
 import { rotateBuilding } from './buildings.js';
 import { spawnInitial, spawnPair } from './spawn.js';
-import { updateSim } from './cars.js';
+import { updateSim, reseatCarsOf } from './cars.js';
 import { initProgress, checkProgress, chooseReward as pickReward } from './progress.js';
 import { prog, maps, specialInfo, roadsAvailable } from './progression.js';
 import { roadConns, tileLanes } from './network.js';
@@ -163,6 +163,7 @@ export function rotateBuildingAt(x, y) {
   const b = buildingAt(x, y);
   if (!b) return false;
   rotateBuilding(game, b);
+  if (b.kind === 'dest') reseatCarsOf(game, b);
   emit();
   return true;
 }
