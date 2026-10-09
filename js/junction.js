@@ -13,8 +13,12 @@ export function junctionAt(g, x, y, cache) {
     const tl = tileLanes(g, x, y), edges = c.map(d => edgeLanes(g, x, y, d));
     const taper = c.length >= 2 && Math.min(...edges) !== Math.max(...edges);      // lanes merge / split inside this tile
     const overpass = (g.roads.get(k) || {}).overpass !== undefined;
-    j = { kind: 'road', n: overpass ? 2 : c.length, stem: -1, round: false, light: false, x, y, taper: overpass ? false : taper, junction: overpass ? false : c.length >= 3 || taper, overpass };
-    if (c.length === 3) j.stem = c.find(d => !c.includes(OPP[d]));
+    // A house's driveway is not a street: it never makes a 4-way or a T. Only real road legs set the junction type;
+    // house legs are minor entrances that always yield (see `outranks`) and never have to stop first.
+    const hs = c.filter(d => { const nx = x + DIR[d][0], ny = y + DIR[d][1]; const p = g.ports.get(ny * g.cols + nx); return p && p.kind === 'house' && !g.roads.has(ny * g.cols + nx); });
+    const rc = c.filter(d => !hs.includes(d));
+    j = { kind: 'road', n: overpass ? 2 : rc.length, houseSides: hs, stem: -1, round: false, light: false, x, y, taper: overpass ? false : taper, junction: overpass ? false : c.length >= 3 || taper, overpass };
+    if (rc.length === 3) j.stem = rc.find(d => !rc.includes(OPP[d]));
     if (c.length >= 3 && special === 'roundabout') j.round = true;
     if (c.length >= 3 && special === 'light') { j.light = true; j.groups = lightGroups(c); }
     cache.set(k, j);
@@ -65,6 +69,10 @@ export function outranks(b, a, J) {
   if (b.commit !== a.commit) return b.commit;                  // already past the point of no return
   if (b.inJ !== a.inJ) return b.inJ;                           // already inside the previous junction: let it clear the tile it's blocking
   if (J.kind === 'lot') return before(b, a);
+  if (J.houseSides && J.houseSides.length && !J.light && !J.round) {   // a car pulling out of a driveway yields to every street car
+    const ha = J.houseSides.includes(qa.in), hb = J.houseSides.includes(qb.in);
+    if (ha !== hb) return ha;
+  }
   if (J.round) return before(b, a);                            // roundabout: cars already circulating win (handled as 'inside'); entrants go in arrival order
   if (J.light) {                                               // both are on green: straight beats right beats left, then arrival
     const ra = turnRank(qa), rb = turnRank(qb);

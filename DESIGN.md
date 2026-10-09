@@ -107,3 +107,7 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 - **Green-light queues**: the no-box-blocking rule ignores a leader that is rolling (v > 1 and gap > 0.22); only a (nearly) stopped leader counts as spillback, so a platoon flows through a green.
 - **Roundabouts** yield only to cars already circulating or about to enter (within 0.3 of the line), never to cars merely approaching; a car whose merge point the ring car has cleared falls in behind it.
 - **Spawn budget**: `buildCost()` (0-1 BFS, existing roads free) makes new houses/pairs spawn only where the player's held road inventory can connect them. Still TODO: houses do not yet get impatient when unconnected.
+
+## Driveways (house legs) - rules agreed in RT
+- A house's connection never counts toward the junction type: house + road + house across the street is a plain through road, not a 4-way. Cars leaving a house always yield to street traffic and don't stop first (`houseSides` in `junctionAt`).
+- Not yet built (future, user-approved shape): a **driveway toggle** piece. Costs a road piece, serves only the one house it starts at, cannot connect to a destination, and the moment it touches a road it stops being a driveway. Drawing a road across a driveway is blocked with a toast. Houses that get angry from long waits are fixed by rotating the house - some things are meant to suck.

@@ -169,7 +169,7 @@ function analyse(g, occ) {
       car.sigRed = (col === 'red' || (col === 'yellow' && !car.commit)) && nxt.turn !== 'right';
     }
     // Stop-sign junctions: come to a full stop at the line first (4-way, or the stem of a T).
-    car.needsStop = J.kind === 'road' && !J.light && !J.round && (J.n === 4 || (J.n === 3 && nxt.in === J.stem)) && !car.commit;
+    car.needsStop = J.kind === 'road' && !J.light && !J.round && (J.n === 4 || (J.n === 3 && nxt.in === J.stem)) && !(J.houseSides && J.houseSides.includes(nxt.in)) && !car.commit;
     if (!car.sigRed) (waiting.get(car.entry.key) || waiting.set(car.entry.key, []).get(car.entry.key)).push(car);
     list.push(car);
   }
