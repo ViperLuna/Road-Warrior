@@ -1,0 +1,9 @@
+{
+  "_note": "Okabe-Ito colorblind-safe palette. Each color also has a shape glyph so color is never the only cue. Add/remove entries freely; spawn order follows array order.",
+  "colors": [
+    { "id": "blue",   "hex": "#0072B2", "glyph": "circle" },
+    { "id": "orange", "hex": "#E69F00", "glyph": "square" },
+    { "id": "pink",   "hex": "#CC79A7", "glyph": "triangle" },
+    { "id": "green",  "hex": "#009E73", "glyph": "diamond" }
+  ]
+}
