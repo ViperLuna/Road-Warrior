@@ -254,7 +254,7 @@ function overpassLanesAlong(x, y, a) {
   return Math.min(...sides.map(d => { const n = game.roads.get(tileIndex(x + SIDES[d][0], y + SIDES[d][1])); return n ? (n.lanes || 2) : 2; }));
 }
 
-// Returns 'ok' | 'flipped' | 'none' | 'badtile' | 'taken' | 'notjunction' | 'notcrossing' | 'highway' | 'toonear' | 'empty'
+// Returns 'ok' | 'flipped' | 'none' | 'badtile' | 'taken' | 'notjunction' | 'notcrossing' | 'mismatch' | 'highway' | 'toonear' | 'empty'
 export function placeSpecial(id, x, y) {
   if (!hasRoad(x, y)) return 'none';
   const r = game.roads.get(tileIndex(x, y));
@@ -270,8 +270,9 @@ export function placeSpecial(id, x, y) {
   if (id === 'overpass') {                                      // two straight roads (either size) crossing, with nothing else joining
     if (roadConns(game, x, y).length !== 4) return 'notcrossing';
     const lanes = [0, 1].map(a => overpassLanesAlong(x, y, a));
-    const ok = a => { const n = d => game.roads.get(tileIndex(x + SIDES[d][0], y + SIDES[d][1])); return (n(a).lanes || 2) === (n(a + 2).lanes || 2); };
-    if (!ok(0) || !ok(1)) return 'notcrossing';
+    const n = d => game.roads.get(tileIndex(x + SIDES[d][0], y + SIDES[d][1]));
+    if (![0, 1, 2, 3].every(n)) return 'notcrossing';          // a house or lot gate on one arm: not a plain street crossing
+    if (![0, 1].every(a => (n(a).lanes || 2) === (n(a + 2).lanes || 2))) return 'mismatch';
     const top = lanes[0] > lanes[1] ? 0 : 1;                    // the bigger road goes over; a tie puts east-west on top
     r.overpass = top;
     r.lanes = lanes[top];

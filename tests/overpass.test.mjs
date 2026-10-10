@@ -64,6 +64,6 @@ for (const [h, v] of (process.env.ONLY ? [process.env.ONLY.split('x').map(Number
 scene(2, 2); g.build4 = false; st.buildRoad(16, 8); // already a road; make a T instead
 scene(2, 2); g.roads.delete(11 * g.cols + 17); ok(st.placeSpecial('overpass', 16, 11) === 'notcrossing', 'refused on a T (3 roads)');
 scene(2, 2); ok(st.placeSpecial('overpass', 10, 11) === 'notcrossing', 'refused on a plain straight road');
-scene(2, 2); g.roads.get(11 * g.cols + 15).lanes = 4; ok(st.placeSpecial('overpass', 16, 11) === 'notcrossing', 'refused when one road changes size at the crossing');
+scene(2, 2); g.roads.get(11 * g.cols + 15).lanes = 4; ok(st.placeSpecial('overpass', 16, 11) === 'mismatch', 'refused when one road changes size at the crossing');
 scene(2, 2); g.inv.light = 1; g.roads.get(11 * g.cols + 16).special = 'light'; ok(st.placeSpecial('overpass', 16, 11) === 'taken', 'refused on a tile that already has a light');
 console.log(pass, 'passed', fail, 'failed');

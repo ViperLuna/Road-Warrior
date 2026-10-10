@@ -82,6 +82,7 @@ const PLACE_MSG = {
   notjunction: 'Needs an intersection: 3 or more roads meeting.', empty: 'None left.',
   toonear: 'Too close to another light. Leave at least one tile between lights.',
   highway: 'Roundabouts only fit on regular streets.',
+  mismatch: "An overpass needs the same road size on both sides of each road. One side here is a different size (check bridge ends and road/highway joins).",
   notcrossing: 'An overpass goes on a straight crossing of two roads (4 roads meeting, same size on both sides of each).',
 };
 
