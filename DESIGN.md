@@ -133,3 +133,9 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 
 ## Rotating a destination with cars heading in / parked (playtest bug, fixed)
 - Rotating a destination used to leave its cars on the old lot geometry; once the old exit road was changed they could never leave. Now: parked cars are re-seated in their bay on the new layout immediately (`reseatCarsOf`), and cars still driving in finish their route (ghost rule) and are re-seated on arrival. A re-seated car leaves through the new gate and waits in its bay if the new gate has no road yet.
+
+## Gridlock patience ladder (playtest: "nobody moves at the green light", snowballing backups)
+- Reproduced with a lit grid: a handful of cars end up inside two neighbouring junctions each waiting for the other's tile (or for room beyond), and the jam grows until the map locks. Roundabouts and plain grids showed it too.
+- A car that has been stuck > 0.8 x `gridlock.warnAfterSeconds` while waiting on **other cars** (chain-inside / chain-earlier / box / outranked / chain-light) now stops deferring to those rules (`force`); after 1.3 x it also ignores every car inside the box (`ignoreAll`). Red lights and stop-sign timers are never skipped. A brief overlap in a jam is accepted over a permanent deadlock.
+- Not fixed (by design): a genuinely full ring of roads with no free space anywhere is still a gridlock; that is what the stuck-car game over is for.
+- Sim results: lit 4x4 grids, 20-60 houses: before, most runs had cars stuck for 500-1500 s; after, 14 of 15 runs clear (worst wait 20-33 s). Bot (full progression): games over 6-8 of 10 -> 0 of 10, three runs.

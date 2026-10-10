@@ -131,7 +131,7 @@ function breakDeadlocks(g, list) {
         else if (loop.every(x => x.why.startsWith('inside') && x.stuck > 1.5)) {
           // Two cars each inside a different junction tile wanting the other's: they swap in opposite lanes.
           const lo = loop.reduce((a, b) => (a.id < b.id ? a : b));
-          lo.ignoreId = +lo.why.split(':')[1]; lo.ignoreT = 2;
+          lo.ignoreAll = false; lo.ignoreId = +lo.why.split(':')[1]; lo.ignoreT = 2;
         }
       }
     }
@@ -192,7 +192,7 @@ function analyse(g, occ) {
     if (car.sigRed) { blocked = true; car.why = 'light'; }
     else if (car.needsStop && car.stopT < tuning.junctions.stopSeconds) { blocked = true; car.why = 'stop'; }
     if (!blocked) for (const o of inside.get(key) || []) {
-      if (o !== car && !(car.ignoreT > 0 && o.id === car.ignoreId) && pieceConflict(q, o.route[o.idx], o.s)) { blocked = true; car.why = 'inside:' + o.id; break; }
+      if (o !== car && !(car.ignoreT > 0 && (car.ignoreAll || o.id === car.ignoreId)) && pieceConflict(q, o.route[o.idx], o.s)) { blocked = true; car.why = 'inside:' + o.id; break; }
     }
     if (!blocked) for (const o of waiting.get(key) || []) {
       // A roundabout only yields to traffic already circulating (the 'inside' check above) or about to enter right now,
@@ -230,12 +230,19 @@ function analyse(g, occ) {
       if (!blocked) {
         const gap = leaderGap(car, occ);
         const rolling = lastLeader && lastLeader.v > 1.0 && gap > 0.22;
-        if (gap < total + 0.08 && !rolling) { blocked = true; car.why = 'box:' + (lastLeader ? lastLeader.id : 0); }
+        if (gap < total + 0.08 && !rolling && !(car.force > 0)) { blocked = true; car.why = 'box:' + (lastLeader ? lastLeader.id : 0); }
       }
     }
     car.hold = blocked && !car.commit;
     // Patience: stuck a long time purely because waiting for a downstream light (nothing physical in the way)? Stop deferring to it for a moment.
-    if (car.hold && car.stuck > tuning.gridlock.warnAfterSeconds * 0.8 && car.why === 'chain-light') car.force = 2;
+    // Patience ladder. Cars that have been stuck for a long time waiting on other cars (never on a red light or their stop-sign timer)
+    // stop deferring: first to the junction-chain / room-beyond / priority rules, then to a car that is physically inside. A brief
+    // overlap in a jam is better than a permanent gridlock that snowballs across the map.
+    if (car.hold && car.stuck > tuning.gridlock.warnAfterSeconds * 0.8) {
+      const w = (car.why || '').split(':')[0];
+      if (w === 'chain-light' || w === 'chain-inside' || w === 'chain-earlier' || w === 'box' || w === 'outranked') car.force = 2;
+      else if (w === 'inside' && car.stuck > tuning.gridlock.warnAfterSeconds * 1.3) { car.ignoreAll = true; car.ignoreT = 2; }      // (one blocker at a time just swaps it for the next car in the box)
+    }
   }
   breakDeadlocks(g, list);
   return { inside, claims };
