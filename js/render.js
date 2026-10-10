@@ -111,7 +111,7 @@ export function render(ctx, W, H, dpr, game, cam, hover) {
     else if (game.tool === 'build') ok = !w && !isHillAt(hover.x, hover.y) && !road && game.inv.road > 0;
     else if (game.tool === 'place') {
       const r = game.roads.get(tileIndex(hover.x, hover.y));
-      ok = !!r && !r.bridge && !r.tunnel && !r.special && roadConns(game, hover.x, hover.y).length >= 3;
+      ok = !!r && !r.bridge && !r.tunnel && (game.placing === 'overpass' ? (r.overpass !== undefined || (!r.special && roadConns(game, hover.x, hover.y).length === 4)) : !r.special && roadConns(game, hover.x, hover.y).length >= 3);
     }
     ctx.strokeStyle = game.tool === 'pan' ? 'rgba(255,255,255,.5)' : ok ? 'rgba(255,255,255,.95)' : 'rgba(255,90,80,.95)';
     ctx.lineWidth = 2.5 / cam.z;
@@ -291,11 +291,11 @@ function offsetLine(pts, d) {
 
 function strokePts(ctx, pts) { ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.stroke(); }
 
-function drawWide(ctx, game, tx, ty, conns, road) {
-  const cx = tx + 0.5, cy = ty + 0.5;
+function drawWide(ctx, game, tx, ty, conns, road, o = {}) {
+  const cx = tx + 0.5, cy = ty + 0.5, MID = o.mid ?? HW;            // MID: half-width in the middle of the tile (HW = 4-lane, 0.23 = 2-lane)
   const mid = d => [cx + DIRS[d][0] * 0.5, cy + DIRS[d][1] * 0.5];
   const hwEdge = d => (edgeLanes(game, tx, ty, d) === 4 ? HW : 0.23);
-  const bridge = !!road.bridge || road.overpass !== undefined;           // an overpass deck gets bridge-style rails
+  const bridge = o.rails ?? (!!road.bridge || road.overpass !== undefined);           // an overpass deck gets bridge-style rails
   const lerp = (a, b, t) => a + (b - a) * t;
   const shapes = [];                                              // { pts, hws, mark: which points get lane markings }
   const N = 14;
@@ -304,8 +304,8 @@ function drawWide(ctx, game, tx, ty, conns, road) {
     for (let i = 0; i <= N; i++) {
       const t = i / N, u = 1 - t;
       pts.push(curve ? [u * u * a[0] + 2 * u * t * cx + t * t * b[0], u * u * a[1] + 2 * u * t * cy + t * t * b[1]] : [lerp(a[0], b[0], t), lerp(a[1], b[1], t)]);
-      hws.push(t < 0.5 ? lerp(hwEdge(d0), HW, t * 2) : lerp(HW, hwEdge(d1), (t - 0.5) * 2));
-      mark.push(hws[i] >= HW - 0.02);
+      hws.push(t < 0.5 ? lerp(hwEdge(d0), MID, t * 2) : lerp(MID, hwEdge(d1), (t - 0.5) * 2));
+      mark.push(hws[i] >= MID - 0.02);
     }
     shapes.push({ pts, hws, mark });
   } else {                                                        // junction / dead end: one arm per connection
@@ -314,8 +314,8 @@ function drawWide(ctx, game, tx, ty, conns, road) {
       for (let i = 0; i <= N; i++) {
         const s = i / N;
         pts.push([lerp(cx, m[0], s), lerp(cy, m[1], s)]);
-        hws.push(s < 0.5 ? HW : lerp(HW, hwEdge(d), (s - 0.5) * 2));
-        mark.push(conns.length < 3 || (s > 0.66 && hws[i] >= HW - 0.02));      // no markings across a junction's middle
+        hws.push(s < 0.5 ? MID : lerp(MID, hwEdge(d), (s - 0.5) * 2));
+        mark.push(conns.length < 3 || (s > 0.66 && hws[i] >= MID - 0.02));      // no markings across a junction's middle
       }
       shapes.push({ pts, hws, mark });
     }
@@ -323,8 +323,8 @@ function drawWide(ctx, game, tx, ty, conns, road) {
   const body = (grow, color) => {
     for (const sh of shapes) ribbon(ctx, sh.pts, sh.hws, grow, color);
     ctx.fillStyle = color;
-    if (conns.length >= 3) ctx.fillRect(cx - HW - grow, cy - HW - grow, 2 * (HW + grow), 2 * (HW + grow));
-    else if (conns.length <= 1) { ctx.beginPath(); ctx.arc(cx, cy, HW + grow, 0, 6.2832); ctx.fill(); }
+    if (conns.length >= 3) ctx.fillRect(cx - MID - grow, cy - MID - grow, 2 * (MID + grow), 2 * (MID + grow));
+    else if (conns.length <= 1) { ctx.beginPath(); ctx.arc(cx, cy, MID + grow, 0, 6.2832); ctx.fill(); }
   };
   if (bridge) body(0.1, '#cdbb9a');
   body(0.035, bridge ? '#6d5d49' : COL.shoulder);
@@ -336,6 +336,7 @@ function drawWide(ctx, game, tx, ty, conns, road) {
     if (cur.length) runs.push(cur);
     for (const run of runs) {
       if (run.length < 2) continue;
+      if (MID < HW) { ctx.setLineDash([0.125, 0.125]); ctx.strokeStyle = COL.line; ctx.lineWidth = 0.025; strokePts(ctx, run); ctx.setLineDash([]); continue; }      // a 2-lane road: one dashed centre line
       ctx.setLineDash([]); ctx.strokeStyle = COL.line; ctx.lineWidth = 0.02;
       strokePts(ctx, offsetLine(run, 0.022)); strokePts(ctx, offsetLine(run, -0.022));     // double yellow median
       ctx.setLineDash([0.1, 0.1]); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 0.018;
@@ -349,7 +350,8 @@ function drawWide(ctx, game, tx, ty, conns, road) {
 
 // ---- Overpass: a street runs underneath, the highway deck passes over it ----
 function drawUnderStreet(ctx, game, tx, ty, road) {
-  const cx = tx + 0.5, cy = ty + 0.5, street = road.overpass === 0 ? [3, 1] : [0, 2];     // the street runs across the highway's axis
+  const cx = tx + 0.5, cy = ty + 0.5, street = road.overpass === 0 ? [3, 1] : [0, 2];     // the road underneath runs across the deck's axis
+  if (edgeLanes(game, tx, ty, street[0]) === 4) { drawWide(ctx, game, tx, ty, street, road, { mid: HW, rails: false }); return; }
   const a = [cx + DIRS[street[0]][0] * 0.5, cy + DIRS[street[0]][1] * 0.5], b = [cx + DIRS[street[1]][0] * 0.5, cy + DIRS[street[1]][1] * 0.5];
   ctx.lineCap = 'butt';
   for (const [w, col] of [[ROAD_W + 0.06, COL.shoulder], [ROAD_W, COL.asphalt]]) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
@@ -358,7 +360,8 @@ function drawUnderStreet(ctx, game, tx, ty, road) {
 
 function drawDeck(ctx, game, tx, ty, road) {
   const cx = tx + 0.5, cy = ty + 0.5, hw = road.overpass === 0 ? [0, 2] : [3, 1];
-  ctx.fillStyle = 'rgba(0,0,0,.30)';                                                       // shadow cast on the street below
-  if (road.overpass === 0) ctx.fillRect(cx - HW - 0.06, ty, 2 * HW + 0.16, 1); else ctx.fillRect(tx, cy - HW - 0.06 + 0.04, 1, 2 * HW + 0.16);
-  drawWide(ctx, game, tx, ty, hw, road);
+  const mid = edgeLanes(game, tx, ty, hw[0]) === 4 ? HW : 0.23;
+  ctx.fillStyle = 'rgba(0,0,0,.30)';                                                       // shadow cast on the road below
+  if (road.overpass === 0) ctx.fillRect(cx - mid - 0.06, ty, 2 * mid + 0.16, 1); else ctx.fillRect(tx, cy - mid - 0.06 + 0.04, 1, 2 * mid + 0.16);
+  drawWide(ctx, game, tx, ty, hw, road, { mid });
 }

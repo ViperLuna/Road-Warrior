@@ -106,9 +106,10 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     // one pill per special you own (the bridge is always shown)
     const sp = $('specials');
     sp.innerHTML = '';
+    const anyOverpass = [...game.roads.values()].some(r => r.overpass !== undefined);
     for (const s of prog.specials) {
       const n = game.inv[s.id] || 0;
-      if (!s.enabled || s.unlock || (n === 0 && s.id !== 'bridge')) continue;
+      if (!s.enabled || s.unlock || (n === 0 && s.id !== 'bridge' && game.placing !== s.id && !(s.id === 'overpass' && anyOverpass))) continue;
       const tappable = s.placeable || s.toggle;
       const d = document.createElement(tappable ? 'button' : 'div');
       d.className = 'pill' + (tappable ? ' tap' : '') + ((game.placing === s.id) || (s.toggle === 'build4' && game.build4) ? ' on' : '');
@@ -120,7 +121,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
         d.type = 'button';
         d.addEventListener('click', () => {
           if (game.placing === s.id) setTool('build');
-          else { selectSpecial(s.id); toast(`Tap an intersection to place the ${s.name.toLowerCase()}.`); }
+          else { selectSpecial(s.id); toast(s.id === 'overpass' ? 'Tap a crossing to place the overpass. Tap an overpass again to swap which road is on top.' : `Tap an intersection to place the ${s.name.toLowerCase()}.`); }
         });
       }
       sp.appendChild(d);

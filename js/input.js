@@ -65,14 +65,14 @@ const PLACE_MSG = {
   notjunction: 'Needs an intersection: 3 or more roads meeting.', empty: 'None left.',
   toonear: 'Too close to another light. Leave at least one tile between lights.',
   highway: 'Roundabouts only fit on regular streets.',
-  notcrossing: 'An overpass needs a highway crossing a street (4 roads meeting).',
+  notcrossing: 'An overpass goes on a straight crossing of two roads (4 roads meeting, same size on both sides of each).',
 };
 
 function apply(mode, x, y, st) {
   if (mode === 'build') stepBuild(st, x, y);
   else if (mode === 'destroy') demolish(x, y);
   else if (mode === 'cut') stepCut(st, x, y);
-  else if (mode === 'place') { const r = placeSpecial(game.placing, x, y); if (r !== 'ok') toast(PLACE_MSG[r]); }
+  else if (mode === 'place') { const r = placeSpecial(game.placing, x, y); if (r === 'flipped') toast('Swapped: the other road is on top now.'); else if (r !== 'ok') toast(PLACE_MSG[r]); }
 }
 
 // 4-connected walk from a to b (excludes a, includes b) so fast drags never leave gaps.

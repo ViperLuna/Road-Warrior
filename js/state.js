@@ -215,27 +215,41 @@ export function setTool(tool) { game.tool = tool; if (tool !== 'place') game.pla
 
 // Pick a placeable special (roundabout / light) from the inventory; taps on road tiles then place it.
 export function selectSpecial(id) {
-  if ((game.inv[id] || 0) <= 0) return;
+  const flippable = id === 'overpass' && [...game.roads.values()].some(r => r.overpass !== undefined);
+  if ((game.inv[id] || 0) <= 0 && !flippable) return;
   game.tool = 'place'; game.placing = id;
   emit();
 }
 
 // Put a roundabout / traffic light on an intersection (a road tile with 3+ connections).
-// Returns 'ok' | 'none' | 'badtile' | 'taken' | 'notjunction' | 'notcrossing' | 'highway' | 'toonear' | 'empty'
+// Lanes of the road running through (x,y) along axis `a` (0 = north-south, 1 = east-west), read off its neighbours.
+function overpassLanesAlong(x, y, a) {
+  const sides = a === 0 ? [0, 2] : [1, 3];
+  return Math.min(...sides.map(d => { const n = game.roads.get(tileIndex(x + SIDES[d][0], y + SIDES[d][1])); return n ? (n.lanes || 2) : 2; }));
+}
+
+// Returns 'ok' | 'flipped' | 'none' | 'badtile' | 'taken' | 'notjunction' | 'notcrossing' | 'highway' | 'toonear' | 'empty'
 export function placeSpecial(id, x, y) {
   if (!hasRoad(x, y)) return 'none';
   const r = game.roads.get(tileIndex(x, y));
   if (r.bridge || r.tunnel) return 'badtile';
+  if (id === 'overpass' && r.overpass !== undefined) {           // tap an overpass again: swap which road goes over
+    r.overpass = 1 - r.overpass;
+    r.lanes = overpassLanesAlong(x, y, r.overpass);
+    emit();
+    return 'flipped';
+  }
   if (r.special || r.overpass !== undefined) return 'taken';
   if ((game.inv[id] || 0) <= 0) return 'empty';
-  if (id === 'overpass') {                                      // a highway crossing a street, with nothing else joining
-    const c = roadConns(game, x, y), lanesAt = d => { const n = game.roads.get(tileIndex(x + SIDES[d][0], y + SIDES[d][1])); return n ? (n.lanes || 2) : 0; };
-    if (c.length !== 4 || (r.lanes || 2) !== 4) return 'notcrossing';
-    const axis = [0, 1].find(a => lanesAt(a) === 4 && lanesAt(a + 2) === 4 && lanesAt(1 - a) === 2 && lanesAt(1 - a + 2) === 2);
-    if (axis === undefined) return 'notcrossing';
-    r.overpass = axis;
-    game.inv[id]--;
-    if (game.inv[id] <= 0) { game.tool = 'build'; game.placing = null; }
+  if (id === 'overpass') {                                      // two straight roads (either size) crossing, with nothing else joining
+    if (roadConns(game, x, y).length !== 4) return 'notcrossing';
+    const lanes = [0, 1].map(a => overpassLanesAlong(x, y, a));
+    const ok = a => { const n = d => game.roads.get(tileIndex(x + SIDES[d][0], y + SIDES[d][1])); return (n(a).lanes || 2) === (n(a + 2).lanes || 2); };
+    if (!ok(0) || !ok(1)) return 'notcrossing';
+    const top = lanes[0] > lanes[1] ? 0 : 1;                    // the bigger road goes over; a tie puts east-west on top
+    r.overpass = top;
+    r.lanes = lanes[top];
+    game.inv[id]--;                                             // (the tool stays on so the player can tap it to swap)
     emit();
     return 'ok';
   }
@@ -265,7 +279,7 @@ export function buildRoad(x, y) {
   const four = game.build4 && (game.inv.highway || 0) > 0;
   const have = game.roads.get(idx);
   if (have) {
-    if (four && (have.lanes || 2) === 2 && !have.bridge && !have.tunnel && have.special !== 'roundabout') {   // widen a street in place
+    if (four && (have.lanes || 2) === 2 && !have.bridge && !have.tunnel && have.special !== 'roundabout' && have.overpass === undefined) {   // widen a street in place
       have.lanes = 4;
       game.inv.highway--; game.inv.road++;
       if (game.inv.highway <= 0) game.build4 = false;

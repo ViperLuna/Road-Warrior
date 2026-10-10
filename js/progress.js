@@ -1,5 +1,6 @@
 // Spawn schedule, goals and rewards. Pure game logic: no DOM.
 import { prog, roadsAvailable } from './progression.js';
+import { roadConns } from './network.js';
 import { spawnPair, spawnHouse, spawnHouseAcross, spawnPairAcross, findCrossings } from './spawn.js';
 
 export function initProgress(g) {
@@ -68,9 +69,19 @@ function doSpawn(g) {
 }
 
 // Weighted pick among enabled specials, or null if none are available.
+// Is there a straight 4-way crossing an overpass could go on?
+function hasCrossing(g) {
+  for (const [k, r] of g.roads) {
+    if (r.special || r.overpass !== undefined || r.bridge || r.tunnel) continue;
+    const x = k % g.cols, y = (k / g.cols) | 0;
+    if (roadConns(g, x, y).length === 4) return true;
+  }
+  return false;
+}
+
 function pickSpecial(g) {
   const hills = !!(g.terrain && g.terrain.hasHill);
-  const list = prog.specials.filter(s => s.enabled && !(s.unlock && g.unlocks[s.id]) && !(s.requires === 'hill' && !hills) && !(s.requires === 'highway' && !((g.inv.highway || 0) > 0 || [...g.roads.values()].some(r => r.lanes === 4))));
+  const list = prog.specials.filter(s => s.enabled && !(s.unlock && g.unlocks[s.id]) && !(s.requires === 'hill' && !hills) && !(s.requires === 'highway' && !((g.inv.highway || 0) > 0 || [...g.roads.values()].some(r => r.lanes === 4))) && !(s.requires === 'crossing' && !hasCrossing(g)));
   if (!list.length) return null;
   let r = Math.random() * list.reduce((a, s) => a + (s.weight || 1), 0);
   for (const s of list) if ((r -= s.weight || 1) <= 0) return s;

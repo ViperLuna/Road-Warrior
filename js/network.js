@@ -9,9 +9,18 @@ export const portAt = (g, x, y) => (inB(g, x, y) ? g.ports.get(tidx(g, x, y)) ||
 // How many lanes a tile has (2 = street, 4 = highway), and how many its edge on `side` has: the smaller of the two
 // neighbours' counts, and 2 where it meets a driveway or gate. A highway tile therefore tapers inside itself.
 export const tileLanes = (g, x, y) => (g.roads.get(tidx(g, x, y)) || {}).lanes || 2;
+// An overpass tile carries two roads of (possibly) different sizes, so its lane count depends on which road you mean.
 export function edgeLanes(g, x, y, side) {
-  const t = tileLanes(g, x, y), nx = x + DIR[side][0], ny = y + DIR[side][1];
-  return roadAt(g, nx, ny) ? Math.min(t, tileLanes(g, nx, ny)) : 2;
+  const t = layerLanes(g, x, y, side), nx = x + DIR[side][0], ny = y + DIR[side][1];
+  return roadAt(g, nx, ny) ? Math.min(t, layerLanes(g, nx, ny, (side + 2) % 4)) : 2;
+}
+// Lanes of the road that runs through (x,y) along the axis of `side`: for an overpass tile, that road's own size (read off its
+// neighbours); for any other tile, the tile's lanes.
+export function layerLanes(g, x, y, side) {
+  const r = g.roads.get(tidx(g, x, y));
+  if (!r || r.overpass === undefined) return (r && r.lanes) || 2;
+  const a = side % 2 === 0 ? [0, 2] : [1, 3];
+  return Math.min(...a.map(d => tileLanes(g, x + DIR[d][0], y + DIR[d][1])));
 }
 
 // Sides of road tile (x,y) that connect to a neighbouring road or to a building port facing it.
@@ -45,7 +54,7 @@ export function pieceValid(g, p) {
     const ov = overpassAxis(g, p.tx, p.ty);
     if (ov >= 0 || p.under) {                                   // layered tile: straight movements only, on the right layer
       if (ov < 0 || p.out !== OPP[p.in] || !!p.under !== (axisOf(p.in) !== ov)) return false;
-      return (p.tl ?? 2) === (p.under ? 2 : tileLanes(g, p.tx, p.ty)) && (p.ei ?? 2) === edgeLanes(g, p.tx, p.ty, p.in) && (p.eo ?? 2) === edgeLanes(g, p.tx, p.ty, p.out);
+      return (p.tl ?? 2) === layerLanes(g, p.tx, p.ty, p.in) && (p.ei ?? 2) === edgeLanes(g, p.tx, p.ty, p.in) && (p.eo ?? 2) === edgeLanes(g, p.tx, p.ty, p.out);
     }
     return (p.tl ?? 2) === tileLanes(g, p.tx, p.ty) && (p.ei ?? 2) === edgeLanes(g, p.tx, p.ty, p.in) && (p.eo ?? 2) === edgeLanes(g, p.tx, p.ty, p.out);
   }

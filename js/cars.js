@@ -2,7 +2,7 @@
 import { DIR, OPP, CAR_LEN, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
 import { lightColor } from './signals.js';
 import { lotTile, gateOf } from './buildings.js';
-import { roadAt, roundAt, tidx, tileLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
+import { roadAt, roundAt, tidx, tileLanes, layerLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
 import { findPath } from './pathfind.js';
 import { tuning } from './tuning.js';
 import { junctionAt, pieceConflict, outranks } from './junction.js';
@@ -34,7 +34,7 @@ const roadPieces = (g, steps, lane) => steps.map(s => {
   if (roundAt(g, s.x, s.y)) return roundPiece(s.x, s.y, s.in, s.out);
   const ei = edgeLanes(g, s.x, s.y, s.in), eo = edgeLanes(g, s.x, s.y, s.out);
   const ov = overpassAxis(g, s.x, s.y), under = ov >= 0 && axisOf(s.in) !== ov;          // on an overpass tile, the street runs underneath
-  return roadPiece(s.x, s.y, s.in, s.out, { tl: under ? 2 : tileLanes(g, s.x, s.y), ei, eo, li: Math.min(lane, ei / 2 - 1), lo: Math.min(lane, eo / 2 - 1), under });
+  return roadPiece(s.x, s.y, s.in, s.out, { tl: layerLanes(g, s.x, s.y, s.in), ei, eo, li: Math.min(lane, ei / 2 - 1), lo: Math.min(lane, eo / 2 - 1), under });
 });
 
 function planOut(g, car) {

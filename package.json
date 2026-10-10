@@ -3,6 +3,7 @@
   "type": "module",
   "scripts": {
     "sim": "node sim/run.mjs",
-    "test:save": "node tests/save.test.mjs"
+    "test:save": "node tests/save.test.mjs",
+    "test:overpass": "node tests/overpass.test.mjs"
   }
 }
