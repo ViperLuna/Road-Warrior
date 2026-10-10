@@ -187,3 +187,11 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 - Toolbar **Cone** (key `x`, button shows "Cone (n)" while any exist). Tap or drag along road tiles to put cones on them; the first tile decides whether the drag places or removes. Free and unlimited; drawn as a traffic cone with a faint orange tile tint. Saved with the game (`road.cone`); rebuilding a tile starts without its cone.
 - A coned tile is closed to **new** trips (`findPath` never starts on or enters one). Cars already on a route keep it, and parked cars whose only way home crosses a cone use their remembered ghost route (`homeRoute`), so a cone never strands a car. Houses with no route simply wait.
 - Use case: closing a half-built road so another colour doesn't discover it and send traffic over it, without cutting/rebuilding. `tests/cone.test.mjs` (`npm run test:cone`).
+
+## Agenda (things we agreed to do later; Alpha, so they can wait)
+1. **Unserved houses and destinations glow.** A house with no route to any destination of its colour will eventually glow (like a stuck car), and a destination with no route home for its houses will too. Without this, a house can just be left dormant to avoid dealing with it. Timing, intensity and what happens at the end (game over like a stuck car, or something gentler first) are still to decide. Related: rotating a house is the intended player fix; ghost routes already keep parked cars from being stranded, so a glow must only count houses/destinations that really have no live route.
+2. Remove the dev `P` key (spawn an extra pair) when the game is declared ready.
+3. Sound hooks (`js/audio.js`) are not wired to game events yet.
+4. Cash piles up (players end 20-minute games with ~$3.5-4.5k): look at road price, special prices or something worth buying.
+5. Optional: phase-through cars inside destination lots if single-exit lots turn out to bottleneck.
+6. Possible later: a parked car that has waited too long for its lot to clear could flash gold like a stuck car.
