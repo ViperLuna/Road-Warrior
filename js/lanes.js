@@ -206,3 +206,19 @@ export function lotOutPiece(bx, by, rot, k, ent) {
   return make(key, 'lot_out', slot, mad(slot, X, near ? 0.27 : 0.42), mad(p3, X, near ? -0.25 : -0.16), p3,
     { tx: Math.floor(ce[0]), ty: Math.floor(ce[1]), bx, by, rot, ent });
 }
+
+// Rebuild a route piece from its cache key (used by save games: a car's route is stored as a list of keys).
+export function pieceFromKey(key) {
+  let m;
+  if ((m = /^r:(\d+),(\d+):(\d)>(\d)(?:\|(\d)(\d)(\d)(\d)(\d)(u?))?$/.exec(key))) {
+    const [x, y, i, o] = m.slice(1, 5).map(Number);
+    const opts = m[5] === undefined ? {} : { tl: +m[5], ei: +m[6], eo: +m[7], li: +m[8], lo: +m[9], under: m[10] === 'u' };
+    return roadPiece(x, y, i, o, opts);
+  }
+  if ((m = /^rb:(\d+),(\d+):(\d)>(\d)$/.exec(key))) return roundPiece(+m[1], +m[2], +m[3], +m[4]);
+  if ((m = /^ho:(\d+),(\d+):(\d)$/.exec(key))) return houseOutPiece(+m[1], +m[2], +m[3]);
+  if ((m = /^hi:(\d+),(\d+):(\d)$/.exec(key))) return houseInPiece(+m[1], +m[2], +m[3]);
+  if ((m = /^li:(\d+),(\d+):(\d):(\d)>(\d)$/.exec(key))) return lotInPiece(+m[1], +m[2], +m[3], +m[4], +m[5]);
+  if ((m = /^lo:(\d+),(\d+):(\d):(\d)>(\d)$/.exec(key))) return lotOutPiece(+m[1], +m[2], +m[3], +m[4], +m[5]);
+  throw new Error('unknown piece key ' + key);
+}

@@ -2,6 +2,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "sim": "node sim/run.mjs"
+    "sim": "node sim/run.mjs",
+    "test:save": "node tests/save.test.mjs"
   }
 }

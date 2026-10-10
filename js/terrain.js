@@ -119,6 +119,16 @@ function build(seed, cols, rows) {
   return terrain;
 }
 
+// Rebuild a terrain object from a saved water grid (save games keep the grid itself, so a later change to the generator can't alter old maps).
+export function terrainFromWater(seed, cols, rows, water, start) {
+  const { comp, sizes } = label(water, cols, rows);
+  let mainId = -1;
+  sizes.forEach((s, id) => { if (mainId < 0 || s > sizes[mainId]) mainId = id; });
+  let hills = 0;
+  for (let i = 0; i < water.length; i++) if (water[i] === HILL) hills++;
+  return { cols, rows, water, comp, mainId, start, seed, ok: true, hasHill: hills >= 6 };
+}
+
 function openBlock(water, comp, mainId, cols, cx, cy, r) {
   for (let y = cy - r; y <= cy + r; y++)
     for (let x = cx - r; x <= cx + r; x++) {

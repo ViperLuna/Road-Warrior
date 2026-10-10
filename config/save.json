@@ -1,0 +1,6 @@
+{
+  "_note": "Where save games go and how often. backend 'local' = this browser (localStorage). A server backend plugs in via setBackend() in js/main.js (see httpBackend in js/save.js).",
+  "backend": "local",
+  "slot": "autosave",
+  "intervalSeconds": 10
+}

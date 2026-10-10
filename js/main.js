@@ -1,8 +1,9 @@
 import { unlock } from './audio.js';
-import { game, newGame, setPalette, setMode, tick } from './state.js';
+import { game, newGame, setPalette, setMode, tick, onChange } from './state.js';
 import { setTuning } from './tuning.js';
 import { setProgression, setMaps, maps } from './progression.js';
-import { resizeView, fitView, cam } from './camera.js';
+import { resizeView, fitView, cam, clampCam } from './camera.js';
+import { configure, restore, saveNow, loadSaved, clearSave, describeSave, startAutosave } from './save.js';
 import { render } from './render.js';
 import { initInput, hover } from './input.js';
 import { initHud } from './hud.js';
@@ -38,15 +39,35 @@ function startMap(map) {
 
 const loadJson = url => fetch(url).then(r => r.json());
 setPalette((await loadJson('config/colors.json')).colors);
-for (const [url, apply] of [['config/tuning.json', setTuning], ['config/progression.json', setProgression], ['config/maps.json', setMaps]]) {
+for (const [url, apply] of [['config/tuning.json', setTuning], ['config/progression.json', setProgression], ['config/maps.json', setMaps], ['config/save.json', configure]]) {
   try { apply(await loadJson(url)); } catch (e) { console.warn(url + ' not loaded, using defaults', e); }
+}
+
+// Save games: the whole game, every car included, is written every few seconds and when the page goes away.
+let saveInfo = null;
+const refreshSaveInfo = async () => { saveInfo = await describeSave(); };
+const view = () => ({ view: { x: cam.x, y: cam.y, z: cam.z } });
+await refreshSaveInfo();
+
+async function continueGame() {
+  const d = await loadSaved();
+  if (!d) return;
+  try { restore(d); } catch (e) { console.error('could not load the save', e); return; }
+  if (d.view) Object.assign(cam, d.view); else fitView(game.cols, game.rows);
+  clampCam();
+  history.replaceState(null, '', '#seed=' + game.seed);
 }
 
 initHud({
   onPlay: map => startMap(map),
   onRestart: () => startMap(game.map),
-  onToMenu: () => setMode('menu'),
+  onToMenu: async () => { await saveNow(view()); await refreshSaveInfo(); setMode('menu'); },
+  onContinue: continueGame,
+  getSaveInfo: () => saveInfo,
 });
+startAutosave(view);
+let wasOver = false;
+onChange(g => { if (g.mode === 'over' && !wasOver) { wasOver = true; clearSave().then(refreshSaveInfo); } else if (g.mode !== 'over') wasOver = false; });
 initInput(canvas);
 addEventListener('resize', resize);
 resize();

@@ -17,7 +17,7 @@ export function toast(msg) {
 
 const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-export function initHud({ onPlay, onRestart, onToMenu }) {
+export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, getSaveInfo = () => null }) {
   toastEl = $('toast');
   const buttons = document.querySelectorAll('#toolbar button[data-tool]');
   const canvas = $('game');
@@ -42,6 +42,15 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
   function buildMenu() {
     const list = $('map-list');
     list.innerHTML = '';
+    const sv = getSaveInfo();
+    if (sv) {
+      const b = document.createElement('button');
+      b.className = 'card continue'; b.type = 'button';
+      const mins = Math.floor(sv.time / 60);
+      b.innerHTML = `<h3>Continue</h3><p>${sv.map}: ${sv.trips} trips, ${mins} min in</p><p>Traffic exactly where you left it</p>`;
+      b.addEventListener('click', onContinue);
+      list.appendChild(b);
+    }
     for (const m of maps) {
       const b = document.createElement('button');
       b.className = 'card'; b.type = 'button';

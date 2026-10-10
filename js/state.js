@@ -37,6 +37,7 @@ export function onEvent(fn) { evListeners.add(fn); }
 const notify = e => evListeners.forEach(fn => fn(e));
 export function onChange(fn) { listeners.add(fn); }
 function emit() { listeners.forEach(fn => fn(game)); }
+export const refresh = emit;       // for modules that change the game from outside (save/load)
 
 export const tileIndex = (x, y) => y * game.cols + x;
 export const inBounds = (x, y) => x >= 0 && y >= 0 && x < game.cols && y < game.rows;
