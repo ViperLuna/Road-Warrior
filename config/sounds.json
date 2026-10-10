@@ -63,5 +63,15 @@
     "pitchJitter": 0.06,
     "volumeJitter": 0.1,
     "cooldownMs": 120
+  },
+  "gameover": {
+    "files": [
+      "assets/sounds/gameover1.mp3",
+      "assets/sounds/gameover2.mp3",
+      "assets/sounds/gameover3.mp3",
+      "assets/sounds/gameover4.mp3",
+      "assets/sounds/gameover5.mp3"
+    ],
+    "volume": 0.9
   }
 }

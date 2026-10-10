@@ -168,6 +168,7 @@ function endGame() {
   if (record) saveBest(game.map.id, game.trips);
   game.over = { trips: game.trips, money: game.money, time: game.time, record, best: Math.max(prev, game.trips) };
   game.mode = 'over';
+  notify({ type: 'over', record });
   emit();
 }
 
