@@ -4,6 +4,7 @@ import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuilding
 import { WATER, HILL } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
+import { play } from './audio.js';
 
 export const hover = { x: -1, y: -1, show: false };
 
@@ -212,7 +213,7 @@ export function initInput(canvas) {
     else if (e.key === 'r' && hover.show) rotateBuildingAt(hover.x, hover.y);
     else if (NUMPAD_SPEED[e.code] !== undefined && game.mode === 'play') setSpeed(NUMPAD_SPEED[e.code]);
     else if (ROW_TOOL[e.code]) ROW_TOOL[e.code]();
-    else if (e.key === 'p') devSpawn();      // dev: spawn an extra pair
+    else if (e.key === 'p') { if (devSpawn()) play('spawn'); }      // dev: spawn an extra pair
   });
   addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; });
 }

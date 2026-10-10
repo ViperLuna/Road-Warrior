@@ -1,5 +1,5 @@
-import { unlock } from './audio.js';
-import { game, newGame, setPalette, setMode, tick, onChange } from './state.js';
+import { unlock, play } from './audio.js';
+import { game, newGame, setPalette, setMode, tick, onChange, onEvent } from './state.js';
 import { setTuning } from './tuning.js';
 import { setProgression, setMaps, maps } from './progression.js';
 import { resizeView, fitView, cam, clampCam } from './camera.js';
@@ -14,6 +14,8 @@ document.getElementById('start').addEventListener('click', async () => {
   splash.classList.add('hide');
   setTimeout(() => splash.remove(), 400);
 });
+
+onEvent(e => { if (e.type === 'spawn') play('spawn'); });          // sound effects hook into game events here
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
