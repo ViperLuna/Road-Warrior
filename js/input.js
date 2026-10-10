@@ -47,6 +47,7 @@ function stepBuild(st, x, y) {
   }
   const r = buildRoad(x, y);
   if (r === 'empty') toast('Out of road pieces and cash!');
+  if (r === 'ok' || r === 'upgraded') play('build');
   // Dragging along roads paints the direction: one-way when the toggle is on, two-way again when it's off.
   if (prev && (r === 'ok' || r === 'upgraded' || r === 'exists') && hasRoad(prev.x, prev.y)) setEdge(prev.x, prev.y, x, y, game.oneway);
 }
