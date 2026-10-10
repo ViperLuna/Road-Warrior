@@ -17,6 +17,13 @@ document.getElementById('start').addEventListener('click', async () => {
 
 onEvent(e => { if (e.type === 'spawn') play('spawn'); });          // sound effects hook into game events here
 
+// Hover sound: the moment a mouse first enters any button (not touch, which has no hover; not disabled buttons).
+document.addEventListener('pointerover', e => {
+  if (e.pointerType !== 'mouse') return;
+  const b = e.target.closest && e.target.closest('button');
+  if (b && !b.disabled && !b.contains(e.relatedTarget)) play('hover');
+});
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 let W = 0, H = 0, dpr = 1;

@@ -31,5 +31,13 @@
     "pitchJitter": 0.05,
     "volumeJitter": 0.1,
     "cooldownMs": 70
+  },
+  "hover": {
+    "files": [
+      "assets/sounds/hover1.mp3"
+    ],
+    "volume": 0.5,
+    "pitchJitter": 0.03,
+    "cooldownMs": 40
   }
 }
