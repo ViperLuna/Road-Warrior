@@ -1,6 +1,6 @@
 10.10.2026
   Game Saves - Now implemented. Currently game saves are local browser storage. The game automatically saves every 10 seconds, when switching tabs, switching apps, locking the phone, or when you tap "Menu."
-  Construction Zones - Choosing the construction tool and tapping/dragging a road will drop cones down and prevent traffic from entering while you fix or build new roads that may intersect with active traffic.
+  Construction Zones - Choosing the construction tool and tapping/dragging a road will drop cones down and prevent traffic from entering while you fix or build new roads that may intersect with active traffic. Cars that have already planned to use that road will still utilize it until they finish their full route and return home.
   Overpasses work with either road size. While the Overpass button is toggled on, tapping the overpass tile will alternate which road becomes the overpass.
   Bridges can intersect and can also be cut from intersection unless they are perpendicular to each other. Two bridges crossing cannot be cut.
   Traffic is even smoother now with much better roundabout control. Cars can turn right on red. 
