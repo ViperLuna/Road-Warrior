@@ -3,7 +3,8 @@ import { DIR, rt } from './lanes.js';
 import { tidx } from './network.js';
 
 export const SLOTS = 4;
-export const LOT_GATES = 1;
+// A destination has a single gate: lot tile `gate` (0 or 1, the player can flip it); the other lot tile is just parking.
+export const gateOf = b => (b.gate ? 1 : 0);
 
 export function footprint(b) {
   return b.kind === 'house' ? [[b.x, b.y]] : [[b.x, b.y], [b.x + 1, b.y], [b.x, b.y + 1], [b.x + 1, b.y + 1]];
@@ -21,8 +22,8 @@ export function reindex(g) {
   for (const b of g.buildings) {
     for (const [x, y] of footprint(b)) g.buildingAt.set(tidx(g, x, y), b);
     if (b.kind === 'house') g.ports.set(tidx(g, b.x, b.y), { b, x: b.x, y: b.y, side: b.rot, kind: 'house', lot: 0 });
-    else for (let i = 0; i < LOT_GATES; i++) {       // a destination has a single gate (lot tile 0); the second lot tile is just parking
-      const [x, y] = lotTile(b, i);
+    else {
+      const i = gateOf(b), [x, y] = lotTile(b, i);
       g.ports.set(tidx(g, x, y), { b, x, y, side: b.rot, kind: 'lot', lot: i });
     }
   }

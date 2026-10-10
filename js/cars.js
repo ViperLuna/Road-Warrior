@@ -1,7 +1,7 @@
 // One car per house. Round trip: house -> destination lot (park, dwell) -> house = 1 trip.
 import { DIR, OPP, CAR_LEN, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
 import { lightColor } from './signals.js';
-import { lotTile } from './buildings.js';
+import { lotTile, gateOf } from './buildings.js';
 import { roadAt, roundAt, tidx, tileLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
 import { findPath } from './pathfind.js';
 import { tuning } from './tuning.js';
@@ -64,7 +64,7 @@ function planBack(g, car) {
   const home = g.ports.get(tidx(g, car.house.x, car.house.y));
   if (!home) return false;
   let best = null, bestEnt = 0;
-  for (const ent of [0]) {                                      // the lot's single gate
+  for (const ent of [L.ent]) {                                  // the lot's single gate
     const [lx, ly] = lotTile({ x: L.bx, y: L.by, rot: L.rot }, ent);
     const rx = lx + D[0], ry = ly + D[1];
     if (!roadAt(g, rx, ry)) continue;
@@ -76,11 +76,11 @@ function planBack(g, car) {
   return true;
 }
 
-// A destination was rotated: put its cars on the new lot. Parked cars sit in their bay on the new layout;
+// A destination was rotated or its gate flipped: put its cars on the new lot. Parked cars sit in their bay on the new layout;
 // cars still driving in finish their (ghost) route and are re-seated on arrival (see updateSim).
 export function reseatCar(car, d) {
-  car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: 0, k: car.slot };
-  const p = lotInPiece(d.x, d.y, d.rot, 0, car.slot);
+  car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: gateOf(d), k: car.slot };
+  const p = lotInPiece(d.x, d.y, d.rot, gateOf(d), car.slot);
   car.route = [p]; car.idx = 0; car.s = p.len; car.v = 0; car.stuck = 0;
   pointAt(p, p.len, car);
 }
@@ -295,7 +295,7 @@ export function updateSim(g, dt) {
         p = car.route[car.idx];
       }
       if (arrived) {
-        if (car.state === 'out' && car.dest && car.lot.rot !== car.dest.rot) reseatCar(car, car.dest);     // the lot was rotated while we drove in
+        if (car.state === 'out' && car.dest && (car.lot.rot !== car.dest.rot || car.lot.ent !== gateOf(car.dest))) reseatCar(car, car.dest);     // the lot was rotated while we drove in
         const last = car.route[car.route.length - 1];
         pointAt(last, last.len, car);
         car.v = 0; car.route = [last]; car.idx = 0; car.s = last.len; car.stuck = 0; car.hold = false; car.entry = null;

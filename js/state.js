@@ -1,7 +1,7 @@
 // Game state + the rules for placing/removing things. No drawing or input in here.
 import { generateTerrain, WATER, HILL, LAND } from './terrain.js';
 import { clearPieceCache } from './lanes.js';
-import { rotateBuilding } from './buildings.js';
+import { rotateBuilding, lotTile, reindex } from './buildings.js';
 import { spawnInitial, spawnPair } from './spawn.js';
 import { updateSim, reseatCarsOf } from './cars.js';
 import { initProgress, checkProgress, chooseReward as pickReward } from './progress.js';
@@ -183,6 +183,19 @@ export function rotateBuildingAt(x, y) {
   if (!b) return false;
   rotateBuilding(game, b);
   if (b.kind === 'dest') reseatCarsOf(game, b);
+  emit();
+  return true;
+}
+
+// Tap the parking-lot part of a destination: move its gate to the other end of the lot.
+export function flipLotAt(x, y) {
+  const b = buildingAt(x, y);
+  if (!b || b.kind !== 'dest') return false;
+  const onLot = [0, 1].some(i => { const [lx, ly] = lotTile(b, i); return lx === x && ly === y; });
+  if (!onLot) return false;
+  b.gate = b.gate ? 0 : 1;
+  reindex(game);
+  reseatCarsOf(game, b);
   emit();
   return true;
 }

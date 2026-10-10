@@ -144,3 +144,6 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 - Toolbar button **Cut** (key `c`). Drag across the seam between two touching road tiles to cut it; the first seam of the drag decides whether the whole drag cuts or rejoins (drag again over a cut seam to rejoin). A tap shows a hint toast.
 - A cut seam is a wall in both directions (`road.cut` bitmask on both tiles; `roadConns` skips cut sides, so pathfinding, junction types, lights, roundabouts and drawing all follow). Cars already on a route across it finish as ghosts, then replan. One-way flags on that seam are cleared when it is cut.
 - Not allowed on bridges, tunnels and overpass tiles; not needed at house/destination entrances (they connect only to their own road). Cuts reset when either tile is demolished/rebuilt. Free to use. Drawn as a dark curb with yellow dashes across the road end.
+
+## Lot gate flip (user request)
+- A destination's single gate is lot tile `b.gate` (0 or 1, default 0). **Tap the building = rotate; tap the parking lot = flip the gate to the other end of the lot** (`flipLotAt`). Parked cars are re-seated in their bay on the new layout; cars still driving in finish their ghost route and are re-seated on arrival (same rule as rotation, now also checking the gate). Spawning, pathing and drawing all read `gateOf(b)`.

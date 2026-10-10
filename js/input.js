@@ -1,6 +1,6 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
-import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut } from './state.js';
+import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt } from './state.js';
 import { WATER, HILL } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
@@ -156,7 +156,8 @@ export function initInput(canvas) {
     }
     // Click/tap on a building (without dragging) rotates it.
     if (stroke && stroke.bld && !stroke.moved && stroke.mode !== 'pan' && e.type === 'pointerup' && stroke.button !== 2) {
-      rotateBuildingAt(stroke.start.x, stroke.start.y);
+      // Tap the building to rotate it; tap a destination's parking lot to flip its gate to the other end.
+      if (!flipLotAt(stroke.start.x, stroke.start.y)) rotateBuildingAt(stroke.start.x, stroke.start.y);
     }
     if (stroke && stroke.mode === 'cut' && stroke.cutMode === undefined && e.type === 'pointerup') toast('Drag across the seam between two roads to cut it (drag again to rejoin).');
     if (stroke && stroke.span) toast(`Drag all the way to the far side to finish the ${stroke.span.item}.`);

@@ -116,7 +116,7 @@ export function spawnHouse(g, color, opts = {}) {
     const hrot = Math.floor(rng() * 4), hex = hx + DIR[hrot][0], hey = hy + DIR[hrot][1];
     const blocked = new Set([hy * g.cols + hx]);
     if (!passable(g, hex, hey, blocked)) continue;
-    const exits = new Set([0].map(i => { const [x, y] = lotTile(d, i); return (y + DIR[d.rot][1]) * g.cols + x + DIR[d.rot][0]; }));
+    const exits = new Set([d.gate ? 1 : 0].map(i => { const [x, y] = lotTile(d, i); return (y + DIR[d.rot][1]) * g.cols + x + DIR[d.rot][0]; }));
     const n = roadsNeeded(g, [hex, hey], exits, blocked, maxR);
     if (n < minR || n > maxR) continue;
     if (opts.budget !== undefined && buildCost(g, [hex, hey], exits, blocked, opts.budget) > opts.budget) continue;       // can the player afford the road?
@@ -168,7 +168,7 @@ export function spawnHouseAcross(g, color, opts = {}) {
   const spans = shuffled(findCrossings(g).filter(c => c.covered || (items[c.item] || 0) > 0), rng);
 
   for (const d of shuffled(dests, rng)) {
-    const exits = new Set([0].map(i => { const [x, y] = lotTile(d, i); return (y + DIR[d.rot][1]) * g.cols + x + DIR[d.rot][0]; }));
+    const exits = new Set([d.gate ? 1 : 0].map(i => { const [x, y] = lotTile(d, i); return (y + DIR[d.rot][1]) * g.cols + x + DIR[d.rot][0]; }));
     for (const c of spans.slice(0, 40)) {
       for (const [near, far] of [[[c.ax, c.ay], [c.bx, c.by]], [[c.bx, c.by], [c.ax, c.ay]]]) {
         const dNear = roadsNeeded(g, near, exits, null, 14);                // dest -> its shore
