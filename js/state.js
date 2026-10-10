@@ -88,11 +88,19 @@ export const isCut = (ax, ay, bx, by) => {
   const A = d >= 0 && hasRoad(ax, ay) ? game.roads.get(tileIndex(ax, ay)) : null;
   return !!A && !!(((A.cut || 0) >> d) & 1);
 };
+// Which way a bridge/tunnel tile runs (0 north-south, 1 east-west); -1 if unknown.
+function spanAxis(k, r) {
+  if (r.axis !== undefined) return r.axis;
+  const tiles = game.bridges.get(r.bridge || r.tunnel);
+  return tiles && tiles.length > 1 ? (tiles[0] % game.cols !== tiles[1] % game.cols ? 1 : 0) : -1;
+}
 export function setCut(ax, ay, bx, by, cut) {
   const d = SIDES.findIndex(([dx, dy]) => ax + dx === bx && ay + dy === by);
   if (d < 0 || !hasRoad(ax, ay) || !hasRoad(bx, by)) return false;
   const A = game.roads.get(tileIndex(ax, ay)), B = game.roads.get(tileIndex(bx, by)), e = (d + 2) % 4;
-  if (A.bridge || B.bridge || A.tunnel || B.tunnel || A.overpass !== undefined || B.overpass !== undefined) return false;
+  if (A.overpass !== undefined || B.overpass !== undefined) return false;
+  // A bridge or tunnel can be cut from a road that meets it from the side, never along its own length.
+  for (const [r, x, y] of [[A, ax, ay], [B, bx, by]]) if ((r.bridge || r.tunnel) && spanAxis(tileIndex(x, y), r) !== (d + 1) % 2) return false;
   if (!!(((A.cut || 0) >> d) & 1) === !!cut) return true;
   if (cut) { A.cut = (A.cut || 0) | (1 << d); B.cut = (B.cut || 0) | (1 << e); A.noExit = (A.noExit || 0) & ~(1 << d); B.noExit = (B.noExit || 0) & ~(1 << e); }
   else { A.cut = (A.cut || 0) & ~(1 << d); B.cut = (B.cut || 0) & ~(1 << e); }
@@ -161,7 +169,7 @@ function buildSpan(kind, from, tiles, end) {
   const dx = Math.sign(tiles[0].x - from.x), dy = Math.sign(tiles[0].y - from.y);
   const dirIdx = SIDES.findIndex(([sx, sy]) => sx === dx && sy === dy);
   tiles.forEach((t, i) => {
-    const entry = { lanes: game.build4 ? 4 : 2 };           // bridges/tunnels take the lane count of the road you drag
+    const entry = { lanes: game.build4 ? 4 : 2, axis: dirIdx % 2 };           // bridges/tunnels take the lane count of the road you drag (axis: 0 north-south, 1 east-west)
     if (kind === 'tunnel') {
       entry.tunnel = id;
       if (i === 0) entry.portal = (dirIdx + 2) % 4;                // mouth facing back toward the near side

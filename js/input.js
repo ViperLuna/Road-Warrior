@@ -57,7 +57,7 @@ function stepCut(st, x, y) {
   st.prevTile = hasRoad(x, y) ? { x, y } : null;
   if (!prev || !hasRoad(x, y) || Math.abs(prev.x - x) + Math.abs(prev.y - y) !== 1) return;
   if (st.cutMode === undefined) st.cutMode = isCut(prev.x, prev.y, x, y) ? 'join' : 'cut';
-  if (!setCut(prev.x, prev.y, x, y, st.cutMode === 'cut')) toast("Can't cut a bridge, tunnel or overpass.");
+  if (!setCut(prev.x, prev.y, x, y, st.cutMode === 'cut')) toast("Can't cut there: bridges and tunnels can only be cut where a road meets them from the side, and overpasses not at all.");
 }
 
 const PLACE_MSG = {

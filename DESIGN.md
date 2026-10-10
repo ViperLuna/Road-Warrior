@@ -173,3 +173,6 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 ## Menu History window
 - The main menu has a scrollable **History** box under the map cards. It shows `history.txt` from the site root (plain text, `white-space: pre-wrap`); if the file is missing (or the host answers with an HTML 404) the box stays hidden. Touch/mouse-wheel scrolling work inside the box; the menu itself uses `justify-content: safe center` so a tall menu never clips its top on a small phone.
 - Fix: the splash banner image had accidentally also replaced the main menu's "Road Warrior" heading (unstyled, full size), which pushed the map cards off screen. The menu is back to the text heading.
+
+## Cutting bridges (user request)
+- Bridges can still meet roads/bridges from the side (e.g. two parallel spans), as real ones do, and now the Cut tool works on those seams. A bridge or tunnel can be cut only **across its side**, never **along its length** (that would just break the span); overpass tiles still can't be cut. Spans remember their direction (`axis`, 0 N-S / 1 E-W); older spans derive it from their tile list. Test: `tests/bridgecut.test.mjs`.
