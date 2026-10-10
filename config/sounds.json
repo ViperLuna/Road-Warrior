@@ -168,5 +168,29 @@
     "volume": 0.8,
     "pitchJitter": 0.03,
     "cooldownMs": 300
+  },
+  "speed:1>1.5": {
+    "files": [
+      "assets/sounds/speedup1.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.03,
+    "cooldownMs": 300
+  },
+  "speed:1>2": {
+    "files": [
+      "assets/sounds/speedup1.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.03,
+    "cooldownMs": 300
+  },
+  "speed:1.5>2": {
+    "files": [
+      "assets/sounds/speedup1.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.03,
+    "cooldownMs": 300
   }
 }
