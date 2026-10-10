@@ -54,7 +54,10 @@
       "assets/sounds/honk2.mp3",
       "assets/sounds/honk3.mp3",
       "assets/sounds/honk4.mp3",
-      "assets/sounds/honk5.mp3"
+      "assets/sounds/honk5.mp3",
+      "assets/sounds/honk6.mp3",
+      "assets/sounds/honk7.mp3",
+      "assets/sounds/honk8.mp3"
     ],
     "volume": 0.6,
     "pitchJitter": 0.06,
