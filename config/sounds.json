@@ -120,5 +120,29 @@
     "volume": 0.8,
     "pitchJitter": 0.03,
     "cooldownMs": 300
+  },
+  "speed:0>1": {
+    "files": [
+      "assets/sounds/speedstart1.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.03,
+    "cooldownMs": 300
+  },
+  "speed:0>1.5": {
+    "files": [
+      "assets/sounds/speedstart1.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.03,
+    "cooldownMs": 300
+  },
+  "speed:0>2": {
+    "files": [
+      "assets/sounds/speedstart1.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.03,
+    "cooldownMs": 300
   }
 }

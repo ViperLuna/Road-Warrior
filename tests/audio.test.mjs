@@ -1,4 +1,4 @@
-import { normalize, pickIndex } from '../js/audio.js';
+import { normalize, pickIndex, setSounds, firstDefined } from '../js/audio.js';
 let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : (fail++, console.log('FAIL:', m)); };
 ok(JSON.stringify(normalize('a.mp3').files) === '["a.mp3"]', 'string entry');
 ok(normalize(['a', 'b']).files.length === 2, 'list entry');
@@ -13,4 +13,9 @@ for (const n of [2, 3, 4]) {
   for (let i = 0; i < 2000; i++) { const k = pickIndex(n, last); if (k === last || k < 0 || k >= n) repeat = true; seen.add(k); last = k; }
   ok(!repeat && seen.size === n, `${n} variants: no immediate repeat, all used`);
 }
+setSounds({ 'speed:up': 'u.mp3', 'speed:0>2': 'x.mp3', _note: 'ignored' });
+ok(firstDefined(['speed:0>2', 'speed:up']) === 'speed:0>2', 'the most specific name wins');
+ok(firstDefined(['speed:1>2', 'speed:up']) === 'speed:up', 'falls back to the general kind');
+ok(firstDefined(['speed:2>1', 'speed:down']) === undefined, 'no sound registered: nothing plays');
+ok(firstDefined(['_note']) === undefined, 'underscore keys are comments');
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);

@@ -1,4 +1,4 @@
-import { unlock, play } from './audio.js';
+import { unlock, play, playFirst } from './audio.js';
 import { game, newGame, setPalette, setMode, tick, onChange, onEvent } from './state.js';
 import { setTuning } from './tuning.js';
 import { setProgression, setMaps, maps } from './progression.js';
@@ -18,7 +18,10 @@ document.getElementById('start').addEventListener('click', async () => {
 onEvent(e => {
   if (e.type === 'spawn') play('spawn');
   if (e.type === 'over') play('gameover');
-  if (e.type === 'speed' && e.speed === 0) play('pause');
+  if (e.type === 'speed') {                                      // most specific first: 'speed:0>1.5', then the general kind
+    const kind = e.speed === 0 ? 'pause' : e.prev === 0 ? 'speed:resume' : e.speed > e.prev ? 'speed:up' : 'speed:down';
+    playFirst([`speed:${e.prev}>${e.speed}`, kind]);
+  }
   if (e.type === 'honk') play('honk', { volume: 0.7 + 0.3 * e.k });          // angrier cars are a bit louder
 });          // sound effects hook into game events here
 

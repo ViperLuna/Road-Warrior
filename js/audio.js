@@ -54,6 +54,10 @@ export async function unlock() {
   }));
 }
 
+// Which of these names has a sound registered? (the first one wins: list the most specific name first)
+export const firstDefined = names => names.find(n => defs[n]);
+export function playFirst(names, opts) { const n = firstDefined(names); if (n) play(n, opts); }
+
 // play('destroy'); optional { volume, rate } multiply the entry's own settings.
 export function play(name, { volume = 1, rate = 1 } = {}) {
   const d = defs[name];
