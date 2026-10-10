@@ -24,7 +24,8 @@
       "assets/sounds/build2.mp3",
       "assets/sounds/build3.mp3",
       "assets/sounds/build4.mp3",
-      "assets/sounds/build5.mp3"
+      "assets/sounds/build5.mp3",
+      "assets/sounds/build6.mp3"
     ],
     "volume": 0.7,
     "pitchJitter": 0.05,
