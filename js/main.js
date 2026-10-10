@@ -24,6 +24,11 @@ document.addEventListener('pointerover', e => {
   if (b && !b.disabled && !b.contains(e.relatedTarget)) play('hover');
 });
 
+// Click sound: pressing any button (on press, like the toolbar reacts), plus keyboard activation (Enter/Space on a focused button).
+const pressedButton = e => { const b = e.target.closest && e.target.closest('button'); return b && !b.disabled ? b : null; };
+document.addEventListener('pointerdown', e => { if (e.button === 0 && pressedButton(e)) play('click'); });
+document.addEventListener('click', e => { if (e.detail === 0 && pressedButton(e)) play('click'); });
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 let W = 0, H = 0, dpr = 1;

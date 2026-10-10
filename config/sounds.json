@@ -39,5 +39,13 @@
     "volume": 0.5,
     "pitchJitter": 0.03,
     "cooldownMs": 40
+  },
+  "click": {
+    "files": [
+      "assets/sounds/click1.mp3"
+    ],
+    "volume": 0.7,
+    "pitchJitter": 0.03,
+    "cooldownMs": 40
   }
 }
