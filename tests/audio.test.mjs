@@ -4,6 +4,7 @@ ok(JSON.stringify(normalize('a.mp3').files) === '["a.mp3"]', 'string entry');
 ok(normalize(['a', 'b']).files.length === 2, 'list entry');
 const o = normalize({ files: ['a', 'b'], volume: 0.5, pitchJitter: 0.1 });
 ok(o.volume === 0.5 && o.pitchJitter === 0.1 && o.volumeJitter === 0, 'object entry keeps options, fills defaults');
+ok(normalize('a').cooldownMs === 0 && normalize({ files: ['a'], cooldownMs: 70 }).cooldownMs === 70, 'cooldownMs defaults to 0 and is kept')
 ok(normalize({ file: 'x' }).files[0] === 'x', 'single "file" key');
 ok(pickIndex(1, 0) === 0 && pickIndex(0, null) === 0, 'single variant');
 // never repeats the previous variant, and every other variant can come up

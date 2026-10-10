@@ -1,3 +1,7 @@
 {
-  "spawn": { "files": ["assets/sounds/spawn1.mp3"], "volume": 0.8, "pitchJitter": 0.04 }
+  "spawn": { "files": ["assets/sounds/spawn1.mp3"], "volume": 0.8, "pitchJitter": 0.04 },
+  "destroy": {
+    "files": ["assets/sounds/destroy1.mp3", "assets/sounds/destroy2.mp3", "assets/sounds/destroy3.mp3", "assets/sounds/destroy4.mp3"],
+    "volume": 0.8, "pitchJitter": 0.05, "volumeJitter": 0.1, "cooldownMs": 70
+  }
 }

@@ -95,7 +95,7 @@ const ROW_TOOL = {                                                              
 
 function apply(mode, x, y, st) {
   if (mode === 'build') stepBuild(st, x, y);
-  else if (mode === 'destroy') demolish(x, y);
+  else if (mode === 'destroy') { if (demolish(x, y)) play('destroy'); }
   else if (mode === 'cut') stepCut(st, x, y);
   else if (mode === 'cone') stepCone(st, x, y);
   else if (mode === 'place') { const r = placeSpecial(game.placing, x, y); if (r === 'flipped') toast('Swapped: the other road is on top now.'); else if (r !== 'ok') toast(PLACE_MSG[r]); }
