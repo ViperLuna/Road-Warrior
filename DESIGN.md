@@ -139,3 +139,8 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 - A car that has been stuck > 0.8 x `gridlock.warnAfterSeconds` while waiting on **other cars** (chain-inside / chain-earlier / box / outranked / chain-light) now stops deferring to those rules (`force`); after 1.3 x it also ignores every car inside the box (`ignoreAll`). Red lights and stop-sign timers are never skipped. A brief overlap in a jam is accepted over a permanent deadlock.
 - Not fixed (by design): a genuinely full ring of roads with no free space anywhere is still a gridlock; that is what the stuck-car game over is for.
 - Sim results: lit 4x4 grids, 20-60 houses: before, most runs had cars stuck for 500-1500 s; after, 14 of 15 runs clear (worst wait 20-33 s). Bot (full progression): games over 6-8 of 10 -> 0 of 10, three runs.
+
+## Cut / Join tool (user request)
+- Toolbar button **Cut** (key `c`). Drag across the seam between two touching road tiles to cut it; the first seam of the drag decides whether the whole drag cuts or rejoins (drag again over a cut seam to rejoin). A tap shows a hint toast.
+- A cut seam is a wall in both directions (`road.cut` bitmask on both tiles; `roadConns` skips cut sides, so pathfinding, junction types, lights, roundabouts and drawing all follow). Cars already on a route across it finish as ghosts, then replan. One-way flags on that seam are cleared when it is cut.
+- Not allowed on bridges, tunnels and overpass tiles; not needed at house/destination entrances (they connect only to their own road). Cuts reset when either tile is demolished/rebuilt. Free to use. Drawn as a dark curb with yellow dashes across the road end.

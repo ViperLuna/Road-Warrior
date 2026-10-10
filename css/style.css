@@ -28,6 +28,7 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 #toolbar button.active[data-tool="build"]   { background: #2e9e5b; box-shadow: 0 0 14px rgba(70, 220, 130, .6); }
 #toolbar button.active[data-tool="destroy"] { background: #d9534f; box-shadow: 0 0 14px rgba(255, 110, 100, .6); }
 #toolbar button.active[data-tool="pan"]     { background: #3b82c4; box-shadow: 0 0 14px rgba(110, 170, 255, .6); }
+#toolbar button.active[data-tool="cut"]     { background: #8a56c4; box-shadow: 0 0 14px rgba(190, 140, 255, .6); }
 
 #toast {
   position: absolute; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom)); transform: translateX(-50%);
@@ -111,7 +112,8 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   .pill { padding: 5px 9px; font-size: .78rem; }
   .chip { padding: 6px 11px; font-size: .78rem; }
   #goal-bar { width: 42vw; }
-  #toolbar button { min-width: 78px; min-height: 48px; }
+  #toolbar { gap: 5px; padding: 6px; max-width: calc(100vw - 12px); }
+  #toolbar button { min-width: 0; flex: 1 1 auto; min-height: 48px; padding: 0 10px; font-size: .9rem; }
 }
 
 .pill.tap { font: inherit; font-size: .9rem; color: #fff; border: 0; cursor: pointer; }

@@ -16,10 +16,10 @@ export function edgeLanes(g, x, y, side) {
 
 // Sides of road tile (x,y) that connect to a neighbouring road or to a building port facing it.
 export function roadConns(g, x, y) {
-  const res = [];
+  const res = [], cut = (g.roads.get(tidx(g, x, y)) || {}).cut || 0;       // cut seams: the two road tiles touch but do not connect
   for (let d = 0; d < 4; d++) {
     const nx = x + DIR[d][0], ny = y + DIR[d][1];
-    if (roadAt(g, nx, ny)) res.push(d);
+    if (roadAt(g, nx, ny)) { if (!((cut >> d) & 1)) res.push(d); }
     else { const p = portAt(g, nx, ny); if (p && p.side === OPP[d]) res.push(d); }
   }
   return res;

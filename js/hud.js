@@ -21,7 +21,7 @@ export function initHud({ onPlay, onRestart, onToMenu }) {
   toastEl = $('toast');
   const buttons = document.querySelectorAll('#toolbar button[data-tool]');
   const canvas = $('game');
-  const cursors = { build: 'crosshair', destroy: 'not-allowed', pan: 'grab', place: 'cell' };
+  const cursors = { cut: 'crosshair', build: 'crosshair', destroy: 'not-allowed', pan: 'grab', place: 'cell' };
 
   // pointerdown for instant response on touch; click keeps keyboard activation working.
   buttons.forEach(b => {

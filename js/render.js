@@ -243,6 +243,15 @@ function computeFlows(game, tx, ty, conns, road) {
 // Signal heads and one-way chevrons, drawn on top of the road body.
 function drawTail(ctx, game, tx, ty, conns, road, flows) {
   const cx = tx + 0.5, cy = ty + 0.5;
+  for (let d = 0; d < 4; d++) {                                          // cut seams: a curb across the road's end
+    if (!(((road.cut || 0) >> d) & 1)) continue;
+    const ex = cx + DIRS[d][0] * 0.5, ey = cy + DIRS[d][1] * 0.5, px = -DIRS[d][1], py = DIRS[d][0], w = (road.lanes || 2) === 4 ? 0.46 : 0.26;
+    ctx.lineCap = 'butt';
+    ctx.strokeStyle = '#111316'; ctx.lineWidth = 0.12; ctx.beginPath(); ctx.moveTo(ex - px * w, ey - py * w); ctx.lineTo(ex + px * w, ey + py * w); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,214,90,.9)'; ctx.lineWidth = 0.03; ctx.setLineDash([0.07, 0.05]);
+    const ix = ex - DIRS[d][0] * 0.07, iy = ey - DIRS[d][1] * 0.07;
+    ctx.beginPath(); ctx.moveTo(ix - px * w, iy - py * w); ctx.lineTo(ix + px * w, iy + py * w); ctx.stroke(); ctx.setLineDash([]);
+  }
   if (road.special === 'light' && conns.length >= 3) drawLights(ctx, game, tx, ty, conns);
   for (const [d, sign] of flows) {                                       // chevron along the arm, pointing the way traffic goes
     const dx = DIRS[d][0] * sign, dy = DIRS[d][1] * sign, px = cx + DIRS[d][0] * 0.3, py = cy + DIRS[d][1] * 0.3;

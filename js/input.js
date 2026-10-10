@@ -1,6 +1,6 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
-import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay } from './state.js';
+import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut } from './state.js';
 import { WATER, HILL } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
@@ -50,6 +50,16 @@ function stepBuild(st, x, y) {
   if (prev && (r === 'ok' || r === 'upgraded' || r === 'exists') && hasRoad(prev.x, prev.y)) setEdge(prev.x, prev.y, x, y, game.oneway);
 }
 
+// Cut/Join: dragging across the seam between two touching roads cuts it; the first seam of the drag decides whether the
+// whole drag cuts (it was connected) or joins (it was already cut).
+function stepCut(st, x, y) {
+  const prev = st.prevTile;
+  st.prevTile = hasRoad(x, y) ? { x, y } : null;
+  if (!prev || !hasRoad(x, y) || Math.abs(prev.x - x) + Math.abs(prev.y - y) !== 1) return;
+  if (st.cutMode === undefined) st.cutMode = isCut(prev.x, prev.y, x, y) ? 'join' : 'cut';
+  if (!setCut(prev.x, prev.y, x, y, st.cutMode === 'cut')) toast("Can't cut a bridge, tunnel or overpass.");
+}
+
 const PLACE_MSG = {
   none: 'Tap a road tile.', badtile: "Can't go on a bridge or tunnel.", taken: 'That intersection already has one.',
   notjunction: 'Needs an intersection: 3 or more roads meeting.', empty: 'None left.',
@@ -61,6 +71,7 @@ const PLACE_MSG = {
 function apply(mode, x, y, st) {
   if (mode === 'build') stepBuild(st, x, y);
   else if (mode === 'destroy') demolish(x, y);
+  else if (mode === 'cut') stepCut(st, x, y);
   else if (mode === 'place') { const r = placeSpecial(game.placing, x, y); if (r !== 'ok') toast(PLACE_MSG[r]); }
 }
 
@@ -147,6 +158,7 @@ export function initInput(canvas) {
     if (stroke && stroke.bld && !stroke.moved && stroke.mode !== 'pan' && e.type === 'pointerup' && stroke.button !== 2) {
       rotateBuildingAt(stroke.start.x, stroke.start.y);
     }
+    if (stroke && stroke.mode === 'cut' && stroke.cutMode === undefined && e.type === 'pointerup') toast('Drag across the seam between two roads to cut it (drag again to rejoin).');
     if (stroke && stroke.span) toast(`Drag all the way to the far side to finish the ${stroke.span.item}.`);
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
@@ -169,6 +181,7 @@ export function initInput(canvas) {
     else if (e.key === 'd') setTool('destroy');
     else if (e.key === 'm') setTool('pan');
     else if (e.key === 'o' && game.unlocks.oneway) setOneWay(!game.oneway);
+    else if (e.key === 'c') setTool('cut');
     else if (e.key === 'r' && hover.show) rotateBuildingAt(hover.x, hover.y);
     else if (e.key === 'p') devSpawn();      // dev: spawn an extra pair
   });

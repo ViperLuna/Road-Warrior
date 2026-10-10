@@ -80,11 +80,30 @@ export function setEdge(ax, ay, bx, by, oneWay) {
   return true;
 }
 
-// Forget one-way flags that point at a tile that no longer has a road.
+// Cut / join the seam between two touching road tiles. A cut seam passes nothing in either direction; cars already on a
+// route across it finish as ghosts. Spans (bridges, tunnels) and overpass tiles can't be cut.
+export const isCut = (ax, ay, bx, by) => {
+  const d = SIDES.findIndex(([dx, dy]) => ax + dx === bx && ay + dy === by);
+  const A = d >= 0 && hasRoad(ax, ay) ? game.roads.get(tileIndex(ax, ay)) : null;
+  return !!A && !!(((A.cut || 0) >> d) & 1);
+};
+export function setCut(ax, ay, bx, by, cut) {
+  const d = SIDES.findIndex(([dx, dy]) => ax + dx === bx && ay + dy === by);
+  if (d < 0 || !hasRoad(ax, ay) || !hasRoad(bx, by)) return false;
+  const A = game.roads.get(tileIndex(ax, ay)), B = game.roads.get(tileIndex(bx, by)), e = (d + 2) % 4;
+  if (A.bridge || B.bridge || A.tunnel || B.tunnel || A.overpass !== undefined || B.overpass !== undefined) return false;
+  if (!!(((A.cut || 0) >> d) & 1) === !!cut) return true;
+  if (cut) { A.cut = (A.cut || 0) | (1 << d); B.cut = (B.cut || 0) | (1 << e); A.noExit = (A.noExit || 0) & ~(1 << d); B.noExit = (B.noExit || 0) & ~(1 << e); }
+  else { A.cut = (A.cut || 0) & ~(1 << d); B.cut = (B.cut || 0) & ~(1 << e); }
+  emit();
+  return true;
+}
+
+// Forget one-way flags (and cuts) that point at a tile that no longer has a road.
 function clearEdgesTowards(x, y) {
   SIDES.forEach(([dx, dy], d) => {
     const n = game.roads.get(tileIndex(x + dx, y + dy));
-    if (n && inBounds(x + dx, y + dy)) n.noExit = (n.noExit || 0) & ~(1 << ((d + 2) % 4));
+    if (n && inBounds(x + dx, y + dy)) { n.noExit = (n.noExit || 0) & ~(1 << ((d + 2) % 4)); n.cut = (n.cut || 0) & ~(1 << ((d + 2) % 4)); }
   });
 }
 
