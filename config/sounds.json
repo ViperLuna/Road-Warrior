@@ -91,5 +91,16 @@
     "volume": 0.7,
     "pitchJitter": 0.03,
     "cooldownMs": 100
+  },
+  "unserved": {
+    "files": [
+      "assets/sounds/unserved1.mp3",
+      "assets/sounds/unserved2.mp3",
+      "assets/sounds/unserved3.mp3",
+      "assets/sounds/unserved4.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.04,
+    "cooldownMs": 300
   }
 }
