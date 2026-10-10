@@ -6,6 +6,7 @@
     "test:save": "node tests/save.test.mjs",
     "test:overpass": "node tests/overpass.test.mjs",
     "test:ghost": "node tests/ghosthome.test.mjs",
-    "test:cone": "node tests/cone.test.mjs"
+    "test:cone": "node tests/cone.test.mjs",
+    "test:audio": "node tests/audio.test.mjs"
   }
 }

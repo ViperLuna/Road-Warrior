@@ -203,3 +203,6 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 
 ## Settings
 `js/settings.js` keeps player preferences in this browser's localStorage (not in save games). Settings screen: main menu or Pause. "Show cut markers" (default on) hides the black bar with yellow dashes drawn at a cut seam; it only affects drawing, never routing. The markers always show while the Cut tool is selected.
+
+## Sound effects
+`js/audio.js` plays sounds by event name, listed in `config/sounds.json` (empty for now). An entry is a file, a list of files, or an object: `{ "files": [...], "volume": 0.8, "pitchJitter": 0.05, "volumeJitter": 0.1 }`. With several files, one is picked at random each play and never the same one twice in a row; the jitters nudge pitch/volume a little each time so even a single file doesn't sound identical. Game code calls `play('destroy')`. Files go in `assets/sounds/`. Not yet wired to game events (see Agenda). Test: `npm run test:audio`.
