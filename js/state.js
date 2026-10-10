@@ -133,7 +133,12 @@ function clearEdgesTowards(x, y) {
 
 export function setMode(mode) { game.mode = mode; emit(); }
 export const SPEEDS = [0, 1, 1.5, 2];
-export function setSpeed(v) { game.speed = SPEEDS.includes(v) ? v : 1; emit(); }
+export function setSpeed(v) {
+  const prev = game.speed;
+  game.speed = SPEEDS.includes(v) ? v : 1;
+  if (game.speed !== prev) notify({ type: 'speed', speed: game.speed, prev });
+  emit();
+}
 export function cycleSpeed() { setSpeed(SPEEDS[(SPEEDS.indexOf(game.speed) + 1) % SPEEDS.length]); }
 
 export function tick(dt) {

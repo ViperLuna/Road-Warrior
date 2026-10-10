@@ -112,5 +112,13 @@
     "volume": 0.8,
     "pitchJitter": 0.03,
     "cooldownMs": 300
+  },
+  "pause": {
+    "files": [
+      "assets/sounds/pause1.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.03,
+    "cooldownMs": 300
   }
 }
