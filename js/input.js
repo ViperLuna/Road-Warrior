@@ -86,6 +86,12 @@ const PLACE_MSG = {
   notcrossing: 'An overpass goes on a straight crossing of two roads (4 roads meeting, same size on both sides of each).',
 };
 
+const NUMPAD_SPEED = { Numpad0: 0, Numpad1: 1, Numpad2: 1.5, Numpad3: 2 };     // numpad: speed
+const ROW_TOOL = {                                                                // number row: toolbar buttons, left to right
+  Digit1: () => setTool('build'), Digit2: () => setTool('destroy'), Digit3: () => setTool('pan'),
+  Digit4: () => setTool('cut'), Digit5: () => setTool('cone'), Digit6: () => { if (game.unlocks.oneway) setOneWay(!game.oneway); },
+};
+
 function apply(mode, x, y, st) {
   if (mode === 'build') stepBuild(st, x, y);
   else if (mode === 'destroy') demolish(x, y);
@@ -204,10 +210,8 @@ export function initInput(canvas) {
     else if (e.key === 'c') setTool('cut');
     else if (e.key === 'x') setTool('cone');
     else if (e.key === 'r' && hover.show) rotateBuildingAt(hover.x, hover.y);
-    else if (e.key === '0' && game.mode === 'play') setSpeed(0);
-    else if (e.key === '1' && game.mode === 'play') setSpeed(1);
-    else if (e.key === '2' && game.mode === 'play') setSpeed(1.5);
-    else if (e.key === '3' && game.mode === 'play') setSpeed(2);
+    else if (NUMPAD_SPEED[e.code] !== undefined && game.mode === 'play') setSpeed(NUMPAD_SPEED[e.code]);
+    else if (ROW_TOOL[e.code]) ROW_TOOL[e.code]();
     else if (e.key === 'p') devSpawn();      // dev: spawn an extra pair
   });
   addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; });
