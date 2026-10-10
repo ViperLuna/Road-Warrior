@@ -13,6 +13,7 @@ export const START_INVENTORY = { road: 20, bridge: 1 };
 
 export const game = {
   seed: 0,
+  speed: 1,                 // sim speed while playing: 0 (frozen, building still allowed) | 1 | 1.5 | 2
   mode: 'menu',             // 'menu' | 'play' | 'reward' | 'over' | 'pause'
   map: null,
   cols: 32,
@@ -45,6 +46,7 @@ export const hasRoad = (x, y) => inBounds(x, y) && game.roads.has(tileIndex(x, y
 
 export function newGame(seed, map = maps[0]) {
   game.seed = seed >>> 0;
+  game.speed = 1;
   game.map = map;
   game.cols = map.cols;
   game.rows = map.rows;
@@ -130,6 +132,9 @@ function clearEdgesTowards(x, y) {
 }
 
 export function setMode(mode) { game.mode = mode; emit(); }
+export const SPEEDS = [0, 1, 1.5, 2];
+export function setSpeed(v) { game.speed = SPEEDS.includes(v) ? v : 1; emit(); }
+export function cycleSpeed() { setSpeed(SPEEDS[(SPEEDS.indexOf(game.speed) + 1) % SPEEDS.length]); }
 
 export function tick(dt) {
   if (game.mode !== 'play') return;

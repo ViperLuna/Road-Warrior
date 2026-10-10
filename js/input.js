@@ -1,6 +1,6 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
-import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt, setCone, hasCone } from './state.js';
+import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt, setCone, hasCone, setSpeed } from './state.js';
 import { WATER, HILL } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
@@ -203,6 +203,10 @@ export function initInput(canvas) {
     else if (e.key === 'c') setTool('cut');
     else if (e.key === 'x') setTool('cone');
     else if (e.key === 'r' && hover.show) rotateBuildingAt(hover.x, hover.y);
+    else if (e.key === '0' && game.mode === 'play') setSpeed(0);
+    else if (e.key === '1' && game.mode === 'play') setSpeed(1);
+    else if (e.key === '2' && game.mode === 'play') setSpeed(1.5);
+    else if (e.key === '3' && game.mode === 'play') setSpeed(2);
     else if (e.key === 'p') devSpawn();      // dev: spawn an extra pair
   });
   addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; });

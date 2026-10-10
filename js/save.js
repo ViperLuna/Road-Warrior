@@ -65,6 +65,7 @@ export function restore(data, g = game) {
   g.reward = data.reward ? { goal: data.reward.goal, options: data.reward.options.map(o => ({ ...o, special: o.special ? specialInfo(o.special) : undefined })) } : null;
   g.mode = g.reward ? 'reward' : 'play';
   g.tool = 'build'; g.placing = null;
+  g.speed = 0;                      // come back paused: no surprise traffic while you find your bearings
 
   const slotsById = new Map();
   g.buildings = data.buildings.map(b => { const o = { ...b, color: color(b.color) }; slotsById.set(o.id, b.slots); return o; });

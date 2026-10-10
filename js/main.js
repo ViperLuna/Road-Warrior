@@ -88,7 +88,7 @@ setMode('menu');
 const STEP = 1 / 60;
 let last = performance.now(), acc = 0;
 (function frame(now) {
-  acc += Math.min(0.1, (now - last) / 1000); last = now;
+  acc += Math.min(0.1, (now - last) / 1000) * game.speed; last = now;
   while (acc >= STEP) { tick(STEP); acc -= STEP; }
   render(ctx, W, H, dpr, game, cam, hover);
   requestAnimationFrame(frame);

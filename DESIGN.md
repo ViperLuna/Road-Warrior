@@ -195,3 +195,6 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 4. Cash piles up (players end 20-minute games with ~$3.5-4.5k): look at road price, special prices or something worth buying.
 5. Optional: phase-through cars inside destination lots if single-exit lots turn out to bottleneck.
 6. Possible later: a parked car that has waited too long for its lot to clear could flash gold like a stuck car.
+
+## Speed control
+`game.speed` is 0 (frozen), 1, 1.5 or 2. The frame loop in `main.js` multiplies elapsed time by it before feeding the fixed 1/60 accumulator, so physics and timers behave identically at every speed. Speed 0 keeps `mode === 'play'`, so all building tools work while frozen; cars, ghost routes and home routes simply resume. HUD pill cycles ⏸ → 1x → 1.5x → 2x; keys `0` pause, `1` 1x, `2` 1.5x, `3` 2x (Space is pan). New games start at 1x; Continue restores paused. Speed is not saved.

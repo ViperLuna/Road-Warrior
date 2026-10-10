@@ -1,5 +1,5 @@
 // DOM overlay: inventory pills, goal bar, shop, toolbar, toasts, and the menu / reward / pause / game-over screens.
-import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, buy, bestFor, isUnlocked, coneCount } from './state.js';
+import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, buy, bestFor, isUnlocked, coneCount, cycleSpeed } from './state.js';
 import { maps, prog, roadsAvailable } from './progression.js';
 
 let toastEl, toastTimer = 0, lastMsg = '', lastAt = 0;
@@ -30,6 +30,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     b.addEventListener('click', pick);
   });
   $('oneway-btn').addEventListener('click', () => { setOneWay(!game.oneway); toast(game.oneway ? 'One-way on: drag along a road to set its direction.' : 'One-way off: dragging along a road makes it two-way.'); });
+  $('speed-btn').addEventListener('click', cycleSpeed);
   $('menu-btn').addEventListener('click', () => setMode('pause'));
   $('shop-btn').addEventListener('click', () => { $('shop').hidden = !$('shop').hidden; render(); });
   $('shop-close').addEventListener('click', () => { $('shop').hidden = true; });
@@ -82,6 +83,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   function render() {
     const mode = game.mode;
     $('hud').hidden = mode === 'menu';
+    const sb = $('speed-btn'); sb.textContent = game.speed === 0 ? '⏸' : game.speed + 'x'; sb.classList.toggle('paused', game.speed === 0);
     $('menu').hidden = mode !== 'menu';
     $('reward').hidden = mode !== 'reward';
     $('pause').hidden = mode !== 'pause';
