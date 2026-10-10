@@ -169,3 +169,7 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 - **Default top road:** the bigger one (a tie puts east-west on top). **While the Overpass tool is on, tapping an overpass swaps which road is on top** (free; cars on the tile finish as ghosts). The tool stays on after the last piece is placed so it can still be tapped to swap; the Overpass pill also shows (count 0) whenever one exists on the map.
 - Implementation: `r.overpass` = axis of the deck (0 N-S, 1 E-W); `r.lanes` = deck's lane count; per-layer lane counts come from `layerLanes()` (network.js), which `edgeLanes`, car routes and `pieceValid` use. Renderer draws a 2- or 4-lane deck over a 2- or 4-lane road (`drawWide` takes a mid half-width and a rails flag).
 - Reward offer needs a crossing to exist (`requires: "crossing"`). Cost stays $80. `tests/overpass.test.mjs` (`npm run test:overpass`) covers all four size combos, swapping, placement rules and traffic.
+
+## Menu History window
+- The main menu has a scrollable **History** box under the map cards. It shows `history.txt` from the site root (plain text, `white-space: pre-wrap`); if the file is missing (or the host answers with an HTML 404) the box stays hidden. Touch/mouse-wheel scrolling work inside the box; the menu itself uses `justify-content: safe center` so a tall menu never clips its top on a small phone.
+- Fix: the splash banner image had accidentally also replaced the main menu's "Road Warrior" heading (unstyled, full size), which pushed the map cards off screen. The menu is back to the text heading.

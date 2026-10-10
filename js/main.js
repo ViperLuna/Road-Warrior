@@ -43,6 +43,13 @@ for (const [url, apply] of [['config/tuning.json', setTuning], ['config/progress
   try { apply(await loadJson(url)); } catch (e) { console.warn(url + ' not loaded, using defaults', e); }
 }
 
+// The main menu's History window shows history.txt from the site root (hidden if there isn't one).
+fetch('history.txt', { cache: 'no-cache' }).then(r => (r.ok ? r.text() : '')).then(t => {
+  if (!t.trim() || /^\s*<(!doctype|html)/i.test(t)) return;                     // missing file, or a host's HTML 404 page
+  document.getElementById('history-text').textContent = t.trim();
+  document.getElementById('history').hidden = false;
+}).catch(() => {});
+
 // Save games: the whole game, every car included, is written every few seconds and when the page goes away.
 let saveInfo = null;
 const refreshSaveInfo = async () => { saveInfo = await describeSave(); };
