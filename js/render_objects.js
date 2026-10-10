@@ -87,9 +87,9 @@ export function drawGhosts(ctx, g) {
   const seen = new Set();
   ctx.lineCap = 'butt'; ctx.lineJoin = 'round';
   for (const car of g.cars) {
-    if (car.state === 'home' || car.state === 'dwell') continue;
-    for (let j = car.idx; j < car.route.length; j++) {
-      const p = car.route[j];
+    if (car.state === 'home') continue;
+    const pieces = car.state === 'dwell' ? car.homeRoute || [] : car.route.slice(car.idx);       // a parked car's way home counts too
+    for (const p of pieces) {
       if (seen.has(p.key) || pieceValid(g, p)) continue;
       seen.add(p.key);
       ctx.beginPath();

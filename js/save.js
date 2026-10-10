@@ -29,7 +29,7 @@ export function serialize(g = game) {
   const carData = g.cars.map(c => ({
     id: c.id, house: c.house.id, state: c.state, idx: c.idx, s: c.s, v: c.v, x: c.x, y: c.y, a: c.a,
     dest: c.dest ? c.dest.id : null, slot: c.slot, lot: c.lot ? { ...c.lot } : null, dwell: c.dwell, cooldown: c.cooldown,
-    route: c.route.map(p => p.key), stuck: c.stuck, holdT: c.holdT || 0,
+    route: c.route.map(p => p.key), home: c.homeRoute ? c.homeRoute.map(p => p.key) : null, stuck: c.stuck, holdT: c.holdT || 0,
   }));
   return {
     version: SAVE_VERSION, savedAt: Date.now(),
@@ -77,7 +77,7 @@ export function restore(data, g = game) {
     Object.assign(c, {
       id: sc.id, state: sc.state, idx: sc.idx, s: sc.s, v: sc.v, x: sc.x, y: sc.y, a: sc.a, slot: sc.slot, lot: sc.lot ? { ...sc.lot } : null,
       dwell: sc.dwell, cooldown: sc.cooldown, stuck: sc.stuck, holdT: sc.holdT, dest: sc.dest != null ? byId.get(sc.dest) || null : null,
-      route: sc.route.map(pieceFromKey),
+      route: sc.route.map(pieceFromKey), homeRoute: sc.home ? sc.home.map(pieceFromKey) : null,
     });
     return c;
   });

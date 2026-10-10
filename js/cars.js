@@ -37,6 +37,9 @@ const roadPieces = (g, steps, lane) => steps.map(s => {
   return roadPiece(s.x, s.y, s.in, s.out, { tl: layerLanes(g, s.x, s.y, s.in), ei, eo, li: Math.min(lane, ei / 2 - 1), lo: Math.min(lane, eo / 2 - 1), under });
 });
 
+// The same road tile in the opposite direction (for a car's way home over the road it came by).
+const reversePiece = p => (p.round ? roundPiece(p.tx, p.ty, p.out, p.in) : roadPiece(p.tx, p.ty, p.out, p.in, { tl: p.tl, ei: p.eo, eo: p.ei, li: p.lo, lo: p.li, under: p.under }));
+
 function planOut(g, car) {
   const b = car.house, D = DIR[b.rot];
   const rx = b.x + D[0], ry = b.y + D[1];
@@ -52,17 +55,28 @@ function planOut(g, car) {
     d.slots[k] = car;
     car.dest = d; car.slot = k;
     car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: res.port.lot, k };
-    car.route = [houseOutPiece(b.x, b.y, b.rot), ...roadPieces(g, res.steps, Math.random() < 0.5 ? 0 : 1), lotInPiece(d.x, d.y, d.rot, res.port.lot, k)];
+    const rp = roadPieces(g, res.steps, Math.random() < 0.5 ? 0 : 1);
+    car.route = [houseOutPiece(b.x, b.y, b.rot), ...rp, lotInPiece(d.x, d.y, d.rot, res.port.lot, k)];
+    // Ghost roads last until the whole round trip is done: remember the way home, so if the roads are changed while this
+    // car is parked it can still drive back over the road it came by (instead of sitting in its bay forever).
+    car.homeRoute = [lotOutPiece(d.x, d.y, d.rot, k, res.port.lot), ...rp.slice().reverse().map(reversePiece), houseInPiece(b.x, b.y, b.rot)];
     return true;
   }
   return false;
+}
+
+// No live road leads home any more: use the remembered way back (ghost pieces), if there is one.
+function ghostHome(car) {
+  if (!car.homeRoute) return false;
+  car.route = car.homeRoute.slice();
+  return true;
 }
 
 // Leave through whichever connected entrance gives the cheapest way home.
 function planBack(g, car) {
   const L = car.lot, D = DIR[L.rot];
   const home = g.ports.get(tidx(g, car.house.x, car.house.y));
-  if (!home) return false;
+  if (!home) return ghostHome(car);
   let best = null, bestEnt = 0;
   for (const ent of [L.ent]) {                                  // the lot's single gate
     const [lx, ly] = lotTile({ x: L.bx, y: L.by, rot: L.rot }, ent);
@@ -71,7 +85,7 @@ function planBack(g, car) {
     const res = findPath(g, rx, ry, OPP[L.rot], [home]);
     if (res && (!best || res.cost < best.cost - 1e-6)) { best = res; bestEnt = ent; }
   }
-  if (!best) return false;
+  if (!best) return ghostHome(car);
   car.route = [lotOutPiece(L.bx, L.by, L.rot, L.k, bestEnt), ...roadPieces(g, best.steps, Math.random() < 0.5 ? 0 : 1), houseInPiece(home.x, home.y, home.b.rot)];
   return true;
 }
@@ -79,6 +93,7 @@ function planBack(g, car) {
 // A destination was rotated or its gate flipped: put its cars on the new lot. Parked cars sit in their bay on the new layout;
 // cars still driving in finish their (ghost) route and are re-seated on arrival (see updateSim).
 export function reseatCar(car, d) {
+  car.homeRoute = null;                                          // the old way home no longer fits the new lot
   car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: gateOf(d), k: car.slot };
   const p = lotInPiece(d.x, d.y, d.rot, gateOf(d), car.slot);
   car.route = [p]; car.idx = 0; car.s = p.len; car.v = 0; car.stuck = 0;
@@ -305,7 +320,7 @@ export function updateSim(g, dt) {
         if (car.state === 'out') { car.state = 'dwell'; car.dwell = tuning.trips.parkedSeconds; }
         else {
           const t = tuning.trips;
-          car.state = 'home'; car.cooldown = t.homeCooldownMinSeconds + Math.random() * (t.homeCooldownMaxSeconds - t.homeCooldownMinSeconds);
+          car.state = 'home'; car.homeRoute = null; car.cooldown = t.homeCooldownMinSeconds + Math.random() * (t.homeCooldownMaxSeconds - t.homeCooldownMinSeconds);
           g.trips++; g.money += t.rewardPerTrip; changed = true;
         }
       } else {
