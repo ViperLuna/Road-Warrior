@@ -56,8 +56,18 @@ function stepCut(st, x, y) {
   const prev = st.prevTile;
   st.prevTile = hasRoad(x, y) ? { x, y } : null;
   if (!prev || !hasRoad(x, y) || Math.abs(prev.x - x) + Math.abs(prev.y - y) !== 1) return;
+  const mx = x - prev.x, my = y - prev.y;
+  // Two roads running side by side: after crossing from one to the other, keep dragging ALONG them and every step cuts
+  // (or rejoins) the seam between the pair, so a whole parallel run is one drag.
+  if (st.sweep && mx * st.sweep.vx + my * st.sweep.vy === 0) {
+    const px = x - st.sweep.vx, py = y - st.sweep.vy;
+    if (hasRoad(px, py)) setCut(x, y, px, py, st.cutMode === 'cut');
+    return;
+  }
   if (st.cutMode === undefined) st.cutMode = isCut(prev.x, prev.y, x, y) ? 'join' : 'cut';
-  if (!setCut(prev.x, prev.y, x, y, st.cutMode === 'cut')) toast("Can't cut there: bridges and tunnels can only be cut where a road meets them from the side, and overpasses not at all.");
+  if (!setCut(prev.x, prev.y, x, y, st.cutMode === 'cut')) { toast("Can't cut there. Drag across the gap between two roads (bridges and tunnels can only be cut from the side; overpasses not at all)."); return; }
+  const ux = my !== 0 ? 1 : 0, uy = mx !== 0 ? 1 : 0;                       // the direction along the roads, if they are parallel
+  if ((hasRoad(prev.x + ux, prev.y + uy) && hasRoad(x + ux, y + uy)) || (hasRoad(prev.x - ux, prev.y - uy) && hasRoad(x - ux, y - uy))) st.sweep = { vx: mx, vy: my };
 }
 
 const PLACE_MSG = {
@@ -159,7 +169,7 @@ export function initInput(canvas) {
       // Tap the building to rotate it; tap a destination's parking lot to flip its gate to the other end.
       if (!flipLotAt(stroke.start.x, stroke.start.y)) rotateBuildingAt(stroke.start.x, stroke.start.y);
     }
-    if (stroke && stroke.mode === 'cut' && stroke.cutMode === undefined && e.type === 'pointerup') toast('Drag across the seam between two roads to cut it (drag again to rejoin).');
+    if (stroke && stroke.mode === 'cut' && stroke.cutMode === undefined && e.type === 'pointerup') toast('Drag across the seam between two roads to cut it. For side-by-side roads, cross once and keep dragging along them. Drag again to rejoin.');
     if (stroke && stroke.span) toast(`Drag all the way to the far side to finish the ${stroke.span.item}.`);
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
