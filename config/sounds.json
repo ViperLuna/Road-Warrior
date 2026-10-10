@@ -144,5 +144,29 @@
     "volume": 0.8,
     "pitchJitter": 0.03,
     "cooldownMs": 300
+  },
+  "speed:2>1.5": {
+    "files": [
+      "assets/sounds/speeddown1.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.03,
+    "cooldownMs": 300
+  },
+  "speed:2>1": {
+    "files": [
+      "assets/sounds/speeddown1.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.03,
+    "cooldownMs": 300
+  },
+  "speed:1.5>1": {
+    "files": [
+      "assets/sounds/speeddown1.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.03,
+    "cooldownMs": 300
   }
 }
