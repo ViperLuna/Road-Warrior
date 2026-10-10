@@ -10,7 +10,7 @@ import {
 import { DIR, OPP } from "../js/lanes.js";
 import { findPath } from "../js/pathfind.js";
 import { roadConns } from "../js/network.js";
-import { lotTile } from "../js/buildings.js";
+import { lotTile, gateOf } from "../js/buildings.js";
 import { prog, specialInfo } from "../js/progression.js";
 import { WATER, HILL, LAND } from "../js/terrain.js";
 
@@ -80,7 +80,7 @@ export function createBot(opts = {}) {
 
 const exitOf = (h) => [h.x + DIR[h.rot][0], h.y + DIR[h.rot][1]];
 const gateExit = (d) => {
-  const [x, y] = lotTile(d, 0);
+  const [x, y] = lotTile(d, gateOf(d));
   return [x + DIR[d.rot][0], y + DIR[d.rot][1]];
 };
 const destsOf = (g, color) =>
