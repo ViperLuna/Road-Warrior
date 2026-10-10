@@ -43,6 +43,7 @@ function stepBuild(st, x, y) {
       const r = (sp.kind === WATER ? buildBridge : buildTunnel)(sp.from, sp.tiles, { x, y });
       if (r === 'badend') { toast("The far side isn't clear."); return; }
       if (r !== 'ok') return;
+      play('build');
     } else { toast('Bridges and tunnels must be a straight line.'); return; }
   }
   const r = buildRoad(x, y);
@@ -76,7 +77,9 @@ function stepCut(st, x, y) {
 function stepCone(st, x, y) {
   if (!hasRoad(x, y)) return;
   if (st.coneMode === undefined) st.coneMode = hasCone(x, y) ? 'remove' : 'place';
+  const had = hasCone(x, y);
   setCone(x, y, st.coneMode === 'place');
+  if (st.coneMode === 'place' && !had) play('build');
 }
 
 const PLACE_MSG = {
@@ -99,7 +102,7 @@ function apply(mode, x, y, st) {
   else if (mode === 'destroy') { if (demolish(x, y)) play('destroy'); }
   else if (mode === 'cut') stepCut(st, x, y);
   else if (mode === 'cone') stepCone(st, x, y);
-  else if (mode === 'place') { const r = placeSpecial(game.placing, x, y); if (r === 'flipped') toast('Swapped: the other road is on top now.'); else if (r !== 'ok') toast(PLACE_MSG[r]); }
+  else if (mode === 'place') { const r = placeSpecial(game.placing, x, y); if (r === 'flipped') toast('Swapped: the other road is on top now.'); else if (r !== 'ok') toast(PLACE_MSG[r]); else play('build'); }
 }
 
 // 4-connected walk from a to b (excludes a, includes b) so fast drags never leave gaps.
