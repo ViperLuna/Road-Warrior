@@ -2,6 +2,7 @@
 import { WATER, HILL } from './terrain.js';
 import { hasRoad, tileIndex, inBounds, buildingAt } from './state.js';
 import { roadConns, edgeLanes } from './network.js';
+import { settings } from './settings.js';
 import { lightGroups, lightColor } from './signals.js';
 import { RING_R } from './lanes.js';
 import { drawBuildings, drawGhosts, drawCars } from './render_objects.js';
@@ -245,7 +246,7 @@ function computeFlows(game, tx, ty, conns, road) {
 function drawTail(ctx, game, tx, ty, conns, road, flows) {
   const cx = tx + 0.5, cy = ty + 0.5;
   for (let d = 0; d < 4; d++) {                                          // cut seams: a curb across the road's end
-    if (!(((road.cut || 0) >> d) & 1)) continue;
+    if (!(((road.cut || 0) >> d) & 1) || !(settings.showCuts || game.tool === 'cut')) continue;
     const ex = cx + DIRS[d][0] * 0.5, ey = cy + DIRS[d][1] * 0.5, px = -DIRS[d][1], py = DIRS[d][0], w = (road.lanes || 2) === 4 ? 0.46 : 0.26;
     ctx.lineCap = 'butt';
     ctx.strokeStyle = '#111316'; ctx.lineWidth = 0.12; ctx.beginPath(); ctx.moveTo(ex - px * w, ey - py * w); ctx.lineTo(ex + px * w, ey + py * w); ctx.stroke();

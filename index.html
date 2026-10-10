@@ -51,6 +51,7 @@
     <h1>Road Warrior</h1>
     <p class="tag">Pick a map</p>
     <div id="map-list"></div>
+    <button class="big alt" id="settings-btn" type="button">Settings</button>
     <section id="history" hidden>
       <h3>History</h3>
       <div id="history-text" tabindex="0"></div>
@@ -68,7 +69,16 @@
     <div class="stack">
       <button class="big" id="resume" type="button">Resume</button>
       <button class="big alt" id="restart" type="button">New map</button>
+      <button class="big alt" id="pause-settings-btn" type="button">Settings</button>
       <button class="big alt" id="to-menu" type="button">Main menu</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="settings" hidden>
+    <h2>Settings</h2>
+    <div class="stack">
+      <label class="opt"><input type="checkbox" id="opt-cuts"> Show road cuts</label>
+      <button class="big" id="settings-close" type="button">Back</button>
     </div>
   </div>
 
