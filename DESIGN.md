@@ -158,3 +158,8 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 - Storage is pluggable: `backend = { load, save, remove, list }` (sync or async). `localBackend` (localStorage) is the default; `httpBackend({ baseUrl, headers })` is a ready server adapter (GET/PUT/DELETE `{baseUrl}/{slot}`, tested against a fake server). Switch with `setBackend(...)` in `js/main.js`; `config/save.json` holds backend id, slot name and autosave interval (10 s).
 - Autosave every 10 s while playing, plus on page hide / unload, and when going to the main menu. Game over deletes the save. The menu shows a **Continue** card (map, trips, minutes) when a save exists. Save version 1; unknown versions are refused instead of half-loaded.
 - Tests: `npm run test:save` (round trip identical, cars return in the same spot, game keeps running, reward screen survives, both backends).
+
+## Sim additions (with Tessa's OK)
+- `node sim/run.mjs --bot flip,cut` turns on two bot behaviours that use the newer mechanics: **flip** (flip a destination's gate if that makes a colour's first hookup cheaper) and **cut** (every 30 s, try cutting a seam between two neighbouring junctions; keep it only if every connected house still has a route). Summary line shows flips / cuts kept / cuts undone.
+- `--resave 60` serialises and restores the whole game every 60 simulated seconds (as if the player refreshed the page) to check saving doesn't change outcomes.
+- Results (3 maps x 24 games, 20 min): baseline, `--bot flip,cut` and `--resave 60` all 0% gridlock; trips within noise of each other (lakeside, 80 games: 775 vs 746 with resave, ~1 SE). Flips are rare in practice (0-0.1 per game); the bot keeps ~1-2 cuts per game and rejects ~80 attempts.

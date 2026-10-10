@@ -1,5 +1,5 @@
 
-//   node sim/run.mjs --games 1000 [--map riverbend|lakeside|highlands|all] [--minutes 30] [--seed 1] [--reward smart|cash|special] [--workers 12] [--out sim/out/run.jsonl] [--set tuning.gridlock.gameOverAfterSeconds=60] [--set progression.economy.roadCost=3]
+//   node sim/run.mjs --games 1000 [--map riverbend|lakeside|highlands|all] [--minutes 30] [--seed 1] [--reward smart|cash|special] [--bot flip,cut] [--resave 60] [--workers 12] [--out sim/out/run.jsonl] [--set tuning.gridlock.gameOverAfterSeconds=60] [--set progression.economy.roadCost=3]
 //   node sim/run.mjs --replay <seed> --map riverbend
 
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
@@ -11,11 +11,11 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 function parseArgs(argv) {
-  const a = { games: 100, map: 'riverbend', minutes: 30, seed: 1, reward: 'smart', workers: availableParallelism(), out: null, set: [], replay: null };
+  const a = { games: 100, map: 'riverbend', minutes: 30, seed: 1, reward: 'smart', workers: availableParallelism(), out: null, set: [], replay: null, bot: '', resave: 0 };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i].replace(/^--/, ''), v = argv[++i];
     if (k === 'set') a.set.push(v);
-    else if (k in a) a[k] = ['games', 'minutes', 'seed', 'workers', 'replay'].includes(k) ? Number(v) : v;
+    else if (k in a) a[k] = ['games', 'minutes', 'seed', 'workers', 'replay', 'resave'].includes(k) ? Number(v) : v;
     else throw new Error('unknown option --' + k);
   }
   return a;
@@ -37,7 +37,8 @@ async function loadGame(overrides) {
     for (const k of keys.slice(1, -1)) o = o[k];
     o[keys.at(-1)] = JSON.parse(raw);
   }
-  return { mulberry32, state, tuning, maps, bot };
+  const save = await import('../js/save.js');
+  return { mulberry32, state, tuning, maps, bot, save };
 }
 
 function describeJunction(J) {
@@ -47,19 +48,20 @@ function describeJunction(J) {
 }
 
 function playGame(G, seed, mapId, opts) {
-  const { mulberry32, state, tuning, maps, bot: B } = G, g = state.game;
+  const { mulberry32, state, tuning, maps, bot: B, save } = G, g = state.game;
   const map = maps.find(m => m.id === mapId);
   Math.random = mulberry32((seed ^ 0x5eed1234) >>> 0);
   state.newGame(seed, map);
-  const bot = B.createBot({ reward: opts.reward });
+  const bot = B.createBot({ reward: opts.reward, features: opts.bot ? opts.bot.split(',') : [] });
   const ev = { spawns: 0, spawnAcross: 0, newColors: 0 };
   G.onEvent = e => { if (e.type === 'spawn') { ev.spawns++; if (e.across) ev.spawnAcross++; if (e.kind === 'newColor') ev.newColors++; } };
 
   const DT = 1 / 60, maxT = opts.minutes * 60, warnAt = tuning.gridlock.warnAfterSeconds;
   const tripsAtMin = [], goalTimes = [];
-  let nextSample = 1, unconnectedHouseSec = 0, warnings = 0, warning = false, worstStuckSurvived = 0, peakCars = 0, lastGoals = 0;
+  let nextResave = opts.resave || 0, nextSample = 1, unconnectedHouseSec = 0, warnings = 0, warning = false, worstStuckSurvived = 0, peakCars = 0, lastGoals = 0;
   const t0 = performance.now();
   while (g.mode !== 'over' && g.time < maxT) {
+    if (opts.resave && g.time >= nextResave) { nextResave += opts.resave; save.restore(JSON.parse(JSON.stringify(save.serialize()))); }   // pretend the player refreshed the page
     B.botTick(g, bot);
     if (g.mode === 'reward') continue;
     state.tick(DT);
@@ -143,6 +145,7 @@ export function summarise(recs, opts) {
     say(`Median time to: ${firstGoals.join(' | ')}`);
     say(`Specials taken: ${tally(rs.flatMap(r => Object.entries(r.bot.specialsTaken).flatMap(([k, v]) => Array(v).fill(k)))) || 'none'}`);
     say(`Specials placed: ${tally(rs.flatMap(r => Object.entries(r.bot.placed).flatMap(([k, v]) => Array(v).fill(k)))) || 'none'}`);
+    say(`Bot gate flips / cuts kept / cuts undone: ${mean(rs.map(r => r.bot.flips || 0)).toFixed(1)} / ${mean(rs.map(r => r.bot.cuts || 0)).toFixed(1)} / ${mean(rs.map(r => r.bot.cutsUndone || 0)).toFixed(1)}`);
     say(`Bought in shop: ${tally(rs.flatMap(r => Object.entries(r.bot.bought).flatMap(([k, v]) => Array(v).fill(k)))) || 'none'}`);
     say(`Spawns: mean ${mean(rs.map(r => r.spawns)).toFixed(1)}, across water ${mean(rs.map(r => r.spawnAcross)).toFixed(1)}`);
     say(`Wall time per game: median ${pct(rs.map(r => r.ms), 0.5)} ms, max ${Math.max(...rs.map(r => r.ms))} ms`);

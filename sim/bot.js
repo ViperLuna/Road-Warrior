@@ -6,6 +6,9 @@ import {
   chooseReward,
   placeSpecial,
   rotateBuildingAt,
+  flipLotAt,
+  setCut,
+  isCut,
 } from "../js/state.js";
 import { DIR, OPP } from "../js/lanes.js";
 import { findPath } from "../js/pathfind.js";
@@ -60,9 +63,16 @@ class Heap {
   }
 }
 
+// Features beyond the basics, switched on with `--bot flip,cut` in sim/run.mjs:
+//   flip: before connecting a colour's first house, flip a destination's gate to the other end if that is the cheaper hookup
+//   cut:  now and then, cut the seam between two neighbouring junctions if every connected house still has a route
+export const FEATURES = ["flip", "cut"];
+
 export function createBot(opts = {}) {
   return {
     reward: opts.reward || "smart",
+    features: new Set(opts.features || []),
+    nextTidy: 0,
     next: 0,
     heat: new Map(),
     fails: new Map(),
@@ -72,12 +82,16 @@ export function createBot(opts = {}) {
       bought: {},
       placed: {},
       rotations: 0,
+      flips: 0,
+      cuts: 0,
+      cutsUndone: 0,
       rewards: { plain: 0, special: 0 },
       specialsTaken: {},
     },
   };
 }
 
+const gateTile = (d) => lotTile(d, gateOf(d));
 const exitOf = (h) => [h.x + DIR[h.rot][0], h.y + DIR[h.rot][1]];
 const gateExit = (d) => {
   const [x, y] = lotTile(d, gateOf(d));
@@ -242,6 +256,30 @@ function build(g, plan, bot) {
   return true;
 }
 
+const planCost = (g, plan) =>
+  plan
+    ? plan.reduce((n, p) => n + (p.span ? 8 : g.roads.has(p.y * g.cols + p.x) ? 0 : 1), 0)
+    : Infinity;
+
+// Flip a destination's gate if that makes the first hookup of its colour cheaper. Only while nothing of that colour is
+// connected yet (a flip would cut off houses already wired to the old gate).
+function maybeFlip(g, h, bot) {
+  if (!bot.features.has("flip")) return;
+  if (g.buildings.some((o) => o.kind === "house" && o.connected && o.color.id === h.color.id)) return;
+  const base = planCost(g, planRoad(g, h));
+  for (const d of destsOf(g, h.color)) {
+    const [fx, fy] = gateTile(d);
+    if (!flipLotAt(fx, fy)) continue;
+    const alt = planCost(g, planRoad(g, h));
+    if (alt < base - 1) {
+      bot.stats.flips++;
+      return;
+    }
+    const [bx, by] = gateTile(d);
+    flipLotAt(bx, by);
+  }
+}
+
 function connectHouses(g, bot) {
   for (const h of g.buildings) {
     if (h.kind !== "house" || h.connected) continue;
@@ -249,6 +287,7 @@ function connectHouses(g, bot) {
       h.connected = true;
       continue;
     }
+    maybeFlip(g, h, bot);
     const plan = planRoad(g, h);
     if (plan) {
       if (build(g, plan, bot) && isConnected(g, h)) h.connected = true;
@@ -263,6 +302,30 @@ function connectHouses(g, bot) {
     ) {
       rotateBuildingAt(h.x, h.y);
       bot.stats.rotations++;
+    }
+  }
+}
+
+// Cut the seam between two neighbouring junctions when nothing needs it: every connected house must still reach a destination.
+function tidyCuts(g, bot) {
+  if (!bot.features.has("cut")) return;
+  const homes = g.buildings.filter((b) => b.kind === "house" && b.connected);
+  const seams = [];
+  for (const [k] of g.roads) {
+    const x = k % g.cols, y = (k / g.cols) | 0;
+    if (roadConns(g, x, y).length < 3) continue;
+    for (const d of [1, 2]) {                      // east and south only: each seam once
+      const nx = x + DIR[d][0], ny = y + DIR[d][1];
+      if (!g.roads.has(ny * g.cols + nx) || isCut(x, y, nx, ny)) continue;
+      if (roadConns(g, nx, ny).length >= 3 && roadConns(g, x, y).includes(d)) seams.push([x, y, nx, ny]);
+    }
+  }
+  for (const [x, y, nx, ny] of seams.slice(0, 3)) {
+    if (!setCut(x, y, nx, ny, true)) continue;
+    if (homes.every((h) => isConnected(g, h))) bot.stats.cuts++;
+    else {
+      setCut(x, y, nx, ny, false);
+      bot.stats.cutsUndone++;
     }
   }
 }
@@ -319,4 +382,8 @@ export function botTick(g, bot) {
   trackHeat(g, bot);
   connectHouses(g, bot);
   placeSpecials(g, bot);
+  if (g.time >= bot.nextTidy) {
+    bot.nextTidy = g.time + 30;
+    tidyCuts(g, bot);
+  }
 }
