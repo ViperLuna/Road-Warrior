@@ -43,7 +43,7 @@ function stepBuild(st, x, y) {
       const r = (sp.kind === WATER ? buildBridge : buildTunnel)(sp.from, sp.tiles, { x, y });
       if (r === 'badend') { toast("The far side isn't clear."); return; }
       if (r !== 'ok') return;
-      play('build');
+      play(sp.kind === WATER ? 'build' : 'tunnel');          // a tunnel gets the drill; a bridge is just another placement
     } else { toast('Bridges and tunnels must be a straight line.'); return; }
   }
   const r = buildRoad(x, y);

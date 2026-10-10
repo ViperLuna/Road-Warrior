@@ -102,5 +102,15 @@
     "volume": 0.8,
     "pitchJitter": 0.04,
     "cooldownMs": 300
+  },
+  "tunnel": {
+    "files": [
+      "assets/sounds/tunnel1.mp3",
+      "assets/sounds/tunnel2.mp3",
+      "assets/sounds/tunnel3.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.03,
+    "cooldownMs": 300
   }
 }
