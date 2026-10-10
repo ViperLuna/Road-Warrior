@@ -33,6 +33,12 @@ const pressedButton = e => { const b = e.target.closest && e.target.closest('but
 document.addEventListener('pointerdown', e => { if (e.button === 0 && pressedButton(e)) play('click'); });
 document.addEventListener('click', e => { if (e.detail === 0 && pressedButton(e)) play('click'); });
 
+// Popup sound: any element marked data-popup (shop, pause, settings, a future dev window) pops open when its `hidden` goes away.
+const popups = new MutationObserver(records => {
+  for (const r of records) if (r.oldValue !== null && !r.target.hidden) play('popup');
+});
+document.querySelectorAll('[data-popup]').forEach(el => popups.observe(el, { attributes: true, attributeFilter: ['hidden'], attributeOldValue: true }));
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 let W = 0, H = 0, dpr = 1;

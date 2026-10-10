@@ -75,5 +75,13 @@
       "assets/sounds/gameover7.mp3"
     ],
     "volume": 0.9
+  },
+  "popup": {
+    "files": [
+      "assets/sounds/popup1.mp3"
+    ],
+    "volume": 0.7,
+    "pitchJitter": 0.04,
+    "cooldownMs": 150
   }
 }
