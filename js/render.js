@@ -95,6 +95,7 @@ export function render(ctx, W, H, dpr, game, cam, hover) {
       if (game.roads.has(tileIndex(x, y))) drawRoad(ctx, game, x, y);
 
   drawGhosts(ctx, game);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const rr = game.roads.get(tileIndex(x, y)); if (rr && rr.cone) drawCone(ctx, x, y); }
   drawBuildings(ctx, game);
   drawCars(ctx, game, 'under');                                        // cars beneath an overpass go first...
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {      // ...then the deck covers them
@@ -364,4 +365,18 @@ function drawDeck(ctx, game, tx, ty, road) {
   ctx.fillStyle = 'rgba(0,0,0,.30)';                                                       // shadow cast on the road below
   if (road.overpass === 0) ctx.fillRect(cx - mid - 0.06, ty, 2 * mid + 0.16, 1); else ctx.fillRect(tx, cy - mid - 0.06 + 0.04, 1, 2 * mid + 0.16);
   drawWide(ctx, game, tx, ty, hw, road, { mid });
+}
+
+// A traffic cone: orange body with two white bands, on a dark base, with a faint hatched ring so a coned tile reads as closed.
+function drawCone(ctx, tx, ty) {
+  const cx = tx + 0.5, cy = ty + 0.5;
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,150,40,.14)'; ctx.fillRect(tx + 0.06, ty + 0.06, 0.88, 0.88);
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(cx + 0.02, cy + 0.17, 0.2, 0.07, 0, 0, 6.2832); ctx.fill();   // shadow
+  ctx.fillStyle = '#26282c'; ctx.fillRect(cx - 0.17, cy + 0.1, 0.34, 0.07);                                                      // base
+  ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.moveTo(cx - 0.12, cy + 0.1); ctx.lineTo(cx - 0.035, cy - 0.2); ctx.lineTo(cx + 0.035, cy - 0.2); ctx.lineTo(cx + 0.12, cy + 0.1); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.moveTo(cx - 0.09, cy - 0.02); ctx.lineTo(cx + 0.09, cy - 0.02); ctx.lineTo(cx + 0.075, cy + 0.04); ctx.lineTo(cx - 0.075, cy + 0.04); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx - 0.055, cy - 0.13); ctx.lineTo(cx + 0.055, cy - 0.13); ctx.lineTo(cx + 0.045, cy - 0.08); ctx.lineTo(cx - 0.045, cy - 0.08); ctx.closePath(); ctx.fill();
+  ctx.restore();
 }

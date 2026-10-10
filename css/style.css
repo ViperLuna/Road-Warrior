@@ -33,6 +33,7 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 #history h3 { margin: 0 0 6px; font-size: 1rem; opacity: .85; }
 #history-text { max-height: min(26vh, 220px); overflow-y: auto; white-space: pre-wrap; font-size: .85rem; line-height: 1.45; opacity: .9; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
 #map-list .card.continue { border: 2px solid #e69f00; }
+#toolbar button.active[data-tool="cone"]    { background: #e07b1a; box-shadow: 0 0 14px rgba(255, 150, 60, .6); }
 #toolbar button.active[data-tool="cut"]     { background: #8a56c4; box-shadow: 0 0 14px rgba(190, 140, 255, .6); }
 
 #toast {

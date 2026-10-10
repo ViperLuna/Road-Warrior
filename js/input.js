@@ -1,6 +1,6 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
-import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt } from './state.js';
+import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt, setCone, hasCone } from './state.js';
 import { WATER, HILL } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
@@ -70,6 +70,13 @@ function stepCut(st, x, y) {
   if ((hasRoad(prev.x + ux, prev.y + uy) && hasRoad(x + ux, y + uy)) || (hasRoad(prev.x - ux, prev.y - uy) && hasRoad(x - ux, y - uy))) st.sweep = { vx: mx, vy: my };
 }
 
+// Cone: tap or drag along road tiles to put cones on them; the first tile decides whether the whole drag places or removes.
+function stepCone(st, x, y) {
+  if (!hasRoad(x, y)) return;
+  if (st.coneMode === undefined) st.coneMode = hasCone(x, y) ? 'remove' : 'place';
+  setCone(x, y, st.coneMode === 'place');
+}
+
 const PLACE_MSG = {
   none: 'Tap a road tile.', badtile: "Can't go on a bridge or tunnel.", taken: 'That intersection already has one.',
   notjunction: 'Needs an intersection: 3 or more roads meeting.', empty: 'None left.',
@@ -82,6 +89,7 @@ function apply(mode, x, y, st) {
   if (mode === 'build') stepBuild(st, x, y);
   else if (mode === 'destroy') demolish(x, y);
   else if (mode === 'cut') stepCut(st, x, y);
+  else if (mode === 'cone') stepCone(st, x, y);
   else if (mode === 'place') { const r = placeSpecial(game.placing, x, y); if (r === 'flipped') toast('Swapped: the other road is on top now.'); else if (r !== 'ok') toast(PLACE_MSG[r]); }
 }
 
@@ -193,6 +201,7 @@ export function initInput(canvas) {
     else if (e.key === 'm') setTool('pan');
     else if (e.key === 'o' && game.unlocks.oneway) setOneWay(!game.oneway);
     else if (e.key === 'c') setTool('cut');
+    else if (e.key === 'x') setTool('cone');
     else if (e.key === 'r' && hover.show) rotateBuildingAt(hover.x, hover.y);
     else if (e.key === 'p') devSpawn();      // dev: spawn an extra pair
   });

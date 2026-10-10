@@ -108,6 +108,19 @@ export function setCut(ax, ay, bx, by, cut) {
   return true;
 }
 
+// Construction cones: a coned road tile is closed to trips that haven't been planned yet. Cars already driving (or parked and
+// heading home) keep their routes, so a cone never strands anyone.
+export const coneCount = () => { let n = 0; for (const r of game.roads.values()) if (r.cone) n++; return n; };
+export function setCone(x, y, on) {
+  if (!hasRoad(x, y)) return false;
+  const r = game.roads.get(tileIndex(x, y));
+  if (!!r.cone === !!on) return true;
+  if (on) r.cone = true; else delete r.cone;
+  emit();
+  return true;
+}
+export const hasCone = (x, y) => hasRoad(x, y) && !!game.roads.get(tileIndex(x, y)).cone;
+
 // Forget one-way flags (and cuts) that point at a tile that no longer has a road.
 function clearEdgesTowards(x, y) {
   SIDES.forEach(([dx, dy], d) => {

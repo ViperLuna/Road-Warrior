@@ -34,7 +34,7 @@ const turnCost = (inS, outS) => {
 
 // start: road tile (sx,sy) entered from side sEntry. goalPorts: array of ports that end the trip.
 export function findPath(g, sx, sy, sEntry, goalPorts) {
-  if (!roadAt(g, sx, sy) || !goalPorts.length) return null;
+  if (!roadAt(g, sx, sy) || !goalPorts.length || g.roads.get(tidx(g, sx, sy)).cone) return null;      // (a coned tile is closed to new trips)
   const cells = g.cols * g.rows, NS = cells * 4;
   const goalTiles = new Map(goalPorts.map(p => [tidx(g, p.x, p.y), p]));
   const gs = new Float32Array(NS + cells).fill(Infinity);
@@ -72,7 +72,7 @@ export function findPath(g, sx, sy, sEntry, goalPorts) {
       const nx = x + DIR[e][0], ny = y + DIR[e][1];
       const cost = gs[id] + 1 + turnCost(inS, e) + (roundAt(g, x, y) ? 0.35 : 0);
       let nid = -1;
-      if (roadAt(g, nx, ny)) nid = tidx(g, nx, ny) * 4 + OPP[e];
+      if (roadAt(g, nx, ny)) { if (g.roads.get(tidx(g, nx, ny)).cone) continue; nid = tidx(g, nx, ny) * 4 + OPP[e]; }
       else {
         const p = portAt(g, nx, ny);
         if (p && p.side === OPP[e] && goalTiles.get(tidx(g, nx, ny)) === p) nid = NS + tidx(g, nx, ny);
