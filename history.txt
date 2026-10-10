@@ -1,0 +1,10 @@
+10.10.2026
+  Game Saves - Now implemented. Currently game saves are local browser storage. The game automatically saves every 10 seconds, when switching tabs, switching apps, locking the phone, or when you tap "Menu."
+  Overpasses work with either road size. While the Overpass button is toggled on, tapping the overpass tile will alternate which road becomes the overpass.
+  Traffic is even smoother now with much better roundabout control. Cars can turn right on red. 
+
+10.09.2026
+  Roads adjacent to other roads can be cut from each other to remove unwanted intersections. Use the cut tool and swipe the branch between tiles to remove it. Swiping again will replace it.
+  Destination building parking lots can be flipped to change which side of the lot exits to the road. Tap the building to rotate it and tap the parking lot to flip the exits.
+  Traffic jams is still a difficult work in progress.
+  Traffic is smoother with less unnecessary gridlock. A car that would not otherwise be locked will force itself forward to reset its impatience timer. They may phase through other cars if the game notices traffic is stopped with nothing blocking it.
