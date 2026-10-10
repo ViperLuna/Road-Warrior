@@ -66,4 +66,7 @@ scene(2, 2); g.roads.delete(11 * g.cols + 17); ok(st.placeSpecial('overpass', 16
 scene(2, 2); ok(st.placeSpecial('overpass', 10, 11) === 'notcrossing', 'refused on a plain straight road');
 scene(2, 2); g.roads.get(11 * g.cols + 15).lanes = 4; ok(st.placeSpecial('overpass', 16, 11) === 'mismatch', 'refused when one road changes size at the crossing');
 scene(2, 2); g.inv.light = 1; g.roads.get(11 * g.cols + 16).special = 'light'; ok(st.placeSpecial('overpass', 16, 11) === 'taken', 'refused on a tile that already has a light');
+// an overpass next door (4-lane road on top of a 2-lane street) must not make the next crossing look mismatched
+scene(2, 2); g.build4 = true; for (let y = 3; y <= 19; y++) st.buildRoad(15, y); g.build4 = false; g.inv.overpass = 2;
+ok(st.placeSpecial('overpass', 15, 11) === 'ok' && st.placeSpecial('overpass', 16, 11) === 'ok', 'overpass beside an overpass of a different size');
 console.log(pass, 'passed', fail, 'failed');

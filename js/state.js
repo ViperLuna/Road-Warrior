@@ -6,7 +6,7 @@ import { spawnInitial, spawnPair } from './spawn.js';
 import { updateSim, reseatCarsOf } from './cars.js';
 import { initProgress, checkProgress, chooseReward as pickReward } from './progress.js';
 import { prog, maps, specialInfo, roadsAvailable } from './progression.js';
-import { roadConns, tileLanes } from './network.js';
+import { roadConns, tileLanes, layerLanes } from './network.js';
 import { tuning } from './tuning.js';
 
 export const START_INVENTORY = { road: 20, bridge: 1 };
@@ -251,7 +251,7 @@ export function selectSpecial(id) {
 // Lanes of the road running through (x,y) along axis `a` (0 = north-south, 1 = east-west), read off its neighbours.
 function overpassLanesAlong(x, y, a) {
   const sides = a === 0 ? [0, 2] : [1, 3];
-  return Math.min(...sides.map(d => { const n = game.roads.get(tileIndex(x + SIDES[d][0], y + SIDES[d][1])); return n ? (n.lanes || 2) : 2; }));
+  return Math.min(...sides.map(d => { const n = game.roads.get(tileIndex(x + SIDES[d][0], y + SIDES[d][1])); return n ? layerLanes(game, x + SIDES[d][0], y + SIDES[d][1], d) : 2; }));
 }
 
 // Returns 'ok' | 'flipped' | 'none' | 'badtile' | 'taken' | 'notjunction' | 'notcrossing' | 'mismatch' | 'highway' | 'toonear' | 'empty'
@@ -272,7 +272,8 @@ export function placeSpecial(id, x, y) {
     const lanes = [0, 1].map(a => overpassLanesAlong(x, y, a));
     const n = d => game.roads.get(tileIndex(x + SIDES[d][0], y + SIDES[d][1]));
     if (![0, 1, 2, 3].every(n)) return 'notcrossing';          // a house or lot gate on one arm: not a plain street crossing
-    if (![0, 1].every(a => (n(a).lanes || 2) === (n(a + 2).lanes || 2))) return 'mismatch';
+    const along = d => layerLanes(game, x + SIDES[d][0], y + SIDES[d][1], d);   // an overpass neighbour counts by the road running our way
+    if (![0, 1].every(a => along(a) === along(a + 2))) return 'mismatch';
     const top = lanes[0] > lanes[1] ? 0 : 1;                    // the bigger road goes over; a tie puts east-west on top
     r.overpass = top;
     r.lanes = lanes[top];
