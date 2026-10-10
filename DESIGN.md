@@ -200,3 +200,6 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 
 ## Speed control
 `game.speed` is 0 (frozen), 1, 1.5 or 2. The frame loop in `main.js` multiplies elapsed time by it before feeding the fixed 1/60 accumulator, so physics and timers behave identically at every speed. Speed 0 keeps `mode === 'play'`, so all building tools work while frozen; cars, ghost routes and home routes simply resume. HUD pill cycles ⏸ → 1x → 1.5x → 2x; numpad `0` pause, `1` 1x, `2` 1.5x, `3` 2x (number row `1`-`6` pick the toolbar tools left to right: Build, Demolish, Move, Cut, Cone, One-way; letter keys still work; Space is pan). New games start at 1x; Continue restores paused. Speed is not saved.
+
+## Settings
+`js/settings.js` keeps player preferences in this browser's localStorage (not in save games). Settings screen: main menu or Pause. "Show cut markers" (default on) hides the black bar with yellow dashes drawn at a cut seam; it only affects drawing, never routing. The markers always show while the Cut tool is selected.
