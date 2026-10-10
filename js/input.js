@@ -187,7 +187,7 @@ export function initInput(canvas) {
     // Click/tap on a building (without dragging) rotates it.
     if (stroke && stroke.bld && !stroke.moved && stroke.mode !== 'pan' && e.type === 'pointerup' && stroke.button !== 2) {
       // Tap the building to rotate it; tap a destination's parking lot to flip its gate to the other end.
-      if (!flipLotAt(stroke.start.x, stroke.start.y)) rotateBuildingAt(stroke.start.x, stroke.start.y);
+      if (flipLotAt(stroke.start.x, stroke.start.y) || rotateBuildingAt(stroke.start.x, stroke.start.y)) play('rotate');
     }
     if (stroke && stroke.mode === 'cut' && stroke.cutMode === undefined && e.type === 'pointerup') toast('Drag across the seam between two roads to cut it. For side-by-side roads, cross once and keep dragging along them. Drag again to rejoin.');
     if (stroke && stroke.span) toast(`Drag all the way to the far side to finish the ${stroke.span.item}.`);
@@ -216,7 +216,7 @@ export function initInput(canvas) {
     else if (e.key === 'o' && game.unlocks.oneway) press(() => setOneWay(!game.oneway));
     else if (e.key === 'c') press(() => setTool('cut'));
     else if (e.key === 'x') press(() => setTool('cone'));
-    else if (e.key === 'r' && hover.show) rotateBuildingAt(hover.x, hover.y);
+    else if (e.key === 'r' && hover.show) { if (rotateBuildingAt(hover.x, hover.y)) play('rotate'); }
     else if (NUMPAD_SPEED[e.code] !== undefined && game.mode === 'play') press(() => setSpeed(NUMPAD_SPEED[e.code]));
     else if (ROW_TOOL[e.code] && (e.code !== 'Digit6' || game.unlocks.oneway)) press(ROW_TOOL[e.code]);
     else if (e.key === 'p') { if (devSpawn()) play('spawn'); }      // dev: spawn an extra pair

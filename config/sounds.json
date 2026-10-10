@@ -192,5 +192,13 @@
     "volume": 0.8,
     "pitchJitter": 0.03,
     "cooldownMs": 300
+  },
+  "rotate": {
+    "files": [
+      "assets/sounds/rotate1.mp3"
+    ],
+    "volume": 0.8,
+    "pitchJitter": 0.04,
+    "cooldownMs": 120
   }
 }
