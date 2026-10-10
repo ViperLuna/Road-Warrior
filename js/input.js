@@ -206,17 +206,19 @@ export function initInput(canvas) {
   }, { passive: false });
 
   addEventListener('keydown', e => {
-    if (e.code === 'Escape') { if (game.mode === 'play') setMode('pause'); else if (game.mode === 'pause') setMode('play'); }
+    // A hotkey that does what a toolbar/HUD button does also makes that button's click sound (not while a key is held down).
+    const press = fn => { if (!e.repeat) play('click'); fn(); };
+    if (e.code === 'Escape') { if (game.mode === 'play') press(() => setMode('pause')); else if (game.mode === 'pause') press(() => setMode('play')); }
     else if (e.code === 'Space') { spaceDown = true; e.preventDefault(); }
-    else if (e.key === 'b') setTool('build');
-    else if (e.key === 'd') setTool('destroy');
-    else if (e.key === 'm') setTool('pan');
-    else if (e.key === 'o' && game.unlocks.oneway) setOneWay(!game.oneway);
-    else if (e.key === 'c') setTool('cut');
-    else if (e.key === 'x') setTool('cone');
+    else if (e.key === 'b') press(() => setTool('build'));
+    else if (e.key === 'd') press(() => setTool('destroy'));
+    else if (e.key === 'm') press(() => setTool('pan'));
+    else if (e.key === 'o' && game.unlocks.oneway) press(() => setOneWay(!game.oneway));
+    else if (e.key === 'c') press(() => setTool('cut'));
+    else if (e.key === 'x') press(() => setTool('cone'));
     else if (e.key === 'r' && hover.show) rotateBuildingAt(hover.x, hover.y);
-    else if (NUMPAD_SPEED[e.code] !== undefined && game.mode === 'play') setSpeed(NUMPAD_SPEED[e.code]);
-    else if (ROW_TOOL[e.code]) ROW_TOOL[e.code]();
+    else if (NUMPAD_SPEED[e.code] !== undefined && game.mode === 'play') press(() => setSpeed(NUMPAD_SPEED[e.code]));
+    else if (ROW_TOOL[e.code] && (e.code !== 'Digit6' || game.unlocks.oneway)) press(ROW_TOOL[e.code]);
     else if (e.key === 'p') { if (devSpawn()) play('spawn'); }      // dev: spawn an extra pair
   });
   addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; });
