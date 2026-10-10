@@ -158,6 +158,7 @@ function analyse(g, occ) {
   }
   for (const car of g.cars) {
     car.entry = null; car.hold = false; car.inJ = false;
+    car.holdT = Math.max(0, (car.holdT || 0) - 2 / 60);                // patience clock: runs while held, even if the car creeps
     if (car.force > 0) car.force -= 1 / 60;
     if (car.ignoreT > 0) car.ignoreT -= 1 / 60;
     if (!moving(car)) { car.arrKey = null; continue; }
@@ -198,7 +199,7 @@ function analyse(g, occ) {
       // A roundabout only yields to traffic already circulating (the 'inside' check above) or about to enter right now,
       // never to a car that is merely on its way: that would make it behave like a stop sign.
       if (J.round && !o.commit && o.entry.dist - STOP_OFFSET > 0.3) continue;
-      if (o !== car && (!(car.force > 0) || o.commit) && pieceConflict(q, o.entry.q, 0) && outranks(o, car, J)) { blocked = true; car.why = 'outranked:' + o.id; break; }
+      if (o !== car && (!(car.force > 0) || (o.commit && !(o.v < 0.3 && Math.max(car.stuck, car.holdT || 0) > tuning.gridlock.warnAfterSeconds * 1.3))) && pieceConflict(q, o.entry.q, 0) && outranks(o, car, J)) { blocked = true; car.why = 'outranked:' + o.id; break; }
     }
     // Never end up waiting *inside* a junction: the whole chain of junction/lot pieces ahead must be
     // clear too (cars already inside, or earlier arrivals), plus room for the car beyond the last one.
@@ -234,14 +235,16 @@ function analyse(g, occ) {
       }
     }
     car.hold = blocked && !car.commit;
+    if (car.hold) car.holdT += 3 / 60;
+    const patience = Math.max(car.stuck, car.holdT);
     // Patience: stuck a long time purely because waiting for a downstream light (nothing physical in the way)? Stop deferring to it for a moment.
     // Patience ladder. Cars that have been stuck for a long time waiting on other cars (never on a red light or their stop-sign timer)
     // stop deferring: first to the junction-chain / room-beyond / priority rules, then to a car that is physically inside. A brief
     // overlap in a jam is better than a permanent gridlock that snowballs across the map.
-    if (car.hold && car.stuck > tuning.gridlock.warnAfterSeconds * 0.8) {
+    if (car.hold && patience > tuning.gridlock.warnAfterSeconds * 0.8) {
       const w = (car.why || '').split(':')[0];
       if (w === 'chain-light' || w === 'chain-inside' || w === 'chain-earlier' || w === 'box' || w === 'outranked') car.force = 2;
-      else if (w === 'inside' && car.stuck > tuning.gridlock.warnAfterSeconds * 1.3) { car.ignoreAll = true; car.ignoreT = 2; }      // (one blocker at a time just swaps it for the next car in the box)
+      else if (w === 'inside' && patience > tuning.gridlock.warnAfterSeconds * 1.3) { car.ignoreAll = true; car.ignoreT = 2; }      // (one blocker at a time just swaps it for the next car in the box)
     }
   }
   breakDeadlocks(g, list);

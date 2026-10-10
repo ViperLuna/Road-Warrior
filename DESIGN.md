@@ -147,3 +147,8 @@ Highway (10 four-lane pieces, still to build), roundabout, traffic light, tunnel
 
 ## Lot gate flip (user request)
 - A destination's single gate is lot tile `b.gate` (0 or 1, default 0). **Tap the building = rotate; tap the parking lot = flip the gate to the other end of the lot** (`flipLotAt`). Parked cars are re-seated in their bay on the new layout; cars still driving in finish their ghost route and are re-seated on arrival (same rule as rotation, now also checking the gate). Spawning, pathing and drawing all read `gateOf(b)`.
+
+## Patience ladder, part 2 (playtest: gridlock where a highway meets other roads)
+- Reproduced with a lit/unlit grid whose middle row and column are 4-lane: whole stretches of bumper-to-bumper cars where the held cars were *creeping* (so the stuck timer kept resetting) and the cars they waited on were committed-but-stationary (so "forcing" never overrode them).
+- Fix: a per-car patience clock `holdT` (runs while held, decays when free, ignores creeping); the ladder uses `max(stuck, holdT)`. A forced car now also stops yielding to an outranking car that is committed but nearly stopped (v < 0.3).
+- Sim: 4-lane grids, 6 seeds each: before, 1-2 of 6 runs jammed for 400-1000 s; after, 24 of 24 clear (worst wait 14-35 s; a single car >15 s at the end in one run). Tessa's sim (`sim/run.mjs`, 3 maps x 24 games): still 0% gridlock, mean riverbend trips 700 -> 741, warnings 8.2 -> 5.0.
