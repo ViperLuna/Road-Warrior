@@ -1,0 +1,23 @@
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+const R = fileURLToPath(new URL('../', import.meta.url));
+const st = await import(R + 'js/state.js');
+const { setTuning, tuning } = await import(R + 'js/tuning.js');
+setTuning(JSON.parse(fs.readFileSync(R + 'config/tuning.json')));
+let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : (fail++, console.log('FAIL:', m)); };
+const events = []; st.onEvent(e => events.push(e));
+const g = st.game, { warnAfterSeconds: warn, gameOverAfterSeconds: over } = tuning.gridlock;
+const run = (stuck, seconds, state = 'out') => {          // one car held at `stuck` for `seconds` of game time
+  events.length = 0; g.cars = [{ state, stuck, honkIn: undefined }];
+  for (let i = 0; i < seconds * 60; i++) st.honkAtStuckCars(1 / 60);
+  return events.filter(e => e.type === 'honk');
+};
+ok(run(warn - 1, 30).length === 0, 'a car that is not stuck long enough stays quiet');
+ok(run(warn + 1, 30, 'home').length === 0, 'a parked car stays quiet');
+const calm = run(warn + 0.1, 30).length, mad = run(over - 0.1, 30).length;
+ok(calm >= 3 && calm <= 9, `just-started-glowing car honks slowly (${calm} in 30 s)`);
+ok(mad >= 12, `nearly-game-over car honks a lot faster (${mad} in 30 s)`);
+ok(mad > calm * 2, 'honking speeds up as the car gets madder');
+const ev = run(over - 0.1, 5);
+ok(ev.length && ev.every(e => e.k > 0.9 && e.k <= 1), 'k is how mad the car is (0..1)');
+console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);

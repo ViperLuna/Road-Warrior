@@ -15,7 +15,10 @@ document.getElementById('start').addEventListener('click', async () => {
   setTimeout(() => splash.remove(), 400);
 });
 
-onEvent(e => { if (e.type === 'spawn') play('spawn'); });          // sound effects hook into game events here
+onEvent(e => {
+  if (e.type === 'spawn') play('spawn');
+  if (e.type === 'honk') play('honk', { volume: 0.7 + 0.3 * e.k });          // angrier cars are a bit louder
+});          // sound effects hook into game events here
 
 // Hover sound: the moment a mouse first enters any button (not touch, which has no hover; not disabled buttons).
 document.addEventListener('pointerover', e => {

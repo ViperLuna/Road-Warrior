@@ -143,7 +143,23 @@ export function tick(dt) {
     emit();
   }
   const worst = game.cars.reduce((m, c) => Math.max(m, c.stuck), 0);
+  honkAtStuckCars(dt);
   if (worst >= tuning.gridlock.gameOverAfterSeconds) endGame();
+}
+
+// Cars that have been stuck long enough to glow also get mad: they honk, slowly at first and faster as the game-over timer nears.
+// Emits { type: 'honk', k } (k = 0..1 how mad). Sound is the listener's business.
+export function honkAtStuckCars(dt) {
+  const { warnAfterSeconds: warn, gameOverAfterSeconds: over, honkSlowSeconds: slow, honkFastSeconds: fast } = tuning.gridlock;
+  for (const c of game.cars) {
+    if (c.state === 'home' || c.state === 'dwell' || c.stuck < warn) { c.honkIn = undefined; continue; }
+    if (c.honkIn === undefined) c.honkIn = Math.random() * 1.5;                // the first honk comes soon after it starts glowing
+    c.honkIn -= dt;
+    if (c.honkIn > 0) continue;
+    const k = Math.min(1, (c.stuck - warn) / (over - warn));
+    c.honkIn = (slow + (fast - slow) * k) * (0.7 + Math.random() * 0.6);
+    notify({ type: 'honk', k });
+  }
 }
 
 function endGame() {

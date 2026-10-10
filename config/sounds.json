@@ -47,5 +47,18 @@
     "volume": 0.7,
     "pitchJitter": 0.03,
     "cooldownMs": 40
+  },
+  "honk": {
+    "files": [
+      "assets/sounds/honk1.mp3",
+      "assets/sounds/honk2.mp3",
+      "assets/sounds/honk3.mp3",
+      "assets/sounds/honk4.mp3",
+      "assets/sounds/honk5.mp3"
+    ],
+    "volume": 0.6,
+    "pitchJitter": 0.06,
+    "volumeJitter": 0.1,
+    "cooldownMs": 120
   }
 }

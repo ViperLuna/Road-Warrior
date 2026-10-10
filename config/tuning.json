@@ -24,7 +24,9 @@
   },
   "gridlock": {
     "warnAfterSeconds": 12,
-    "gameOverAfterSeconds": 40
+    "gameOverAfterSeconds": 40,
+    "honkSlowSeconds": 5,
+    "honkFastSeconds": 1.2
   },
   "trips": {
     "parkedSeconds": 1.6,
