@@ -70,7 +70,9 @@
       "assets/sounds/gameover2.mp3",
       "assets/sounds/gameover3.mp3",
       "assets/sounds/gameover4.mp3",
-      "assets/sounds/gameover5.mp3"
+      "assets/sounds/gameover5.mp3",
+      "assets/sounds/gameover6.mp3",
+      "assets/sounds/gameover7.mp3"
     ],
     "volume": 0.9
   }
