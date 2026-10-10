@@ -83,5 +83,13 @@
     "volume": 0.7,
     "pitchJitter": 0.04,
     "cooldownMs": 150
+  },
+  "toast": {
+    "files": [
+      "assets/sounds/toast1.mp3"
+    ],
+    "volume": 0.7,
+    "pitchJitter": 0.03,
+    "cooldownMs": 100
   }
 }

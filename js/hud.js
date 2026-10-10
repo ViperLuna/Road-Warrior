@@ -1,6 +1,7 @@
 // DOM overlay: inventory pills, goal bar, shop, toolbar, toasts, and the menu / reward / pause / game-over screens.
 import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, buy, bestFor, isUnlocked, coneCount, cycleSpeed } from './state.js';
 import { settings, setSetting } from './settings.js';
+import { play } from './audio.js';
 import { maps, prog, roadsAvailable } from './progression.js';
 
 let toastEl, toastTimer = 0, lastMsg = '', lastAt = 0;
@@ -10,6 +11,7 @@ export function toast(msg) {
   const now = performance.now();
   if (msg === lastMsg && now - lastAt < 1500) return;
   lastMsg = msg; lastAt = now;
+  play('toast');
   toastEl.textContent = msg;
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
