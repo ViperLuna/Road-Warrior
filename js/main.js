@@ -92,7 +92,8 @@ async function continueGame() {
   const d = await loadSaved();
   if (!d) return;
   try { restore(d); } catch (e) { console.error('could not load the save', e); return; }
-  if (d.view) Object.assign(cam, d.view); else fitView(game.cols, game.rows);
+  fitView(game.cols, game.rows);                  // tells the camera the real map size (and zoom limits) first...
+  if (d.view) Object.assign(cam, d.view);          // ...then puts the player's saved view back
   clampCam();
   history.replaceState(null, '', '#seed=' + game.seed);
 }
