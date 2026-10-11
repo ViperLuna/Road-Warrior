@@ -6,6 +6,8 @@
 // cooldownMs: ignore play() calls that come sooner than this after the last one (so dragging across many tiles isn't a wall of noise).
 // Game code just calls play('destroy').
 
+import { settings, gainOf } from './settings.js';
+
 let ctx = null;
 let defs = {};                     // name -> { files, volume, pitchJitter, volumeJitter }
 const buffers = new Map();         // url -> decoded audio
@@ -28,6 +30,8 @@ export function pickIndex(count, last, rng = Math.random) {
   const i = Math.floor(rng() * (count - 1));
   return i >= last ? i + 1 : i;
 }
+
+export const getContext = () => ctx;      // the shared AudioContext (music.js plays through it too)
 
 export function setSounds(config) {
   defs = {};
@@ -61,7 +65,7 @@ export function playFirst(names, opts) { const n = firstDefined(names); if (n) p
 // play('destroy'); optional { volume, rate } multiply the entry's own settings.
 export function play(name, { volume = 1, rate = 1 } = {}) {
   const d = defs[name];
-  if (!ctx || !d || muted) return;
+  if (!ctx || !d || muted || settings.sfxMuted || settings.sfxVolume <= 0) return;
   const ready = d.files.map((url, i) => [i, buffers.get(url)]).filter(([, b]) => b);       // skip files that failed to load
   if (!ready.length) return;
   const now = performance.now();
@@ -74,7 +78,7 @@ export function play(name, { volume = 1, rate = 1 } = {}) {
   const gain = ctx.createGain();
   src.buffer = pick[1];
   src.playbackRate.value = rate * jitter(d.pitchJitter);
-  gain.gain.value = volume * d.volume * jitter(d.volumeJitter);
+  gain.gain.value = volume * d.volume * jitter(d.volumeJitter) * gainOf(settings.sfxVolume);
   src.connect(gain).connect(ctx.destination);
   src.start();
 }

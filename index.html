@@ -27,10 +27,22 @@
       </div>
       <div id="actions">
         <button id="speed-btn" class="chip" type="button" title="Speed (numpad 0 pause, 1, 2, 3)">1x</button>
+        <button id="music-btn" class="chip" type="button" title="Music" hidden>♪</button>
         <button id="shop-btn" class="chip" type="button">Shop</button>
         <button id="menu-btn" class="chip" type="button">Menu</button>
       </div>
       <div id="goal"><div id="goal-bar"><i></i></div><span id="goal-text"></span></div>
+    </div>
+    <div id="music" data-popup hidden>
+      <div id="music-head"><b>Music</b><button id="music-close" type="button" aria-label="Close music">Close</button></div>
+      <div id="music-title">&nbsp;</div>
+      <div id="music-controls">
+        <button type="button" id="music-prev" aria-label="Previous song">⏮</button>
+        <button type="button" id="music-play" aria-label="Play or pause">⏸</button>
+        <button type="button" id="music-next" aria-label="Next song">⏭</button>
+      </div>
+      <label class="vol"><span>Volume</span><input type="range" id="music-vol" min="0" max="100" step="1"></label>
+      <label class="opt small"><input type="checkbox" id="music-mute"> Mute music</label>
     </div>
     <div id="shop" data-popup hidden>
       <div id="shop-head"><b>Shop</b><button id="shop-close" type="button" aria-label="Close shop">Close</button></div>
@@ -78,6 +90,16 @@
     <h2>Settings</h2>
     <div class="stack">
       <label class="opt"><input type="checkbox" id="opt-cuts"> Show cut markers</label>
+      <div class="vol-group">
+        <b>Sound effects</b>
+        <label class="vol"><span>Volume</span><input type="range" id="opt-sfx-vol" min="0" max="100" step="1"></label>
+        <label class="opt small"><input type="checkbox" id="opt-sfx-mute"> Mute sound effects</label>
+      </div>
+      <div class="vol-group" id="opt-music-group">
+        <b>Music</b>
+        <label class="vol"><span>Volume</span><input type="range" id="opt-music-vol" min="0" max="100" step="1"></label>
+        <label class="opt small"><input type="checkbox" id="opt-music-mute"> Mute music</label>
+      </div>
       <button class="big" id="settings-close" type="button">Back</button>
     </div>
   </div>

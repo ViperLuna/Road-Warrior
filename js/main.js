@@ -1,4 +1,5 @@
 import { unlock, play, playFirst } from './audio.js';
+import { loadConfig as loadMusic, start as startMusic } from './music.js';
 import { game, newGame, setPalette, setMode, tick, onChange, onEvent } from './state.js';
 import { setTuning } from './tuning.js';
 import { setProgression, setMaps, maps } from './progression.js';
@@ -9,8 +10,11 @@ import { initInput, hover } from './input.js';
 import { initHud } from './hud.js';
 
 const splash = document.getElementById('splash');
+const musicReady = loadMusic();                       // fetch the playlist while the splash is showing
 document.getElementById('start').addEventListener('click', async () => {
   await unlock();
+  await musicReady;
+  startMusic();
   splash.classList.add('hide');
   setTimeout(() => splash.remove(), 400);
 });

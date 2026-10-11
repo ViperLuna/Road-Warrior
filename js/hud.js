@@ -1,6 +1,7 @@
 // DOM overlay: inventory pills, goal bar, shop, toolbar, toasts, and the menu / reward / pause / game-over screens.
 import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, buy, bestFor, isUnlocked, coneCount, cycleSpeed } from './state.js';
-import { settings, setSetting } from './settings.js';
+import { settings, setSetting, onSetting } from './settings.js';
+import { onMusic, getState as musicState, next as musicNext, prev as musicPrev, toggle as musicToggle } from './music.js';
 import { play } from './audio.js';
 import { maps, prog, roadsAvailable } from './progression.js';
 
@@ -33,12 +34,39 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     b.addEventListener('click', pick);
   });
   $('oneway-btn').addEventListener('click', () => { setOneWay(!game.oneway); toast(game.oneway ? 'One-way on: drag along a road to set its direction.' : 'One-way off: dragging along a road makes it two-way.'); });
+  // Settings screen: cut markers, plus volume and mute for sound effects and for music.
   const optCuts = $('opt-cuts');
-  const openSettings = () => { optCuts.checked = settings.showCuts; $('settings').hidden = false; };
+  const bind = (rangeId, muteId, volKey, muteKey) => {
+    const range = $(rangeId), mute = $(muteId);
+    range.addEventListener('input', () => setSetting(volKey, range.value / 100));
+    mute.addEventListener('change', () => setSetting(muteKey, mute.checked));
+    return () => { range.value = Math.round(settings[volKey] * 100); mute.checked = settings[muteKey]; };
+  };
+  const syncSfx = bind('opt-sfx-vol', 'opt-sfx-mute', 'sfxVolume', 'sfxMuted');
+  const syncMusicA = bind('opt-music-vol', 'opt-music-mute', 'musicVolume', 'musicMuted');
+  const syncMusicB = bind('music-vol', 'music-mute', 'musicVolume', 'musicMuted');       // the music panel's own copy of the same two controls
+  const syncAll = () => { optCuts.checked = settings.showCuts; syncSfx(); syncMusicA(); syncMusicB(); };
+  const openSettings = () => { syncAll(); $('settings').hidden = false; };
   $('settings-btn').addEventListener('click', openSettings);
   $('pause-settings-btn').addEventListener('click', openSettings);
   $('settings-close').addEventListener('click', () => { $('settings').hidden = true; });
   optCuts.addEventListener('change', () => setSetting('showCuts', optCuts.checked));
+  onSetting(() => { if (!$('settings').hidden || !$('music').hidden) syncAll(); });
+
+  // Music panel (the note button): shown only when there are songs.
+  const paintMusic = st => {
+    $('music-btn').hidden = st.count === 0;
+    $('opt-music-group').hidden = st.count === 0;
+    $('music-title').textContent = st.title || '\u00a0';
+    $('music-play').textContent = st.playing ? '\u23f8' : '\u25b6';
+    $('music-btn').classList.toggle('paused', !st.playing);
+  };
+  onMusic(paintMusic); paintMusic(musicState());
+  $('music-btn').addEventListener('click', () => { const m = $('music'); m.hidden = !m.hidden; if (!m.hidden) syncAll(); });
+  $('music-close').addEventListener('click', () => { $('music').hidden = true; });
+  $('music-play').addEventListener('click', musicToggle);
+  $('music-next').addEventListener('click', musicNext);
+  $('music-prev').addEventListener('click', musicPrev);
   $('speed-btn').addEventListener('click', cycleSpeed);
   $('menu-btn').addEventListener('click', () => setMode('pause'));
   $('shop-btn').addEventListener('click', () => { $('shop').hidden = !$('shop').hidden; render(); });
