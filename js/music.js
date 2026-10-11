@@ -10,7 +10,7 @@ import { getContext } from './audio.js';
 let tracks = [], crossfade = 4;
 let queue = [], history = [], current = -1;
 const slots = [];                       // two <audio> elements that take turns, so one song can fade out while the next fades in
-let active = 0, bus = null, started = false, fading = false, playToken = 0, suspended = false;
+let active = 0, bus = null, started = false, fading = false, playToken = 0;
 const listeners = new Set();
 export const onMusic = fn => { listeners.add(fn); return () => listeners.delete(fn); };
 const emit = () => listeners.forEach(fn => fn(getState()));
@@ -60,7 +60,7 @@ function ensureGraph() {
     const gain = ctx.createGain(); gain.gain.value = 0;
     ctx.createMediaElementSource(el).connect(gain).connect(bus);
     el.addEventListener('timeupdate', () => { if (i === active) watch(el); });
-    el.addEventListener('ended', () => { if (i === active && !fading && !suspended) advance(1); });
+    el.addEventListener('ended', () => { if (i === active && !fading) advance(1); });
     slots.push({ el, gain });
   }
   return true;
@@ -72,7 +72,7 @@ function applyVolume() {
 
 // Near the end of the song: start the next one underneath so they overlap.
 function watch(el) {
-  if (fading || suspended || !settings.musicOn || !(el.duration > 0)) return;
+  if (fading || !settings.musicOn || !(el.duration > 0)) return;
   if (el.duration - el.currentTime <= crossfade + 0.1) advance(1);
 }
 
@@ -114,18 +114,9 @@ export function start() {
   if (settings.musicOn && ensureGraph()) advance(1);
   emit();
 }
-export function next() { if (started && settings.musicOn && !suspended) advance(1); }
-export function prev() { if (started && settings.musicOn && !suspended) advance(-1); }
+export function next() { if (started && settings.musicOn) advance(1); }
+export function prev() { if (started && settings.musicOn) advance(-1); }
 
-// The game's pause screen (Menu / Esc) holds the music; the speed pause does not touch it. Resuming carries on from the same spot.
-export function setSuspended(on) {
-  on = !!on;
-  if (on === suspended) return;
-  suspended = on;
-  if (!started || !slots.length) return;
-  if (on) slots.forEach(s => s.el.pause());
-  else if (settings.musicOn && current >= 0) slots[active].el.play().catch(() => {});
-}
 export function toggle() {
   if (!started) return;
   setSetting('musicOn', !settings.musicOn);
@@ -135,7 +126,7 @@ onSetting(name => {
   if (name === 'musicVolume' || name === 'musicMuted') applyVolume();
   if (name === 'musicOn' && started) {
     const a = slots[active];
-    if (settings.musicOn) { if (suspended) { /* stays held until the pause screen closes */ } else if (current < 0) advance(1); else a && a.el.play().catch(() => {}); }
+    if (settings.musicOn) { if (current < 0) advance(1); else a && a.el.play().catch(() => {}); }
     else slots.forEach(s => s.el.pause());
     emit();
   }
