@@ -39,7 +39,7 @@ export function serialize(g = game) {
     progress: { spawnCount: g.spawnCount, nextSpawnAt: g.nextSpawnAt, goalCount: g.goalCount, nextGoalAt: g.nextGoalAt, prevGoalAt: g.prevGoalAt, colorsUsed: g.colorsUsed },
     reward: g.reward ? { goal: g.reward.goal, options: g.reward.options.map(o => ({ ...o, special: o.special ? o.special.id : undefined })) } : null,
     terrain: { water: encodeGrid(g.terrain.water), start: g.terrain.start },
-    roads: [...g.roads.entries()].map(([k, t]) => [k, { ...t }]),
+    roads: [...g.roads.entries()].map(([k, t]) => [k, t.sig ? { ...t, sig: { ...t.sig, dem: [...t.sig.dem] } } : { ...t }]),
     bridges: [...g.bridges.entries()],
     buildings: g.buildings.map(b => ({ ...b, color: b.color.id, slots: b.slots ? b.slots.map(c => (c ? c.id : null)) : null })),
     cars: carData,
@@ -55,7 +55,7 @@ export function restore(data, g = game) {
 
   g.seed = data.seed >>> 0; g.map = map; g.cols = map.cols; g.rows = map.rows;
   g.terrain = terrainFromWater(g.seed, g.cols, g.rows, decodeGrid(data.terrain.water, g.cols * g.rows), data.terrain.start);
-  g.roads = new Map(data.roads.map(([k, t]) => [k, { ...t }]));
+  g.roads = new Map(data.roads.map(([k, t]) => [k, t.sig ? { ...t, sig: { ...t.sig, dem: [...t.sig.dem] } } : { ...t }]));
   g.bridges = new Map(data.bridges.map(([id, tiles]) => [id, [...tiles]]));
   g.nextBridge = data.nextBridge; g.nextId = data.nextId;
   g.inv = { ...data.inv }; g.unlocks = { ...data.unlocks }; g.oneway = !!data.oneway && !!g.unlocks.oneway; g.build4 = !!data.build4 && (g.inv.highway || 0) > 0;

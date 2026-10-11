@@ -3,7 +3,7 @@ import { WATER, HILL } from './terrain.js';
 import { hasRoad, tileIndex, inBounds, buildingAt } from './state.js';
 import { roadConns, edgeLanes } from './network.js';
 import { settings } from './settings.js';
-import { lightGroups, lightColor } from './signals.js';
+import { lightGroups, lightColor, signalState } from './signals.js';
 import { RING_R } from './lanes.js';
 import { drawBuildings, drawGhosts, drawCars } from './render_objects.js';
 
@@ -194,10 +194,10 @@ function drawRing(ctx, cx, cy, conns, path, pass) {
 }
 
 // Signal heads sit at each approach, on the driver's right, showing the live colour.
-function drawLights(ctx, game, tx, ty, conns) {
-  const cx = tx + 0.5, cy = ty + 0.5, groups = lightGroups(conns);
+function drawLights(ctx, road, tx, ty, conns) {
+  const cx = tx + 0.5, cy = ty + 0.5, groups = lightGroups(conns), sig = signalState(road);
   for (const d of conns) {
-    const col = lightColor(game.time, groups, d);
+    const col = lightColor(sig, groups, d);
     const hx = -DIRS[d][0], hy = -DIRS[d][1], rx = -hy, ry = hx;        // approach heading + its right-hand side
     const px = cx + DIRS[d][0] * 0.4 + rx * 0.3, py = cy + DIRS[d][1] * 0.4 + ry * 0.3;
     ctx.fillStyle = '#15181c'; ctx.beginPath(); ctx.arc(px, py, 0.075, 0, 6.2832); ctx.fill();
@@ -254,7 +254,7 @@ function drawTail(ctx, game, tx, ty, conns, road, flows) {
     const ix = ex - DIRS[d][0] * 0.07, iy = ey - DIRS[d][1] * 0.07;
     ctx.beginPath(); ctx.moveTo(ix - px * w, iy - py * w); ctx.lineTo(ix + px * w, iy + py * w); ctx.stroke(); ctx.setLineDash([]);
   }
-  if (road.special === 'light' && conns.length >= 3) drawLights(ctx, game, tx, ty, conns);
+  if (road.special === 'light' && conns.length >= 3) drawLights(ctx, road, tx, ty, conns);
   for (const [d, sign] of flows) {                                       // chevron along the arm, pointing the way traffic goes
     const dx = DIRS[d][0] * sign, dy = DIRS[d][1] * sign, px = cx + DIRS[d][0] * 0.3, py = cy + DIRS[d][1] * 0.3;
     ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 0.035; ctx.lineCap = 'round'; ctx.lineJoin = 'round';

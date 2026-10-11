@@ -1,10 +1,19 @@
 // Intersection rules: which movements conflict, and who has priority.
 import { CAR_LEN, DIR, OPP, rt } from './lanes.js';
-import { roadConns, tileLanes, edgeLanes } from './network.js';
+import { roadConns, tileLanes, edgeLanes, netVersion } from './network.js';
 import { tuning } from './tuning.js';
 import { lightGroups } from './signals.js';
 
-// Per-step cache of junction info: { n: connection count, stem: side of the T's stem or -1 }.
+const kept = new WeakMap();
+export function junctionCache(g) {
+  let c = kept.get(g);
+  if (!c || c.ver !== netVersion() || c.roads !== g.roads || c.ports !== g.ports || c.size !== g.roads.size) {
+    c = { ver: netVersion(), roads: g.roads, ports: g.ports, size: g.roads.size, map: new Map() };
+    kept.set(g, c);
+  }
+  return c.map;
+}
+
 export function junctionAt(g, x, y, cache) {
   const k = y * g.cols + x;
   let j = cache.get(k);
@@ -37,28 +46,43 @@ export function pieceConflict(a, b, sb) {
     if (!a.round && !a.taper && !b.taper) return false;          // (plain paths split at once; ring paths and tapers separate slowly, so use the geometry)
   }
   if (a.kind === 'lot_in' && b.kind === 'lot_in' && a.ent === b.ent && sb < CAR_LEN + 0.12) return true;   // two cars entering by the same gate
+  const g = pairGeometry(a, b);
   // Two ring paths share an arc. If the car already circulating has cleared my merge point, I simply fall in behind it.
+  if (g.ring >= 0 && sb - CAR_LEN / 2 > g.ring + 0.12) return false;
+  if (g.together) return false;
+  return g.last >= 0 && b.lut[g.last] >= sb - CAR_LEN / 2;
+}
+
+const pairs = new Map();
+let pairsDist = -1;
+function pairGeometry(a, b) {
+  if (pairsDist !== tuning.cars.conflictDistance || pairs.size > 400000) { pairs.clear(); pairsDist = tuning.cars.conflictDistance; }
+  const k = a.uid * 67108864 + b.uid;
+  let r = pairs.get(k);
+  if (r) return r;
+  r = { ring: -1, together: false, last: -1 };
   if (a.round && b.round && a.xy.length > 7) {
     const E = a.xy[7];
     let jBest = -1, dBest = 1e9;
     for (let j = 0; j < b.xy.length; j++) { const d = Math.hypot(b.xy[j][0] - E[0], b.xy[j][1] - E[1]); if (d < dBest) { dBest = d; jBest = j; } }
-    if (dBest < 0.15 && sb - CAR_LEN / 2 > b.lut[jBest] + 0.12) return false;
+    if (dBest < 0.15) r.ring = b.lut[jBest];
   }
+
   // Parking-lot moves get a wider margin (cars there are swinging around); so do highway lanes, where cars cut diagonally
   // across a neighbouring lane. Two cars making the *same* movement in side-by-side lanes simply travel together.
   const lot = a.kind !== 'road' || b.kind !== 'road';
-  if (!lot && a.in === b.in && a.out === b.out && (a.li ?? 0) !== (b.li ?? 0) && (a.lo ?? 0) !== (b.lo ?? 0) && a.tl === b.tl) return false;
+  r.together = !lot && a.in === b.in && a.out === b.out && (a.li ?? 0) !== (b.li ?? 0) && (a.lo ?? 0) !== (b.lo ?? 0) && a.tl === b.tl;
   const wide = !lot && (a.tl === 4 || b.tl === 4);
-  const thr = tuning.cars.conflictDistance + (lot ? 0.1 : wide ? 0.05 : 0), t2 = thr * thr, from = sb - CAR_LEN / 2;
-  for (let j = 0; j < b.xy.length; j++) {
-    if (b.lut[j] < from) continue;
+  const thr = tuning.cars.conflictDistance + (lot ? 0.1 : wide ? 0.05 : 0), t2 = thr * thr;
+  for (let j = b.xy.length - 1; j >= 0 && r.last < 0; j--) {
     const bx = b.xy[j][0], by = b.xy[j][1];
     for (let i = 0; i < a.xy.length; i++) {
       const dx = a.xy[i][0] - bx, dy = a.xy[i][1] - by;
-      if (dx * dx + dy * dy < t2) return true;
+      if (dx * dx + dy * dy < t2) { r.last = j; break; }
     }
   }
-  return false;
+  pairs.set(k, r);
+  return r;
 }
 
 // Does waiting car `b` have right of way over waiting car `a` at junction `J`?

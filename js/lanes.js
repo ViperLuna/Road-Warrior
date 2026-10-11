@@ -10,7 +10,10 @@ export const rt = v => [-v[1], v[0]];                   // right-hand side of he
 const mad = (a, d, k) => [a[0] + d[0] * k, a[1] + d[1] * k];
 
 const cache = new Map();
+let uid = 0;
 export const clearPieceCache = () => cache.clear();
+
+const spaceKey = p => (p.kind === 'road' ? p.tx + ',' + p.ty : p.kind === 'lot_in' || p.kind === 'lot_out' ? 'L' + p.bx + ',' + p.by : null);
 
 function bez(p0, c1, c2, p3, t) {
   const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
@@ -27,6 +30,7 @@ function make(key, kind, p0, c1, c2, p3, extra) {
     lut.push(len); xy.push(q); prev = q;
   }
   const p = { key, kind, pts: [p0, c1, c2, p3], len, lut, xy, turn: 'straight', lanes: 2, ...extra };
+  p.tk = spaceKey(p); p.uid = ++uid; p.occT = 0; p.occ = [];
   cache.set(key, p);
   return p;
 }
@@ -41,6 +45,7 @@ function makePoly(key, kind, pts, extra) {
   const lut = [0];
   for (let i = 1; i < pts.length; i++) lut.push(lut[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
   const p = { key, kind, poly: true, len: lut[lut.length - 1], lut, xy: pts, turn: 'straight', lanes: 2, ...extra };
+  p.tk = spaceKey(p); p.uid = ++uid; p.occT = 0; p.occ = [];
   cache.set(key, p);
   return p;
 }
