@@ -18,6 +18,8 @@ const firsts = new Set(Array.from({ length: 400 }, () => makeQueue(4, -1)[0]));
 ok(firsts.size === 4, 'any song can open a lap');
 ok(titleOf({ file: 'assets/music/quiet-asphalt_v2.mp3' }) === 'quiet asphalt v2', 'title made from the file name');
 ok(titleOf({ title: 'Quiet Asphalt', file: 'x.mp3' }) === 'Quiet Asphalt', 'explicit title wins');
+ok(titleOf({ title: 'Irish_Luna - Road_Warrior_Theme', file: 'x.mp3' }) === 'Irish Luna - Road Warrior Theme', 'underscores in a title show as spaces');
+ok(titleOf({ file: 'a/Still_Moving.mp3' }) === 'Still Moving', 'underscores in a file name show as spaces');
 setTracks([]); ok(getState().count === 0 && !getState().playing, 'no tracks: nothing to play');
 setTracks(['a.mp3', { title: 'B', file: 'b.mp3' }, null, {}]); ok(getState().count === 2, 'plain file names and objects accepted, junk dropped');
 // settings: defaults and the volume curve

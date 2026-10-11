@@ -15,7 +15,7 @@ const listeners = new Set();
 export const onMusic = fn => { listeners.add(fn); return () => listeners.delete(fn); };
 const emit = () => listeners.forEach(fn => fn(getState()));
 
-export const titleOf = t => t.title || String(t.file).replace(/^.*\//, '').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+export const titleOf = t => (t.title || String(t.file).replace(/^.*\//, '').replace(/\.[^.]+$/, '').replace(/-+/g, ' ')).replace(/_+/g, ' ').trim();       // underscores always show as spaces
 
 // A shuffled order of 0..n-1 for the next lap through the playlist; the first song never repeats the one that just played.
 export function makeQueue(n, last, rng = Math.random) {
