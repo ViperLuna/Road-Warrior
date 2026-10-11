@@ -32,26 +32,30 @@ const turnCost = (inS, outS) => {
   return h0[0] * h1[1] - h0[1] * h1[0] > 0 ? 0.15 : 0.3;   // right turns slightly cheaper than left
 };
 
+let S = null;
+function scratch(n) {
+  if (!S || S.n !== n || S.stamp >= 0xfffffffe) S = { n, stamp: 0, gs: new Float32Array(n), parent: new Int32Array(n), via: new Int8Array(n), seen: new Uint32Array(n), done: new Uint32Array(n) };
+  S.stamp++;
+  return S;
+}
+
 // start: road tile (sx,sy) entered from side sEntry. goalPorts: array of ports that end the trip.
 export function findPath(g, sx, sy, sEntry, goalPorts) {
   if (!roadAt(g, sx, sy) || !goalPorts.length || g.roads.get(tidx(g, sx, sy)).cone) return null;      // (a coned tile is closed to new trips)
   const cells = g.cols * g.rows, NS = cells * 4;
   const goalTiles = new Map(goalPorts.map(p => [tidx(g, p.x, p.y), p]));
-  const gs = new Float32Array(NS + cells).fill(Infinity);
-  const parent = new Int32Array(NS + cells).fill(-1);
-  const via = new Int8Array(NS + cells).fill(-1);
-  const done = new Uint8Array(NS + cells);
+  const { gs, parent, via, seen, done, stamp } = scratch(NS + cells);
   const h = (x, y) => { let m = Infinity; for (const p of goalPorts) m = Math.min(m, Math.abs(x - p.x) + Math.abs(y - p.y)); return m; };
 
   const heap = new Heap();
   const s0 = tidx(g, sx, sy) * 4 + sEntry;
-  gs[s0] = 0;
+  gs[s0] = 0; parent[s0] = -1; seen[s0] = stamp;
   heap.push(h(sx, sy), s0);
 
   while (heap.size) {
     const id = heap.pop();
-    if (done[id]) continue;
-    done[id] = 1;
+    if (done[id] === stamp) continue;
+    done[id] = stamp;
     if (id >= NS) {                      // goal node: walk parents back
       const steps = [];
       let goalId = id, cur = parent[id], out = via[id];
@@ -66,19 +70,20 @@ export function findPath(g, sx, sy, sEntry, goalPorts) {
     }
     const cell = id >> 2, inS = id & 3, x = cell % g.cols, y = (cell / g.cols) | 0;
     const noExit = (g.roads.get(cell) || {}).noExit || 0;                 // one-way streets: sides this tile may not be left through
+    const over = overpassAxis(g, x, y) >= 0, round = roundAt(g, x, y) ? 0.35 : 0;
     for (const e of roadConns(g, x, y)) {
       if (e === inS || (noExit >> e) & 1) continue;
-      if (overpassAxis(g, x, y) >= 0 && e !== OPP[inS]) continue;           // an overpass has no turns
+      if (over && e !== OPP[inS]) continue;
       const nx = x + DIR[e][0], ny = y + DIR[e][1];
-      const cost = gs[id] + 1 + turnCost(inS, e) + (roundAt(g, x, y) ? 0.35 : 0);
+      const cost = gs[id] + 1 + turnCost(inS, e) + round;
       let nid = -1;
       if (roadAt(g, nx, ny)) { if (g.roads.get(tidx(g, nx, ny)).cone) continue; nid = tidx(g, nx, ny) * 4 + OPP[e]; }
       else {
         const p = portAt(g, nx, ny);
         if (p && p.side === OPP[e] && goalTiles.get(tidx(g, nx, ny)) === p) nid = NS + tidx(g, nx, ny);
       }
-      if (nid < 0 || cost >= gs[nid]) continue;
-      gs[nid] = cost; parent[nid] = id; via[nid] = e;
+      if (nid < 0 || (seen[nid] === stamp && cost >= gs[nid])) continue;
+      gs[nid] = cost; parent[nid] = id; via[nid] = e; seen[nid] = stamp;
       heap.push(cost + (nid >= NS ? 0 : h(nx, ny)), nid);
     }
   }

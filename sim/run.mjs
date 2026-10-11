@@ -1,5 +1,5 @@
 
-//   node sim/run.mjs --games 1000 [--map riverbend|lakeside|highlands|all] [--minutes 30] [--seed 1] [--reward smart|cash|special] [--bot flip,cut] [--resave 60] [--workers 12] [--out sim/out/run.jsonl] [--set tuning.gridlock.gameOverAfterSeconds=60] [--set progression.economy.roadCost=3]
+//   node sim/run.mjs --games 1000 [--map riverbend|lakeside|highlands|all] [--minutes 30] [--seed 1] [--reward smart|cash|special] [--bot flip,cut] [--junctions heat|none|light|roundabout, comma list runs each on the same seeds] [--resave 60] [--workers 12] [--out sim/out/run.jsonl] [--set tuning.gridlock.gameOverAfterSeconds=60] [--set progression.economy.roadCost=3]
 //   node sim/run.mjs --replay <seed> --map riverbend
 
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 function parseArgs(argv) {
-  const a = { games: 100, map: 'riverbend', minutes: 30, seed: 1, reward: 'smart', workers: availableParallelism(), out: null, set: [], replay: null, bot: '', resave: 0 };
+  const a = { games: 100, map: 'riverbend', minutes: 30, seed: 1, reward: 'smart', workers: availableParallelism(), out: null, set: [], replay: null, bot: '', junctions: 'heat', resave: 0 };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i].replace(/^--/, ''), v = argv[++i];
     if (k === 'set') a.set.push(v);
@@ -47,12 +47,13 @@ function describeJunction(J) {
   return J.round ? 'roundabout' : J.light ? 'light' : J.taper ? 'taper' : J.n + '-way';
 }
 
-function playGame(G, seed, mapId, opts) {
+function playGame(G, seed, mapId, opts, junctions = 'heat') {
   const { mulberry32, state, tuning, maps, bot: B, save } = G, g = state.game;
   const map = maps.find(m => m.id === mapId);
   Math.random = mulberry32((seed ^ 0x5eed1234) >>> 0);
   state.newGame(seed, map);
-  const bot = B.createBot({ reward: opts.reward, features: opts.bot ? opts.bot.split(',') : [] });
+  g.headless = true;
+  const bot = B.createBot({ reward: opts.reward, features: opts.bot ? opts.bot.split(',') : [], junctions });
   const ev = { spawns: 0, spawnAcross: 0, newColors: 0 };
   G.onEvent = e => { if (e.type === 'spawn') { ev.spawns++; if (e.across) ev.spawnAcross++; if (e.kind === 'newColor') ev.newColors++; } };
 
@@ -78,11 +79,13 @@ function playGame(G, seed, mapId, opts) {
     }
   }
   const houses = g.buildings.filter(b => b.kind === 'house');
+  const inters = [...g.roads.entries()].filter(([k]) => B.streetLegs(g, k % g.cols, (k / g.cols) | 0) >= 3).map(([, r]) => r);
   const rec = {
-    seed, map: mapId, end: g.mode === 'over' ? 'gridlock' : 'timeout', time: Math.round(g.time), trips: g.trips, money: g.money,
+    seed, map: mapId, junctions, end: g.mode === 'over' ? 'gridlock' : 'timeout', time: Math.round(g.time), trips: g.trips, money: g.money,
     houses: houses.length, dests: g.buildings.filter(b => b.kind === 'dest').length, colors: g.colorsUsed,
     unconnectedAtEnd: houses.filter(h => !h.connected).length, unconnectedHouseSec, roads: g.roads.size,
     goals: g.goalCount, goalTimes, tripsAtMin, warnings, worstStuckSurvived: +worstStuckSurvived.toFixed(1), peakCarsMoving: peakCars,
+    intersections: inters.length, lit: inters.filter(r => r.special === 'light').length, roundabouts: inters.filter(r => r.special === 'roundabout').length,
     ...ev, bot: bot.stats, ms: Math.round(performance.now() - t0),
   };
   if (rec.end === 'gridlock') {
@@ -98,7 +101,7 @@ async function workerMain() {
   G.state.onEvent(e => G.onEvent && G.onEvent(e));
   parentPort.on('message', job => {
     if (!job) return process.exit(0);
-    try { parentPort.postMessage(playGame(G, job.seed, job.map, workerData.opts)); }
+    try { parentPort.postMessage(playGame(G, job.seed, job.map, workerData.opts, job.junctions)); }
     catch (e) { parentPort.postMessage({ seed: job.seed, map: job.map, error: String(e.stack || e) }); }
   });
   parentPort.postMessage({ ready: true });
@@ -111,7 +114,8 @@ const tally = arr => Object.entries(arr.reduce((m, k) => (m[k] = (m[k] || 0) + 1
 export function summarise(recs, opts) {
   const lines = [];
   const say = s => lines.push(s);
-  const byMap = Object.groupBy(recs.filter(r => !r.error), r => r.map);
+  const arms = new Set(recs.map(r => r.junctions)).size > 1;
+  const byMap = Object.groupBy(recs.filter(r => !r.error), r => (arms ? `${r.map} [junctions: ${r.junctions}]` : r.map));
   const errors = recs.filter(r => r.error);
   for (const [map, rs] of Object.entries(byMap)) {
     const over = rs.filter(r => r.end === 'gridlock'), n = rs.length;
@@ -133,6 +137,7 @@ export function summarise(recs, opts) {
     say(`Goals reached: ${f('goals')}`);
     say(`Warnings (gold): ${f('warnings')}  | games with ≥1 warning: ${rs.filter(r => r.warnings).length}`);
     say(`Peak cars moving: ${f('peakCarsMoving')}`);
+    say(`Intersections at end: ${f('intersections')}  | with a light: ${f('lit')}  | with a roundabout: ${f('roundabouts')}`);
     say(`Houses the bot never connected (at end): ${f('unconnectedAtEnd')}`);
     const mins = Math.max(...rs.map(r => r.tripsAtMin.length));
     const curve = [];
@@ -150,7 +155,31 @@ export function summarise(recs, opts) {
     say(`Spawns: mean ${mean(rs.map(r => r.spawns)).toFixed(1)}, across water ${mean(rs.map(r => r.spawnAcross)).toFixed(1)}`);
     say(`Wall time per game: median ${pct(rs.map(r => r.ms), 0.5)} ms, max ${Math.max(...rs.map(r => r.ms))} ms`);
   }
+  if (arms) say('\n' + compare(recs.filter(r => !r.error), opts));
   if (errors.length) say(`\n${errors.length} games crashed. First: seed ${errors[0].seed} ${errors[0].map}\n${errors[0].error}`);
+  return lines.join('\n');
+}
+
+function compare(recs, opts) {
+  const lines = [], pols = opts.junctions.split(','), base = pols[0];
+  const key = r => `${r.map}:${r.seed}`;
+  const W = [12, 7, 12, 12, 14, 15, 28, 0];
+  for (const [map, rs] of Object.entries(Object.groupBy(recs, r => r.map))) {
+    const by = Object.groupBy(rs, r => r.junctions), baseBy = new Map((by[base] || []).map(r => [key(r), r]));
+    lines.push(`Junction comparison, ${map} (${opts.minutes} min cap; paired against '${base}' on the same seeds)`);
+    lines.push(['policy', 'games', 'gridlock %', 'mean trips', 'median trips', 'mean time (s)', 'more trips / fewer / same', 'mean Δtrips (95% CI)'].map((s, i) => s.padEnd(W[i])).join(''));
+    for (const p of pols) {
+      const g = by[p] || [];
+      if (!g.length) continue;
+      const pairs = g.filter(r => baseBy.has(key(r))).map(r => r.trips - baseBy.get(key(r)).trips);
+      const md = mean(pairs), sd = Math.sqrt(pairs.reduce((a, d) => a + (d - md) ** 2, 0) / Math.max(1, pairs.length - 1)), ci = 1.96 * sd / Math.sqrt(pairs.length || 1);
+      const cells = [p, g.length, (100 * g.filter(r => r.end === 'gridlock').length / g.length).toFixed(1), mean(g.map(r => r.trips)).toFixed(1), pct(g.map(r => r.trips), 0.5), mean(g.map(r => r.time)).toFixed(0),
+        p === base ? '-' : `${pairs.filter(d => d > 0).length} / ${pairs.filter(d => d < 0).length} / ${pairs.filter(d => d === 0).length}`,
+        p === base ? '-' : `${md >= 0 ? '+' : ''}${md.toFixed(1)} (±${ci.toFixed(1)})`];
+      lines.push(cells.map((s, i) => String(s).padEnd(W[i])).join(''));
+    }
+    lines.push('');
+  }
   return lines.join('\n');
 }
 
@@ -159,12 +188,12 @@ async function main() {
   if (opts.replay !== null) {
     const G = await loadGame(opts.set);
     G.state.onEvent(e => G.onEvent && G.onEvent(e));
-    console.log(JSON.stringify(playGame(G, opts.replay, opts.map === 'all' ? 'riverbend' : opts.map, opts), null, 1));
+    console.log(JSON.stringify(playGame(G, opts.replay, opts.map === 'all' ? 'riverbend' : opts.map, opts, opts.junctions.split(',')[0]), null, 1));
     return;
   }
   const mapIds = opts.map === 'all' ? JSON.parse(readFileSync(join(root, 'config/maps.json'), 'utf8')).maps.map(m => m.id) : [opts.map];
   const jobs = [];
-  for (const map of mapIds) for (let i = 0; i < opts.games; i++) jobs.push({ seed: opts.seed + i, map });
+  for (const map of mapIds) for (let i = 0; i < opts.games; i++) for (const junctions of opts.junctions.split(',')) jobs.push({ seed: opts.seed + i, map, junctions });
   const out = opts.out || join(root, 'sim/out', `run-${new Date().toISOString().replace(/[:.]/g, '-')}.jsonl`);
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, '');

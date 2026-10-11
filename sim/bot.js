@@ -12,7 +12,7 @@ import {
 } from "../js/state.js";
 import { DIR, OPP } from "../js/lanes.js";
 import { findPath } from "../js/pathfind.js";
-import { roadConns } from "../js/network.js";
+import { roadConns, netVersion } from "../js/network.js";
 import { lotTile, gateOf } from "../js/buildings.js";
 import { prog, specialInfo } from "../js/progression.js";
 import { WATER, HILL, LAND } from "../js/terrain.js";
@@ -68,13 +68,19 @@ class Heap {
 //   cut:  now and then, cut the seam between two neighbouring junctions if every connected house still has a route
 export const FEATURES = ["flip", "cut"];
 
+export const JUNCTION_POLICIES = ["heat", "none", "light", "roundabout"];
+
 export function createBot(opts = {}) {
+  const junctions = opts.junctions || "heat";
+  if (!JUNCTION_POLICIES.includes(junctions)) throw new Error("unknown junction policy " + junctions);
   return {
     reward: opts.reward || "smart",
+    junctions,
     features: new Set(opts.features || []),
     nextTidy: 0,
     next: 0,
     heat: new Map(),
+    dests: new Map(),
     fails: new Map(),
     stats: {
       roadsBuilt: 0,
@@ -100,21 +106,22 @@ const gateExit = (d) => {
 const destsOf = (g, color) =>
   g.buildings.filter((b) => b.kind === "dest" && b.color.id === color.id);
 
-export function isConnected(g, h) {
+export function unreached(g, h) {
   const [ex, ey] = exitOf(h);
-  if (!g.roads.has(ey * g.cols + ex)) return false;
-  for (const d of destsOf(g, h.color)) {
+  if (!g.roads.has(ey * g.cols + ex)) return destsOf(g, h.color);
+  return destsOf(g, h.color).filter((d) => {
     const goals = [...g.ports.values()].filter((p) => p.b === d);
-    if (findPath(g, ex, ey, OPP[h.rot], goals)) return true;
-  }
-  return false;
+    return !findPath(g, ex, ey, OPP[h.rot], goals);
+  });
 }
+
+export const isConnected = (g, h) => unreached(g, h).length === 0;
 
 const canGet = (g, item) =>
   (g.inv[item] || 0) > 0 ||
   (specialInfo(item)?.enabled && g.money >= specialInfo(item).cost);
 
-function planRoad(g, h) {
+function planRoad(g, h, dests = destsOf(g, h.color)) {
   const { cols, rows } = g,
     W = g.terrain.water,
     N = cols * rows;
@@ -131,7 +138,7 @@ function planRoad(g, h) {
     g.roads.has(k) ? 0.1 : 1 + 0.3 * adjRoads(x, y);
 
   const targets = new Set(
-    destsOf(g, h.color)
+    dests
       .map(gateExit)
       .filter(([x, y]) => inB(x, y))
       .map(([x, y]) => y * cols + x),
@@ -281,14 +288,22 @@ function maybeFlip(g, h, bot) {
 }
 
 function connectHouses(g, bot) {
+  const dests = new Map();
+  for (const d of g.buildings) if (d.kind === "dest") dests.set(d.color.id, (dests.get(d.color.id) || 0) + 1);
+  for (const [c, n] of dests) {
+    if (bot.dests.get(c) === n) continue;
+    bot.dests.set(c, n);
+    for (const h of g.buildings) if (h.kind === "house" && h.color.id === c) h.connected = false;
+  }
   for (const h of g.buildings) {
     if (h.kind !== "house" || h.connected) continue;
-    if (isConnected(g, h)) {
+    const miss = unreached(g, h);
+    if (!miss.length) {
       h.connected = true;
       continue;
     }
     maybeFlip(g, h, bot);
-    const plan = planRoad(g, h);
+    const plan = planRoad(g, h, miss);
     if (plan) {
       if (build(g, plan, bot) && isConnected(g, h)) h.connected = true;
       continue;
@@ -343,7 +358,27 @@ function trackHeat(g, bot) {
   }
 }
 
+export function streetLegs(g, x, y) {
+  return roadConns(g, x, y).filter((d) => g.roads.has((y + DIR[d][1]) * g.cols + x + DIR[d][0])).length;
+}
+
+function placeEverywhere(g, bot, id) {
+  if (bot.scanned === netVersion() && bot.scannedRoads === g.roads && bot.scannedPorts === g.ports) return;
+  for (const [k, r] of g.roads) {
+    if (r.special || r.overpass !== undefined || r.bridge || r.tunnel) continue;
+    const x = k % g.cols,
+      y = (k / g.cols) | 0;
+    if (streetLegs(g, x, y) < 3) continue;
+    g.inv[id] = (g.inv[id] || 0) + 1;
+    if (placeSpecial(id, x, y) === "ok") bot.stats.placed[id] = (bot.stats.placed[id] || 0) + 1;
+    else g.inv[id]--;
+  }
+  bot.scanned = netVersion(); bot.scannedRoads = g.roads; bot.scannedPorts = g.ports;
+}
+
 function placeSpecials(g, bot) {
+  if (bot.junctions === "none") return;
+  if (bot.junctions !== "heat") return placeEverywhere(g, bot, bot.junctions);
   for (const id of placeable) {
     if ((g.inv[id] || 0) <= 0) continue;
     const spots = [...bot.heat.entries()]
@@ -367,7 +402,8 @@ function answerReward(g, bot) {
   const take =
     special &&
     (bot.reward === "special" ||
-      (bot.reward === "smart" && useable.has(special.special.id)));
+      (bot.reward === "smart" && useable.has(special.special.id))) &&
+    (bot.junctions === "heat" || !placeable.includes(special.special.id));
   chooseReward(take ? "special" : "plain");
   bot.stats.rewards[take ? "special" : "plain"]++;
   if (take)

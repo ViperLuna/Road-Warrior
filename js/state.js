@@ -6,7 +6,7 @@ import { spawnInitial, spawnPair } from './spawn.js';
 import { updateSim, reseatCarsOf } from './cars.js';
 import { initProgress, checkProgress, chooseReward as pickReward } from './progress.js';
 import { prog, maps, specialInfo, roadsAvailable } from './progression.js';
-import { roadConns, tileLanes, layerLanes } from './network.js';
+import { roadConns, tileLanes, layerLanes, netChanged } from './network.js';
 import { tuning } from './tuning.js';
 
 export const START_INVENTORY = { road: 20, bridge: 1 };
@@ -37,7 +37,8 @@ const listeners = new Set(), evListeners = new Set();
 export function onEvent(fn) { evListeners.add(fn); }
 const notify = e => evListeners.forEach(fn => fn(e));
 export function onChange(fn) { listeners.add(fn); }
-function emit() { listeners.forEach(fn => fn(game)); }
+const fire = () => listeners.forEach(fn => fn(game));
+function emit() { netChanged(); fire(); }
 export const refresh = emit;       // for modules that change the game from outside (save/load)
 
 export const tileIndex = (x, y) => y * game.cols + x;
@@ -145,7 +146,7 @@ export function tick(dt) {
   if (game.mode !== 'play') return;
   if (updateSim(game, dt)) {
     checkProgress(game, notify);
-    emit();
+    fire();
   }
   const worst = game.cars.reduce((m, c) => Math.max(m, c.stuck), 0);
   honkAtStuckCars(dt);
