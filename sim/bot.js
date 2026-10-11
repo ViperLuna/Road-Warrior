@@ -68,7 +68,7 @@ class Heap {
 //   cut:  now and then, cut the seam between two neighbouring junctions if every connected house still has a route
 export const FEATURES = ["flip", "cut"];
 
-export const JUNCTION_POLICIES = ["heat", "none", "light", "roundabout"];
+export const JUNCTION_POLICIES = ["heat", "none", "light", "roundabout", "hot-light", "hot-roundabout"];
 
 export function createBot(opts = {}) {
   const junctions = opts.junctions || "heat";
@@ -378,8 +378,10 @@ function placeEverywhere(g, bot, id) {
 
 function placeSpecials(g, bot) {
   if (bot.junctions === "none") return;
-  if (bot.junctions !== "heat") return placeEverywhere(g, bot, bot.junctions);
-  for (const id of placeable) {
+  const hot = bot.junctions.startsWith("hot-") ? bot.junctions.slice(4) : null;
+  if (bot.junctions !== "heat" && !hot) return placeEverywhere(g, bot, bot.junctions);
+  for (const id of hot ? [hot] : placeable) {
+    if (hot) g.inv[id] = Math.max(1, g.inv[id] || 0);
     if ((g.inv[id] || 0) <= 0) continue;
     const spots = [...bot.heat.entries()]
       .filter(([, v]) => v > 3)

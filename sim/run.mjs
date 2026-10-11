@@ -1,5 +1,5 @@
 
-//   node sim/run.mjs --games 1000 [--map riverbend|lakeside|highlands|all] [--minutes 30] [--seed 1] [--reward smart|cash|special] [--bot flip,cut] [--junctions heat|none|light|roundabout, comma list runs each on the same seeds] [--resave 60] [--workers 12] [--out sim/out/run.jsonl] [--set tuning.gridlock.gameOverAfterSeconds=60] [--set progression.economy.roadCost=3]
+//   node sim/run.mjs --games 1000 [--map riverbend|lakeside|highlands|all] [--minutes 30] [--seed 1] [--reward smart|cash|special] [--bot flip,cut] [--junctions heat|none|light|roundabout|hot-light|hot-roundabout, comma list runs each on the same seeds] [--resave 60] [--workers 12] [--out sim/out/run.jsonl] [--set tuning.gridlock.gameOverAfterSeconds=60] [--set progression.economy.roadCost=3]
 //   node sim/run.mjs --replay <seed> --map riverbend
 
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';

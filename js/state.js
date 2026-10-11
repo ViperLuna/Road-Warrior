@@ -312,7 +312,7 @@ export function placeSpecial(id, x, y) {
     const n = game.roads.get(tileIndex(x + dx, y + dy));
     if (inBounds(x + dx, y + dy) && n && n.special === 'light') return 'toonear';
   }
-  r.special = id;
+  r.special = id; delete r.sig;
   game.inv[id]--;
   if (game.inv[id] <= 0) { game.tool = 'build'; game.placing = null; }
   emit();
