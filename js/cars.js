@@ -1,14 +1,15 @@
 // One car per house. Round trip: house -> destination lot (park, dwell) -> house = 1 trip.
 import { DIR, OPP, CAR_LEN, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
-import { lightColor } from './signals.js';
+import { lightColor, lightHolds, signalState, stepLight } from './signals.js';
 import { lotTile, gateOf } from './buildings.js';
 import { roadAt, roundAt, tidx, tileLanes, layerLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
 import { findPath } from './pathfind.js';
 import { tuning } from './tuning.js';
-import { junctionAt, pieceConflict, outranks } from './junction.js';
+import { junctionAt, junctionCache, pieceConflict, outranks } from './junction.js';
 
 const TURN_RATE = 12;
 const STOP_OFFSET = CAR_LEN / 2 + 0.12;       // where a held car's centre stops, back from the junction edge
+const CHAIN_LIGHT_MARGIN = 2;                 // seconds a light just beyond a plain junction must stay green to be worth entering
 
 // Target speed (tiles/s) for a piece: lane-count base speed x movement-type factor.
 function pieceSpeed(p) {
@@ -24,7 +25,7 @@ export function createCar(house) {
   return {
     id: house.id, house, color: house.color, state: 'home', route: [], idx: 0, s: 0, v: 0,
     x: 0, y: 0, a: 0, dest: null, slot: -1, lot: null, dwell: 0, cooldown: 1 + Math.random() * 1.5,
-    arrKey: null, arrT: 0, entry: null, commit: false, inJ: false, hold: false, force: 0, ignoreId: 0, ignoreT: 0, sigRed: false, needsStop: false, stopT: 0, why: null, stuck: 0,
+    arrKey: null, arrT: 0, entry: null, commit: false, inJ: false, hold: false, force: 0, ignoreId: 0, ignoreT: 0, sigRed: false, greenRun: false, needsStop: false, stopT: 0, why: null, stuck: 0,
   };
 }
 
@@ -108,14 +109,16 @@ function start(car, state) {
   pointAt(car.route[0], 0, car);
 }
 
+let occStep = 0;
+
 let lastLeader = null;
-function leaderGap(car, occ) {
+function leaderGap(car) {
   let ahead = -car.s, best = Infinity;
   lastLeader = null;
   const last = Math.min(car.route.length, car.idx + 4);
   for (let j = car.idx; j < last; j++) {
-    const p = car.route[j], list = occ.get(p.key);
-    if (list) for (const o of list) {
+    const p = car.route[j];
+    if (p.occT === occStep) for (const o of p.occ) {
       if (o === car) continue;
       if (j === car.idx && (o.s < car.s || (o.s === car.s && o.id < car.id))) continue;
       const gap = ahead + o.s - CAR_LEN;
@@ -130,6 +133,7 @@ function leaderGap(car, occ) {
 // deadlock no static rule can untangle, so one car in the loop gets a short priority override.
 // Prefer a car held only by a rule-based "you outrank me" check: the other car hasn't entered yet, so releasing it is safe.
 function breakDeadlocks(g, list) {
+  if (!list.some(c => c.hold && c.why && c.why.includes(':'))) return;     // nobody waits on another car: no loop possible
   const byId = new Map(list.map(c => [c.id, c]));
   const waitsOn = c => (c.hold && c.why && c.why.includes(':') ? byId.get(+c.why.split(':')[1]) : null) || null;
   const seen = new Set();
@@ -154,14 +158,14 @@ function breakDeadlocks(g, list) {
   }
 }
 
-// A parking lot is one space shared by both entrances, so its pieces key on the building, not the tile.
-const tileKey = p => (p.kind === 'road' ? p.tx + ',' + p.ty : p.kind === 'lot_in' || p.kind === 'lot_out' ? 'L' + p.bx + ',' + p.by : null);
+const tileKey = p => p.tk;
 const moving = car => car.state === 'out' || car.state === 'back';
 
 // Work out, for every car about to enter a junction/lot, whether it must hold at the stop line.
-function analyse(g, occ) {
-  const jc = new Map(), inside = new Map(), waiting = new Map(), claims = new Set(), list = [];
+function analyse(g, dt) {
+  const jc = junctionCache(g), inside = new Map(), waiting = new Map(), claims = new Set(), list = [];
   const { braking } = tuning.cars;
+  const demand = new Map();                                     // lit tile -> cars approaching it per axis [N/S, E/W]
   for (const car of g.cars) {
     if (!moving(car)) continue;
     const k = tileKey(car.route[car.idx]);
@@ -170,12 +174,27 @@ function analyse(g, occ) {
       const p = car.route[car.idx + j];
       if (p && p.kind === 'lot_in') claims.add(tileKey(p));
     }
+    // Light detectors: a car within two pieces of a light calls for green on its axis (right turns go on red, so they don't).
+    // Only a car that is rolling or held by the light itself counts: one stuck behind a queue can't use a green, so holding
+    // green for it just starves the cross street (last tick's `why` is fine for this).
+    const w = car.why;
+    if (car.v > 0.3 || w === 'light' || w === 'chain-light') for (let j = 1; j <= 2; j++) {
+      const p = car.route[car.idx + j];
+      if (!p || p.kind !== 'road') break;
+      if (p.tk === k || !junctionAt(g, p.tx, p.ty, jc).light) continue;
+      if (p.turn !== 'right') { const ti = p.ty * g.cols + p.tx; (demand.get(ti) || demand.set(ti, [0, 0]).get(ti))[p.in & 1]++; }
+      break;
+    }
+  }
+  for (const [ti, road] of g.roads) {
+    if (road.special !== 'light' || !junctionAt(g, ti % g.cols, (ti / g.cols) | 0, jc).light) continue;
+    stepLight(signalState(road), demand.get(ti) || [0, 0], dt);
   }
   for (const car of g.cars) {
     car.entry = null; car.hold = false; car.inJ = false;
-    car.holdT = Math.max(0, (car.holdT || 0) - 2 / 60);                // patience clock: runs while held, even if the car creeps
-    if (car.force > 0) car.force -= 1 / 60;
-    if (car.ignoreT > 0) car.ignoreT -= 1 / 60;
+    car.holdT = Math.max(0, (car.holdT || 0) - 2 * dt);
+    if (car.force > 0) car.force -= dt;
+    if (car.ignoreT > 0) car.ignoreT -= dt;
     if (!moving(car)) { car.arrKey = null; continue; }
     const cur = car.route[car.idx], nxt = car.route[car.idx + 1];
     car.inJ = cur.kind === 'road' && junctionAt(g, cur.tx, cur.ty, jc).junction;
@@ -190,11 +209,12 @@ function analyse(g, occ) {
     car.commit = stopAt < -0.05 || stopDist > stopAt + 0.05;      // too close/fast to stop: it goes
     car.entry = { J, q: nxt, dist, key: tileKey(nxt) };
     // A signal: stop on red, and on yellow if there's room to stop. A car stopped at a red must not outrank cars that have green.
-    car.sigRed = false;
+    car.sigRed = false; car.greenRun = false;
     if (J.light) {
-      const col = lightColor(g.time, J.groups, nxt.in);
+      const col = lightColor(signalState(g.roads.get(J.y * g.cols + J.x)), J.groups, nxt.in);
       // US rules: a right turn may go on red when nothing conflicts (the normal conflict logic still applies to it).
       car.sigRed = (col === 'red' || (col === 'yellow' && !car.commit)) && nxt.turn !== 'right';
+      car.greenRun = col === 'green' && nxt.turn === 'straight';
     }
     // Stop-sign junctions: come to a full stop at the line first (4-way, or the stem of a T).
     car.needsStop = J.kind === 'road' && !J.light && !J.round && (J.n === 4 || (J.n === 3 && nxt.in === J.stem)) && !(J.houseSides && J.houseSides.includes(nxt.in)) && !car.commit;
@@ -228,11 +248,10 @@ function analyse(g, occ) {
         if (!XJ) break;
         // A signal further on: don't enter this tile unless that light will still be green when we reach it,
         // otherwise we'd end up parked inside this junction waiting on it and block the cross traffic.
-        // Only the very next tile, and only if this tile has no light of its own: with one shared clock, a light two tiles on
-        // (or one beyond another light) can be red exactly when ours is green, which would make the car wait for the impossible.
+        // Only the very next tile, and only if this tile has no light of its own: a light two tiles on (or one beyond
+        // another light) can be red exactly when ours is green, which would make the car wait for the impossible.
         if (lit && j === 2 && !J.light && X.turn !== 'right' && !car.inJ) {                      // (a car already inside can't un-enter, so only outside cars wait)
-          const { greenSeconds } = tuning.trafficLight, margin = Math.min(3.5, greenSeconds * 0.6);
-          if (lightColor(g.time, lit.groups, X.in) !== 'green' || lightColor(g.time + margin, lit.groups, X.in) !== 'green') { blocked = true; car.why = 'chain-light'; break; }
+          if (!lightHolds(signalState(g.roads.get(lit.y * g.cols + lit.x)), X.in, CHAIN_LIGHT_MARGIN)) { blocked = true; car.why = 'chain-light'; break; }
         }
         const xk = tileKey(X);
         for (const o of inside.get(xk) || []) if (pieceConflict(X, o.route[o.idx], o.s)) { blocked = true; car.why = 'chain-inside:' + o.id; break; }
@@ -244,13 +263,13 @@ function analyse(g, occ) {
       // Room beyond the junction? A leader that is rolling will clear the space by the time we get there, so only a
       // (nearly) stopped one counts as real spillback. Otherwise a platoon would creep through a green one car at a time.
       if (!blocked) {
-        const gap = leaderGap(car, occ);
+        const gap = leaderGap(car);
         const rolling = lastLeader && lastLeader.v > 1.0 && gap > 0.22;
         if (gap < total + 0.08 && !rolling && !(car.force > 0)) { blocked = true; car.why = 'box:' + (lastLeader ? lastLeader.id : 0); }
       }
     }
     car.hold = blocked && !car.commit;
-    if (car.hold) car.holdT += 3 / 60;
+    if (car.hold) car.holdT += 3 * dt;
     const patience = Math.max(car.stuck, car.holdT);
     // Patience: stuck a long time purely because waiting for a downstream light (nothing physical in the way)? Stop deferring to it for a moment.
     // Patience ladder. Cars that have been stuck for a long time waiting on other cars (never on a red light or their stop-sign timer)
@@ -270,13 +289,14 @@ function analyse(g, occ) {
 export function updateSim(g, dt) {
   g.time += dt;
   let changed = false;
-  const occ = new Map();
+  occStep++;
   for (const car of g.cars) {
     if (!moving(car)) continue;
-    const k = car.route[car.idx].key;
-    (occ.get(k) || occ.set(k, []).get(k)).push(car);
+    const p = car.route[car.idx];
+    if (p.occT !== occStep) { p.occT = occStep; p.occ.length = 0; }
+    p.occ.push(car);
   }
-  const { inside, claims } = analyse(g, occ);
+  const { inside, claims } = analyse(g, dt);
   const { acceleration, braking, minGapTiles } = tuning.cars;
 
   for (const car of g.cars) {
@@ -299,9 +319,11 @@ export function updateSim(g, dt) {
       }
     } else {
       let p = car.route[car.idx];
-      const gap = leaderGap(car, occ);
+      const gap = leaderGap(car);
       let target = Math.min(pieceSpeed(p), Math.sqrt(2 * braking * Math.max(0, gap - minGapTiles)));
-      if (car.entry) target = Math.min(target, tuning.speed.junctionApproach);     // everyone slows for a junction, so a fast road never outruns its stopping distance
+      // Everyone slows for a junction, so a fast road never outruns its stopping distance. Except straight through a green:
+      // the cross street is held at red, so the light is what makes a busy highway junction flow at full speed.
+      if (car.entry && !(car.greenRun && !car.hold)) target = Math.min(target, tuning.speed.junctionApproach);
       if (car.hold && car.entry) target = Math.min(target, Math.sqrt(2 * braking * Math.max(0, car.entry.dist - STOP_OFFSET)));
       if (car.needsStop && car.entry && car.v < 0.15 && car.entry.dist - STOP_OFFSET < 0.12) car.stopT += dt;   // standing at the line
       car.v += Math.max(-braking * dt, Math.min(acceleration * dt, target - car.v));
@@ -324,11 +346,13 @@ export function updateSim(g, dt) {
           g.trips++; g.money += t.rewardPerTrip; changed = true;
         }
       } else {
-        const pt = pointAt(p, car.s, { x: 0, y: 0, a: 0 });
-        car.x = pt.x; car.y = pt.y;
-        let da = pt.a - car.a; da = Math.atan2(Math.sin(da), Math.cos(da));
-        const m = TURN_RATE * dt;
-        car.a += Math.max(-m, Math.min(m, da));
+        if (!g.headless) {
+          const pt = pointAt(p, car.s, { x: 0, y: 0, a: 0 });
+          car.x = pt.x; car.y = pt.y;
+          let da = pt.a - car.a; da = Math.atan2(Math.sin(da), Math.cos(da));
+          const m = TURN_RATE * dt;
+          car.a += Math.max(-m, Math.min(m, da));
+        }
         car.stuck = car.v < 0.05 ? car.stuck + dt : 0;
       }
     }

@@ -57,7 +57,7 @@
       "enabled": true,
       "weight": 1,
       "cost": 55,
-      "description": "Fixed-timer signal for an intersection. Needs a tile of gap between lights.",
+      "description": "Smart signal for an intersection: gives green to whoever is waiting. Needs a tile of gap between lights.",
       "placeable": true
     },
     {

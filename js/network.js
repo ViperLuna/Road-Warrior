@@ -2,6 +2,10 @@
 import { DIR, OPP } from './lanes.js';
 
 export const tidx = (g, x, y) => y * g.cols + x;
+
+let netVer = 0;
+export const netVersion = () => netVer;
+export const netChanged = () => { netVer++; };
 export const inB = (g, x, y) => x >= 0 && y >= 0 && x < g.cols && y < g.rows;
 export const roadAt = (g, x, y) => inB(g, x, y) && g.roads.has(tidx(g, x, y));
 export const portAt = (g, x, y) => (inB(g, x, y) ? g.ports.get(tidx(g, x, y)) || null : null);

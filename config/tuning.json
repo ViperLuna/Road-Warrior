@@ -12,7 +12,8 @@
     "junctionApproach": 2.2
   },
   "trafficLight": {
-    "greenSeconds": 6,
+    "minGreenSeconds": 2,
+    "maxGreenSeconds": 10,
     "yellowSeconds": 1.5,
     "allRedSeconds": 1
   },
