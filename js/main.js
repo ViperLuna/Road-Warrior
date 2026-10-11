@@ -1,5 +1,5 @@
 import { unlock, play, playFirst } from './audio.js';
-import { loadConfig as loadMusic, start as startMusic } from './music.js';
+import { loadConfig as loadMusic, start as startMusic, setSuspended as holdMusic } from './music.js';
 import { game, newGame, setPalette, setMode, tick, onChange, onEvent } from './state.js';
 import { setTuning } from './tuning.js';
 import { setProgression, setMaps, maps } from './progression.js';
@@ -19,6 +19,7 @@ document.getElementById('start').addEventListener('click', async () => {
   setTimeout(() => splash.remove(), 400);
 });
 
+onChange(g => holdMusic(g.mode === 'pause'));      // music waits while the Menu / Esc pause screen is up
 onEvent(e => {
   if (e.type === 'spawn') play('spawn');
   if (e.type === 'over') play('gameover');

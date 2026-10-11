@@ -20,6 +20,26 @@
     {
       "title": "Irish Luna - Downhill",
       "file": "assets/music/downhill.mp3"
+    },
+    {
+      "title": "Irish Luna - Interchange Sunrise",
+      "file": "assets/music/interchange-sunrise.mp3"
+    },
+    {
+      "title": "Irish Luna - Neon City",
+      "file": "assets/music/neon-city.mp3"
+    },
+    {
+      "title": "Irish Luna - Nowhere To Be",
+      "file": "assets/music/nowhere-to-be.mp3"
+    },
+    {
+      "title": "Irish Luna - Overpass",
+      "file": "assets/music/overpass.mp3"
+    },
+    {
+      "title": "Irish Luna - Soft Shoulder",
+      "file": "assets/music/soft-shoulder.mp3"
     }
   ]
 }
