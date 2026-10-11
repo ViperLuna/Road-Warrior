@@ -10,7 +10,7 @@ import { getContext } from './audio.js';
 let tracks = [], crossfade = 4;
 let queue = [], history = [], current = -1;
 const slots = [];                       // two <audio> elements that take turns, so one song can fade out while the next fades in
-let active = 0, bus = null, started = false, fading = false;
+let active = 0, bus = null, started = false, fading = false, playToken = 0;
 const listeners = new Set();
 export const onMusic = fn => { listeners.add(fn); return () => listeners.delete(fn); };
 const emit = () => listeners.forEach(fn => fn(getState()));
@@ -98,9 +98,12 @@ function play(idx) {
   from.gain.gain.cancelScheduledValues(now);
   from.gain.gain.setValueAtTime(from.gain.gain.value, now);
   from.gain.gain.linearRampToValueAtTime(0, now + fade);
+  // The old song stops once its fade-out is done. That timer belongs to the slot and is cancelled if the slot gets a new song first
+  // (skipping quickly), otherwise it would pause a song that has since been started again.
+  clearTimeout(to.timer); clearTimeout(from.timer);
   fading = true; active = 1 - active;
-  const old = from.el;
-  setTimeout(() => { old.pause(); fading = false; }, fade * 1000 + 50);
+  const token = ++playToken;
+  from.timer = setTimeout(() => { from.el.pause(); if (token === playToken) fading = false; }, fade * 1000 + 50);
   emit();
 }
 

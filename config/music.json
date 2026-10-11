@@ -1,4 +1,25 @@
 {
   "crossfadeSeconds": 4,
-  "tracks": []
+  "tracks": [
+    {
+      "title": "Irish Luna - Detour",
+      "file": "assets/music/detour.mp3"
+    },
+    {
+      "title": "Irish Luna - Golden Hour Traffic",
+      "file": "assets/music/golden-hour-traffic.mp3"
+    },
+    {
+      "title": "Irish Luna - Green Lights",
+      "file": "assets/music/green-lights.mp3"
+    },
+    {
+      "title": "Irish Luna - Easy Lane",
+      "file": "assets/music/easy-lane.mp3"
+    },
+    {
+      "title": "Irish Luna - Downhill",
+      "file": "assets/music/downhill.mp3"
+    }
+  ]
 }
