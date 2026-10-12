@@ -1,7 +1,15 @@
+TBD:
+  Building Patience - Currently Off during Beta testing. Buildings not routed to a matching destination will become impatient and eventually end the game if not resolved. This includes all colors in a Multicolor Unit. 
+
 10.12.2026
   New Destination Types: Single Unit and Multicolor
   Single Unit - One tile building with 2 parking spaces. This allows more destinations when spaces start getting tight.
   Multicolor - Two different colors access the same destination. These spawn in after 5,000 trips have been completed.
+
+  Parking Lot exits are no longer limited to the front entrance. They can be toggled to any available side.
+
+  Construction Cones Removed
+  Cones were initially meant to block traffic while working on a road to stop cars from getting stuck in a parking lot after reaching their destination. This is no longer an issue because cars automatically build ghost roads to ensure they return back to their homes if a route back home is no longer available. The cone will remain in the game, however, for a possible future difficulty setting.
 
 10.10.2026
   Game Saves - Now implemented. Currently game saves are local browser storage. The game automatically saves every 10 seconds, when switching tabs, switching apps, locking the phone, or when you tap "Menu."
