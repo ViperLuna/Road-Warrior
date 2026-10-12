@@ -55,7 +55,8 @@ export function restore(data, g = game) {
 
   g.seed = data.seed >>> 0; g.map = map; g.cols = map.cols; g.rows = map.rows;
   g.terrain = terrainFromWater(g.seed, g.cols, g.rows, decodeGrid(data.terrain.water, g.cols * g.rows), data.terrain.start);
-  g.roads = new Map(data.roads.map(([k, t]) => [k, t.sig ? { ...t, sig: { ...t.sig, dem: [...t.sig.dem] } } : { ...t }]));
+  // Cones are not a player tool any more, so a cone in an old save would be a roadblock nobody can remove: leave them out.
+  g.roads = new Map(data.roads.map(([k, t]) => { const { cone, ...road } = t; return [k, road.sig ? { ...road, sig: { ...road.sig, dem: [...road.sig.dem] } } : road]; }));
   g.bridges = new Map(data.bridges.map(([id, tiles]) => [id, [...tiles]]));
   g.nextBridge = data.nextBridge; g.nextId = data.nextId;
   g.inv = { ...data.inv }; g.unlocks = { ...data.unlocks }; g.oneway = !!data.oneway && !!g.unlocks.oneway; g.build4 = !!data.build4 && (g.inv.highway || 0) > 0;

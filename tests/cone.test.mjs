@@ -48,8 +48,10 @@ for (const when of ['out', 'dwell']) {
   for (let i = 0; i < 60 * 40; i++) st.tick(1 / 60);
   ok(g.trips > after, `${when}: trips resume once the cones are removed`);
 }
-// save keeps cones
-const S2 = await import(R + 'js/save.js'); st.setCone(8, l2y, true); const d = JSON.parse(JSON.stringify(S2.serialize())); st.newGame(9, maps[0]); S2.restore(d); ok(st.hasCone(8, l2y), 'cones survive a save/load');
+// loading a save drops cones: the player has no tool to remove one, so an old save's cone would be a permanent roadblock
+const S2 = await import(R + 'js/save.js'); st.setCone(8, l2y, true); const d = JSON.parse(JSON.stringify(S2.serialize())); st.newGame(9, maps[0]); S2.restore(d);
+ok(!st.hasCone(8, l2y) && st.coneCount() === 0, 'cones in a save are ignored on load');
+ok(st.hasRoad(8, l2y), 'and the road under a dropped cone is still there');
 // demolish removes it
 st.demolish(8, l2y); st.buildRoad(8, l2y); ok(!st.hasCone(8, l2y), 'rebuilding a tile starts without its cone');
 console.log(pass, 'passed', fail, 'failed');
