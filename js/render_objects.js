@@ -51,8 +51,17 @@ function drawDest(ctx, b) {
   ctx.setLineDash([0.07, 0.07]); ctx.strokeStyle = 'rgba(242,201,76,.5)';
   ctx.beginPath(); ctx.moveTo(0.82, -0.85); ctx.lineTo(0.82, 0.85); ctx.stroke(); ctx.setLineDash([]);     // drive aisle joining the two ends
   ctx.fillStyle = 'rgba(0,0,0,.28)'; rrect(ctx, -0.9, -0.88, 0.84, 1.84, 0.1); ctx.fill();       // building
-  ctx.fillStyle = b.color.hex; rrect(ctx, -0.92, -0.92, 0.84, 1.84, 0.1); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,.2)'; rrect(ctx, -0.84, -0.84, 0.68, 1.68, 0.07); ctx.fill();
+  if (b.color2) {                                                  // two colours: one half each, a thin seam between them
+    ctx.save(); rrect(ctx, -0.92, -0.92, 0.84, 1.84, 0.1); ctx.clip();
+    ctx.fillStyle = b.color.hex; ctx.fillRect(-0.92, -0.92, 0.84, 0.92);
+    ctx.fillStyle = b.color2.hex; ctx.fillRect(-0.92, 0, 0.84, 0.92);
+    ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(-0.84, -0.84, 0.68, 0.84 - 0.02); ctx.fillRect(-0.84, 0.02, 0.68, 0.82);
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(-0.92, -0.012, 0.84, 0.024);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = b.color.hex; rrect(ctx, -0.92, -0.92, 0.84, 1.84, 0.1); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.2)'; rrect(ctx, -0.84, -0.84, 0.68, 1.68, 0.07); ctx.fill();
+  }
   ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 0.025; rrect(ctx, -0.92, -0.92, 0.84, 1.84, 0.1); ctx.stroke();
   for (let k = 0; k < 4; k++) {                                   // inbound-car markers, one per parking bay
     const y = (k >> 1) - 0.5 + ((k & 1) ? 0.22 : -0.22);
@@ -61,7 +70,12 @@ function drawDest(ctx, b) {
     else { ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 0.025; ctx.stroke(); }
   }
   ctx.translate(-0.3, 0); ctx.rotate(-rotAngle(b.rot));
-  ctx.fillStyle = 'rgba(255,255,255,.95)'; glyph(ctx, b.color.glyph, 0.17);
+  ctx.fillStyle = 'rgba(255,255,255,.95)';
+  if (b.color2) {                                                  // each colour keeps its own shape (colour is never the only cue)
+    const up = rotAngle(b.rot);                                    // the halves lie along the building's long axis (local y); undo the turn to place them
+    const place = (dy, c) => { ctx.save(); ctx.rotate(up); ctx.translate(0, dy); ctx.rotate(-up); glyph(ctx, c.glyph, 0.14); ctx.restore(); };
+    place(-0.46, b.color); place(0.46, b.color2);
+  } else glyph(ctx, b.color.glyph, 0.17);
   ctx.restore();
 }
 

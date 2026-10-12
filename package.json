@@ -9,6 +9,7 @@
     "test:cone": "node tests/cone.test.mjs",
     "test:audio": "node tests/audio.test.mjs",
     "test:honk": "node tests/honk.test.mjs",
-    "test:music": "node tests/music.test.mjs"
+    "test:music": "node tests/music.test.mjs",
+    "test:dual": "node tests/dual.test.mjs"
   }
 }

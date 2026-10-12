@@ -6,6 +6,9 @@ export const SLOTS = 4;
 // A destination has a single gate: lot tile `gate` (0 or 1, the player can flip it); the other lot tile is just parking.
 export const gateOf = b => (b.gate ? 1 : 0);
 
+// A destination takes cars of its own colour, and of its second colour if it is a two-colour destination (color2).
+export const accepts = (d, colorId) => d.color.id === colorId || (!!d.color2 && d.color2.id === colorId);
+
 export function footprint(b) {
   return b.kind === 'house' ? [[b.x, b.y]] : [[b.x, b.y], [b.x + 1, b.y], [b.x, b.y + 1], [b.x + 1, b.y + 1]];
 }

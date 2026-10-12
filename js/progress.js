@@ -1,6 +1,7 @@
 // Spawn schedule, goals and rewards. Pure game logic: no DOM.
 import { prog, roadsAvailable } from './progression.js';
 import { roadConns } from './network.js';
+import { accepts } from './buildings.js';
 import { spawnPair, spawnHouse, spawnHouseAcross, spawnPairAcross, findCrossings } from './spawn.js';
 
 export function initProgress(g) {
@@ -10,7 +11,8 @@ export function initProgress(g) {
 }
 
 const houseCount = g => g.buildings.filter(b => b.kind === 'house').length;
-const count = (g, kind, color) => g.buildings.filter(b => b.kind === kind && b.color.id === color.id).length;
+// (a two-colour destination counts as a destination for each of its colours)
+const count = (g, kind, color) => g.buildings.filter(b => b.kind === kind && (kind === 'dest' ? accepts(b, color.id) : b.color.id === color.id)).length;
 
 function anchorNear(g) {
   const a = g.buildings[(Math.random() * g.buildings.length) | 0];
@@ -24,6 +26,34 @@ export function crossChance(g) {
   if (roads < 30) return 0;
   if (items > 0) return Math.min(0.6, 0.3 + 0.15 * items);
   return findCrossings(g).some(c => c.covered) ? 0.35 : 0;
+}
+
+// Chance that a new destination serves two colours: none until `afterTrips`, then `startChance`, climbing to `maxChance`
+// over the next `rampTrips`. (progression.json -> spawns.dual; chance 0 turns it off.)
+export function dualChance(g) {
+  const d = prog.spawns.dual;
+  if (!d || g.colorsUsed < 2 || g.trips < d.afterTrips) return 0;
+  const k = Math.max(0, Math.min(1, (g.trips - d.afterTrips) / Math.max(1, d.rampTrips)));
+  return d.startChance + (d.maxChance - d.startChance) * k;
+}
+
+// A two-colour destination: `color` plus another colour already in play. Both colours get a house placed well apart from each other,
+// so their routes have to come together on the way in. Returns a description of what spawned, or null (nothing was placed).
+function spawnDual(g, color) {
+  if (!(Math.random() < dualChance(g))) return null;
+  const sp = prog.spawns;
+  const others = g.palette.slice(0, g.colorsUsed).filter(c => c.id !== color.id);
+  if (!others.length) return null;
+  const color2 = others[(Math.random() * others.length) | 0];
+  for (let widen = 0; widen < 3; widen++) {
+    const anchor = anchorNear(g); anchor.rMax += widen * 3;
+    const made = spawnPair(g, color, { anchor, roads: sp.roadsNeeded, budget: roadsAvailable(g), color2 });
+    if (!made) continue;
+    const h = made.house, second = spawnHouse(g, color2, { near: made.dest, apart: { x: h.x, y: h.y, min: 5 }, roads: sp.roadsNeeded, budget: roadsAvailable(g) })
+      || spawnHouse(g, color2, { near: made.dest, roads: sp.roadsNeeded, budget: roadsAvailable(g) });
+    return { kind: 'dual', color, color2, n: second ? 3 : 2 };
+  }
+  return null;
 }
 
 // Returns a description of what spawned, or null if there was no room.
@@ -54,6 +84,7 @@ function doSpawn(g) {
     }
     return made ? { kind, color, n: made, across: !!over, needsBridge: !!(over && over.needsBridge) } : null;
   }
+  if (kind === 'combo') { const r = spawnDual(g, color); if (r) return r; }       // sometimes the new destination serves two colours
   if (Math.random() < p) {                                   // new colour with its house on the far bank
     const r = spawnPairAcross(g, color, { anchor: anchorNear(g), ...across() });
     if (r) { if (kind === 'newColor') g.colorsUsed++; return { kind, color, n: 2, across: true, needsBridge: r.needsBridge }; }

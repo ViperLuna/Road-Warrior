@@ -1,6 +1,6 @@
 // Placing a matching house + destination pair on free land at a sensible distance.
 import { DIR } from './lanes.js';
-import { addBuilding, lotTile, reindex } from './buildings.js';
+import { addBuilding, lotTile, reindex, accepts } from './buildings.js';
 import { createCar } from './cars.js';
 import { mulberry32 } from './rng.js';
 import { WATER, HILL, LAND } from './terrain.js';
@@ -62,7 +62,7 @@ export function spawnInitial(g, color) {
   });
 }
 
-// opts: rng, region {x0,y0,x1,y1} for the destination's top-left | anchor {x,y,rMin,rMax}, roads [min,max]
+// opts: rng, region {x0,y0,x1,y1} for the destination's top-left | anchor {x,y,rMin,rMax}, roads [min,max], color2 (make it a two-colour destination)
 export function spawnPair(g, color, opts = {}) {
   const rng = opts.rng || Math.random;
   const [minR, maxR] = opts.roads || [5, 13];
@@ -93,26 +93,29 @@ export function spawnPair(g, color, opts = {}) {
       const n = roadsNeeded(g, [hex, hey], exitSet, blocked, maxR);
       if (n < minR || n > maxR) continue;
       if (opts.budget !== undefined && buildCost(g, [hex, hey], exitSet, blocked, opts.budget) > opts.budget) continue;   // can the player afford the road?
-      addBuilding(g, 'dest', color, ax, ay, rot);
+      const dest = addBuilding(g, 'dest', color, ax, ay, rot);
+      if (opts.color2) dest.color2 = opts.color2;                          // a two-colour destination: either colour's cars may park here
       const house = addBuilding(g, 'house', color, hx, hy, hrot);
       g.cars.push(createCar(house));
-      return { dest: g.buildings[g.buildings.length - 2], house, roads: n };
+      return { dest, house, roads: n };
     }
   }
   return null;
 }
 
-// Add one house of `color` near an existing destination of that colour (reachable over land within `roads`).
+// Add one house of `color` near an existing destination that takes that colour (reachable over land within `roads`).
+// opts: near (use only this destination), apart {x, y, min} (stay at least `min` tiles from that spot), roads, budget, rng.
 export function spawnHouse(g, color, opts = {}) {
   const rng = opts.rng || Math.random;
   const [minR, maxR] = opts.roads || [4, 14];
-  const dests = g.buildings.filter(b => b.kind === 'dest' && b.color.id === color.id);
+  const dests = opts.near ? [opts.near] : g.buildings.filter(b => b.kind === 'dest' && accepts(b, color.id));
   if (!dests.length) return null;
   for (let attempt = 0; attempt < 300; attempt++) {
     const d = dests[Math.floor(rng() * dests.length)];
     const r = 3 + Math.floor(rng() * 7), th = rng() * 6.283;
     const hx = Math.round(d.x + 1 + Math.cos(th) * r), hy = Math.round(d.y + 1 + Math.sin(th) * r);
     if (!free(g, hx, hy)) continue;
+    if (opts.apart && Math.hypot(hx - opts.apart.x, hy - opts.apart.y) < opts.apart.min) continue;     // keep this house away from another one (so their routes have to merge)
     const hrot = Math.floor(rng() * 4), hex = hx + DIR[hrot][0], hey = hy + DIR[hrot][1];
     const blocked = new Set([hy * g.cols + hx]);
     if (!passable(g, hex, hey, blocked)) continue;
@@ -163,7 +166,7 @@ const shuffled = (arr, rng) => { const a = arr.slice(); for (let i = a.length - 
 // Both land stretches are sized so the player's roads cover them. Returns the house or null.
 export function spawnHouseAcross(g, color, opts = {}) {
   const rng = opts.rng || Math.random, budget = opts.budget ?? 0, items = opts.items || { bridge: opts.bridgeItems ?? 0, tunnel: 0 };
-  const dests = g.buildings.filter(b => b.kind === 'dest' && b.color.id === color.id);
+  const dests = g.buildings.filter(b => b.kind === 'dest' && accepts(b, color.id));
   if (!dests.length || budget < 8) return null;
   const spans = shuffled(findCrossings(g).filter(c => c.covered || (items[c.item] || 0) > 0), rng);
 

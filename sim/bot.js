@@ -104,7 +104,7 @@ const gateExit = (d) => {
   return [x + DIR[d.rot][0], y + DIR[d.rot][1]];
 };
 const destsOf = (g, color) =>
-  g.buildings.filter((b) => b.kind === "dest" && b.color.id === color.id);
+  g.buildings.filter((b) => b.kind === "dest" && (b.color.id === color.id || (b.color2 && b.color2.id === color.id)));
 
 export function unreached(g, h) {
   const [ex, ey] = exitOf(h);
@@ -289,7 +289,10 @@ function maybeFlip(g, h, bot) {
 
 function connectHouses(g, bot) {
   const dests = new Map();
-  for (const d of g.buildings) if (d.kind === "dest") dests.set(d.color.id, (dests.get(d.color.id) || 0) + 1);
+  for (const d of g.buildings) {
+    if (d.kind !== "dest") continue;
+    for (const c of [d.color, d.color2]) if (c) dests.set(c.id, (dests.get(c.id) || 0) + 1);       // a two-colour destination counts for both
+  }
   for (const [c, n] of dests) {
     if (bot.dests.get(c) === n) continue;
     bot.dests.set(c, n);

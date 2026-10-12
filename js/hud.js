@@ -199,6 +199,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
       if (e.across) toast(e.needsBridge ? `New ${name} house across the water. You'll need a bridge.` : `New ${name} house across the river (bridge already built).`);
       else if (e.kind === 'newColor') toast(`New ${name} house and destination!`);
       else if (e.kind === 'combo') toast(`New ${name} destination and house.`);
+      else if (e.kind === 'dual') toast(`New ${name} and ${e.color2.id} destination: both colours park here.`);
       else toast(e.n > 1 ? `${e.n} new ${name} houses.` : `New ${name} house.`);
     }
   });

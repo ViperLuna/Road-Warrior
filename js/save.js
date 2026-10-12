@@ -41,7 +41,7 @@ export function serialize(g = game) {
     terrain: { water: encodeGrid(g.terrain.water), start: g.terrain.start },
     roads: [...g.roads.entries()].map(([k, t]) => [k, t.sig ? { ...t, sig: { ...t.sig, dem: [...t.sig.dem] } } : { ...t }]),
     bridges: [...g.bridges.entries()],
-    buildings: g.buildings.map(b => ({ ...b, color: b.color.id, slots: b.slots ? b.slots.map(c => (c ? c.id : null)) : null })),
+    buildings: g.buildings.map(b => ({ ...b, color: b.color.id, color2: b.color2 ? b.color2.id : undefined, slots: b.slots ? b.slots.map(c => (c ? c.id : null)) : null })),
     cars: carData,
   };
 }
@@ -68,7 +68,7 @@ export function restore(data, g = game) {
   g.speed = 0;                      // come back paused: no surprise traffic while you find your bearings
 
   const slotsById = new Map();
-  g.buildings = data.buildings.map(b => { const o = { ...b, color: color(b.color) }; slotsById.set(o.id, b.slots); return o; });
+  g.buildings = data.buildings.map(b => { const o = { ...b, color: color(b.color) }; if (b.color2) o.color2 = color(b.color2); else delete o.color2; slotsById.set(o.id, b.slots); return o; });
   const byId = new Map(g.buildings.map(b => [b.id, b]));
   clearPieceCache();
   reindex(g);

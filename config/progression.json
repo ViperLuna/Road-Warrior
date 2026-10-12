@@ -21,7 +21,13 @@
     "roadsNeeded": [
       4,
       14
-    ]
+    ],
+    "dual": {
+      "afterTrips": 5000,
+      "startChance": 0.33,
+      "maxChance": 0.5,
+      "rampTrips": 1500
+    }
   },
   "specials": [
     {

@@ -1,7 +1,7 @@
 // One car per house. Round trip: house -> destination lot (park, dwell) -> house = 1 trip.
 import { DIR, OPP, CAR_LEN, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
 import { lightColor, lightHolds, signalState, stepLight } from './signals.js';
-import { lotTile, gateOf } from './buildings.js';
+import { lotTile, gateOf, accepts } from './buildings.js';
 import { roadAt, roundAt, tidx, tileLanes, layerLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
 import { findPath } from './pathfind.js';
 import { tuning } from './tuning.js';
@@ -45,7 +45,7 @@ function planOut(g, car) {
   const b = car.house, D = DIR[b.rot];
   const rx = b.x + D[0], ry = b.y + D[1];
   if (!roadAt(g, rx, ry)) return false;
-  const dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && d.color.id === b.color.id && d.slots.includes(null)));
+  const dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && accepts(d, b.color.id) && d.slots.includes(null)));
   for (const d of dests) {
     const goals = [...g.ports.values()].filter(port => port.b === d);       // either entrance leads to every bay
     const res = findPath(g, rx, ry, OPP[b.rot], goals);
