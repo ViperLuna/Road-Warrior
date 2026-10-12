@@ -8,6 +8,8 @@ TBD:
 
   Parking Lot exits are no longer limited to the front entrance. They can be toggled to any available side.
 
+  End Game Option - You can end your game at any time and record your trip count. Ending the game is equivalent to losing to gridlock or impatience.
+
   Construction Cones Removed
   Cones were initially meant to block traffic while working on a road to stop cars from getting stuck in a parking lot after reaching their destination. This is no longer an issue because cars automatically build ghost roads to ensure they return back to their homes if a route back home is no longer available. The cone will remain in the game, however, for a possible future difficulty setting.
 
