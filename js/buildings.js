@@ -3,12 +3,32 @@ import { DIR, rt } from './lanes.js';
 import { tidx } from './network.js';
 
 export const SLOTS = 4;
-// A destination has a single gate: lot tile `gate` (0 or 1, the player can flip it); the other lot tile is just parking.
-// A SMALL destination is one half of that 2x2 box: its building tile, its lot tile and 2 bays. Its gate is always that lot tile (`half`,
-// 0 or 1), so it cannot be flipped, and the other half of the box is plain free ground. All the lot geometry is shared with the big one.
-export const gateOf = b => (b.small ? (b.half ? 1 : 0) : (b.gate ? 1 : 0));
+// A destination has a single entrance. It is written as `ent` = tile + 2 * code:
+//   tile (0|1)  which lot tile it sits on (tile 0 is the building's -T end of the lot, tile 1 the +T end; T = a clockwise quarter turn from the front)
+//   code        0 = the front (the road side), 1 = the -T end of the lot, 2 = the +T end
+// A big (double) destination can use ent 0, 1 (front, either tile), 5 (+T end, on tile 1) and 2 (-T end, on tile 0): 4 choices.
+// A SMALL destination is one half of that 2x2 box: its building tile, its lot tile and 2 bays. Its lot tile is `half` (0 or 1), the other half
+// of the box is plain free ground, and it has 3 choices: the front (half), its +T side (half + 4) and its -T side (half + 2).
+// All the lot geometry is shared between the two.
+// Older saves have `gate` (0|1) = the front entrance on that tile, which is the same as ent 0|1.
+export function entOf(b) {
+  if (b.small) { const h = b.half ? 1 : 0, e = b.ent ?? h; return (e & 1) === h ? e : h; }
+  return b.ent ?? (b.gate ? 1 : 0);
+}
+export const gateOf = b => entOf(b) & 1;                                                           // the lot tile the entrance is on
+export const entCode = ent => ent >> 1;
+export const entSide = (rot, ent) => (ent >> 1 === 0 ? rot : ent >> 1 === 1 ? (rot + 3) % 4 : (rot + 1) % 4);   // which way the entrance faces (a DIR index)
+// The entrances a destination can use, in the order tapping its lot cycles through them: clockwise round the lot, the same
+// way a building turns.
+export const entrancesOf = b => (b.small ? [entOf(b) & 1, (entOf(b) & 1) + 4, (entOf(b) & 1) + 2] : [0, 1, 5, 2]);
 export const baysOf = b => (b.small ? [2 * gateOf(b), 2 * gateOf(b) + 1] : [0, 1, 2, 3]);      // the parking bays a destination really has
 export const destWeight = b => (b.small ? 0.5 : 1);                                              // its share of a normal destination's capacity
+
+// The road tile just outside entrance `ent` of destination (or box) b: where the road must reach.
+export function exitTile(b, ent = entOf(b)) {
+  const [lx, ly] = lotTile(b, ent & 1), D = DIR[entSide(b.rot, ent)];
+  return [lx + D[0], ly + D[1]];
+}
 
 // A destination takes cars of its own colour, and of its second colour if it is a two-colour destination (color2).
 export const accepts = (d, colorId) => d.color.id === colorId || (!!d.color2 && d.color2.id === colorId);
@@ -32,8 +52,8 @@ export function reindex(g) {
     for (const [x, y] of footprint(b)) g.buildingAt.set(tidx(g, x, y), b);
     if (b.kind === 'house') g.ports.set(tidx(g, b.x, b.y), { b, x: b.x, y: b.y, side: b.rot, kind: 'house', lot: 0 });
     else {
-      const i = gateOf(b), [x, y] = lotTile(b, i);
-      g.ports.set(tidx(g, x, y), { b, x, y, side: b.rot, kind: 'lot', lot: i });
+      const ent = entOf(b), i = ent & 1, [x, y] = lotTile(b, i);
+      g.ports.set(tidx(g, x, y), { b, x, y, side: entSide(b.rot, ent), kind: 'lot', lot: i, ent });
     }
   }
 }

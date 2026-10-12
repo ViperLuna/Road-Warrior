@@ -1,7 +1,7 @@
 // One car per house. Round trip: house -> destination lot (park, dwell) -> house = 1 trip.
 import { DIR, OPP, CAR_LEN, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
 import { lightColor, lightHolds, signalState, stepLight } from './signals.js';
-import { lotTile, gateOf, accepts, baysOf } from './buildings.js';
+import { entOf, entSide, exitTile, accepts, baysOf } from './buildings.js';
 import { roadAt, roundAt, tidx, tileLanes, layerLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
 import { findPath } from './pathfind.js';
 import { tuning } from './tuning.js';
@@ -56,12 +56,12 @@ function planOut(g, car) {
     const k = open[(Math.random() * open.length) | 0];
     d.slots[k] = car;
     car.dest = d; car.slot = k;
-    car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: res.port.lot, k };
+    car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: res.port.ent, k };
     const rp = roadPieces(g, res.steps, Math.random() < 0.5 ? 0 : 1);
-    car.route = [houseOutPiece(b.x, b.y, b.rot), ...rp, lotInPiece(d.x, d.y, d.rot, res.port.lot, k)];
+    car.route = [houseOutPiece(b.x, b.y, b.rot), ...rp, lotInPiece(d.x, d.y, d.rot, res.port.ent, k)];
     // Ghost roads last until the whole round trip is done: remember the way home, so if the roads are changed while this
     // car is parked it can still drive back over the road it came by (instead of sitting in its bay forever).
-    car.homeRoute = [lotOutPiece(d.x, d.y, d.rot, k, res.port.lot), ...rp.slice().reverse().map(reversePiece), houseInPiece(b.x, b.y, b.rot)];
+    car.homeRoute = [lotOutPiece(d.x, d.y, d.rot, k, res.port.ent), ...rp.slice().reverse().map(reversePiece), houseInPiece(b.x, b.y, b.rot)];
     return true;
   }
   return false;
@@ -76,15 +76,14 @@ function ghostHome(car) {
 
 // Leave through whichever connected entrance gives the cheapest way home.
 function planBack(g, car) {
-  const L = car.lot, D = DIR[L.rot];
+  const L = car.lot;
   const home = g.ports.get(tidx(g, car.house.x, car.house.y));
   if (!home) return ghostHome(car);
   let best = null, bestEnt = 0;
-  for (const ent of [L.ent]) {                                  // the lot's single gate
-    const [lx, ly] = lotTile({ x: L.bx, y: L.by, rot: L.rot }, ent);
-    const rx = lx + D[0], ry = ly + D[1];
+  for (const ent of [L.ent]) {                                  // the lot's single entrance
+    const [rx, ry] = exitTile({ x: L.bx, y: L.by, rot: L.rot }, ent);
     if (!roadAt(g, rx, ry)) continue;
-    const res = findPath(g, rx, ry, OPP[L.rot], [home]);
+    const res = findPath(g, rx, ry, OPP[entSide(L.rot, ent)], [home]);
     if (res && (!best || res.cost < best.cost - 1e-6)) { best = res; bestEnt = ent; }
   }
   if (!best) return ghostHome(car);
@@ -96,8 +95,8 @@ function planBack(g, car) {
 // cars still driving in finish their (ghost) route and are re-seated on arrival (see updateSim).
 export function reseatCar(car, d) {
   car.homeRoute = null;                                          // the old way home no longer fits the new lot
-  car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: gateOf(d), k: car.slot };
-  const p = lotInPiece(d.x, d.y, d.rot, gateOf(d), car.slot);
+  car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: entOf(d), k: car.slot };
+  const p = lotInPiece(d.x, d.y, d.rot, entOf(d), car.slot);
   car.route = [p]; car.idx = 0; car.s = p.len; car.v = 0; car.stuck = 0;
   pointAt(p, p.len, car);
 }
@@ -336,7 +335,7 @@ export function updateSim(g, dt) {
         p = car.route[car.idx];
       }
       if (arrived) {
-        if (car.state === 'out' && car.dest && (car.lot.rot !== car.dest.rot || car.lot.ent !== gateOf(car.dest))) reseatCar(car, car.dest);     // the lot was rotated while we drove in
+        if (car.state === 'out' && car.dest && (car.lot.rot !== car.dest.rot || car.lot.ent !== entOf(car.dest))) reseatCar(car, car.dest);     // the lot was rotated while we drove in
         const last = car.route[car.route.length - 1];
         pointAt(last, last.len, car);
         car.v = 0; car.route = [last]; car.idx = 0; car.s = last.len; car.stuck = 0; car.hold = false; car.entry = null;

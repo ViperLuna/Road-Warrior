@@ -6,14 +6,14 @@ import {
   chooseReward,
   placeSpecial,
   rotateBuildingAt,
-  flipLotAt,
+  setEntrance,
   setCut,
   isCut,
 } from "../js/state.js";
 import { DIR, OPP } from "../js/lanes.js";
 import { findPath } from "../js/pathfind.js";
 import { roadConns, netVersion } from "../js/network.js";
-import { lotTile, gateOf } from "../js/buildings.js";
+import { lotTile, gateOf, entOf, entrancesOf, exitTile } from "../js/buildings.js";
 import { prog, specialInfo } from "../js/progression.js";
 import { WATER, HILL, LAND } from "../js/terrain.js";
 
@@ -99,10 +99,7 @@ export function createBot(opts = {}) {
 
 const gateTile = (d) => lotTile(d, gateOf(d));
 const exitOf = (h) => [h.x + DIR[h.rot][0], h.y + DIR[h.rot][1]];
-const gateExit = (d) => {
-  const [x, y] = lotTile(d, gateOf(d));
-  return [x + DIR[d.rot][0], y + DIR[d.rot][1]];
-};
+const gateExit = (d) => exitTile(d);
 const destsOf = (g, color) =>
   g.buildings.filter((b) => b.kind === "dest" && (b.color.id === color.id || (b.color2 && b.color2.id === color.id)));
 
@@ -268,22 +265,26 @@ const planCost = (g, plan) =>
     ? plan.reduce((n, p) => n + (p.span ? 8 : g.roads.has(p.y * g.cols + p.x) ? 0 : 1), 0)
     : Infinity;
 
-// Flip a destination's gate if that makes the first hookup of its colour cheaper. Only while nothing of that colour is
-// connected yet (a flip would cut off houses already wired to the old gate).
+// Move a destination's entrance to the place round its lot that makes the first hookup of its colour cheapest. Only while nothing of
+// that colour is connected yet (a move would cut off houses already wired to the old entrance).
 function maybeFlip(g, h, bot) {
   if (!bot.features.has("flip")) return;
   if (g.buildings.some((o) => o.kind === "house" && o.connected && o.color.id === h.color.id)) return;
   const base = planCost(g, planRoad(g, h));
   for (const d of destsOf(g, h.color)) {
-    const [fx, fy] = gateTile(d);
-    if (!flipLotAt(fx, fy)) continue;
-    const alt = planCost(g, planRoad(g, h));
-    if (alt < base - 1) {
+    const orig = entOf(d);
+    let bestEnt = orig, bestCost = base;
+    for (const ent of entrancesOf(d)) {
+      if (ent === orig) continue;
+      setEntrance(d, ent);
+      const alt = planCost(g, planRoad(g, h));
+      if (alt < bestCost - 1) { bestCost = alt; bestEnt = ent; }
+    }
+    setEntrance(d, bestEnt);
+    if (bestEnt !== orig) {
       bot.stats.flips++;
       return;
     }
-    const [bx, by] = gateTile(d);
-    flipLotAt(bx, by);
   }
 }
 

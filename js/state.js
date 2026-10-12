@@ -1,7 +1,7 @@
 // Game state + the rules for placing/removing things. No drawing or input in here.
 import { generateTerrain, WATER, HILL, LAND } from './terrain.js';
 import { clearPieceCache } from './lanes.js';
-import { rotateBuilding, lotTile, reindex, footprint } from './buildings.js';
+import { rotateBuilding, lotTile, reindex, footprint, entOf, entrancesOf, exitTile } from './buildings.js';
 import { spawnInitial, spawnPair } from './spawn.js';
 import { updateSim, reseatCarsOf } from './cars.js';
 import { initProgress, checkProgress, chooseReward as pickReward } from './progress.js';
@@ -265,17 +265,33 @@ export function rotateBuildingAt(x, y) {
   return true;
 }
 
-// Tap the parking-lot part of a destination: move its gate to the other end of the lot.
-export function flipLotAt(x, y) {
-  const b = buildingAt(x, y);
-  if (!b || b.kind !== 'dest' || b.small) return false;       // a small destination has only one lot tile: nothing to flip
-  const onLot = [0, 1].some(i => { const [lx, ly] = lotTile(b, i); return lx === x && ly === y; });
-  if (!onLot) return false;
-  b.gate = b.gate ? 0 : 1;
+// Move a destination's entrance (see buildings.js for the encoding) and put its cars on the new layout.
+export function setEntrance(b, ent) {
+  b.ent = ent;
   reindex(game);
   reseatCarsOf(game, b);
   emit();
-  return true;
+}
+
+// Can a road reach entrance `ent` of b? (the tile outside it must be land and not covered by a building)
+const entranceUsable = (b, ent) => {
+  const [x, y] = exitTile(b, ent), k = tileIndex(x, y);
+  return inBounds(x, y) && game.terrain.water[k] === LAND && !game.buildingAt.has(k);
+};
+
+// Tap the parking-lot part of a destination: move its entrance to the next place round the lot, clockwise (the same way a
+// building turns), skipping places a road could not reach. Returns false when there is nowhere else to go.
+export function flipLotAt(x, y) {
+  const b = buildingAt(x, y);
+  if (!b || b.kind !== 'dest') return false;
+  const onLot = (b.small ? [entOf(b) & 1] : [0, 1]).some(i => { const [lx, ly] = lotTile(b, i); return lx === x && ly === y; });
+  if (!onLot) return false;
+  const cycle = entrancesOf(b), here = cycle.indexOf(entOf(b));
+  for (let n = 1; n < cycle.length; n++) {
+    const ent = cycle[(here + n) % cycle.length];
+    if (entranceUsable(b, ent)) { setEntrance(b, ent); return true; }
+  }
+  return false;
 }
 
 // Dev hotkey: extra pair near an existing building (real spawning arrives with progression).

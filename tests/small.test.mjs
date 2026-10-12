@@ -15,7 +15,7 @@ const palette = JSON.parse(fs.readFileSync(R + 'config/colors.json')).colors; st
 const g = st.game;
 let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : (fail++, console.log('FAIL:', m)); };
 const L = 0.34 * 0.92, W = 0.2 * 0.92;
-const { lotTile, gateOf, baysOf, footprint, destWeight } = await import(R + 'js/buildings.js');
+const { lotTile, gateOf, baysOf, footprint, destWeight, entOf } = await import(R + 'js/buildings.js');
 const { serialize, restore } = await import(R + 'js/save.js');
 const { spawnPair } = await import(R + 'js/spawn.js');
 const blue = palette[0], orange = palette[1];
@@ -59,10 +59,10 @@ for (const [rot, half] of [[2, 0], [2, 1]]) {
   ok(worst < 12, `half ${half}: nobody jams (worst ${worst.toFixed(1)} s)`);
 }
 
-// ---- tapping the lot does not flip it; turning needs room
+// ---- tapping the lot moves its entrance (front -> side -> side); turning needs room
 {
   const d = scene(2, 0); const [lx, ly] = lotTile(d, 0);
-  ok(st.flipLotAt(lx, ly) === false && !d.gate, 'a small destination cannot be flipped');
+  ok(st.flipLotAt(lx, ly) === true && entOf(d) === 4, 'tapping a small destination\'s lot moves its entrance to the next side (got ' + entOf(d) + ')');
   const before = d.rot, [tx, ty] = footprint(d)[0], ok1 = st.rotateBuildingAt(tx, ty);
   ok(ok1 === true && d.rot !== before, 'it can be turned when there is room');
   for (const [x, y] of [[13, 8], [14, 8], [15, 8], [13, 9], [15, 9], [13, 10], [14, 10], [15, 10], [14, 7], [15, 7], [16, 9], [16, 8], [12, 9], [12, 8]]) if (!g.buildingAt.has(y * g.cols + x) && !g.roads.has(y * g.cols + x)) st.buildRoad(x, y);

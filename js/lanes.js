@@ -185,18 +185,29 @@ export function slotPos(bx, by, rot, k) {
   return mad(mad(c, T, k & 1 ? 0.2 : -0.2), X, -0.1);        // parked a bit deep so the aisle stays clear
 }
 
-// Drive in through entrance `ent` and park in bay k.
+// Entrances: ent = tile + 2 * code (see buildings.js). `out` is the way the entrance faces: from the lot toward the road tile outside it.
+function entrance(bx, by, rot, ent) {
+  const X = DIR[rot], T = rt(X), code = ent >> 1;
+  const out = code === 0 ? X : code === 1 ? [-T[0], -T[1]] : T;
+  return { X, T, out, code, tile: ent & 1, ce: lotCenter(bx, by, rot, ent & 1) };
+}
+
+// Drive in through entrance `ent` and park in bay k. (Inside a lot cars may overlap: only the road itself is kept clear.)
 export function lotInPiece(bx, by, rot, ent, k) {
   const key = `li:${bx},${by}:${rot}:${ent}>${k}`;
   const hit = cache.get(key);
   if (hit) return hit;
-  const X = DIR[rot], T = rt(X), h = [-X[0], -X[1]];
-  const ce = lotCenter(bx, by, rot, ent);
-  const p0 = mad(mad(ce, X, 0.5), T, -LANE), slot = slotPos(bx, by, rot, k);
-  // Same side: a short curve into the bay. Other side: stay out in the aisle (clear of parked noses), then turn in.
-  const near = (k >> 1) === ent;
-  return make(key, 'lot_in', p0, mad(p0, h, near ? 0.22 : 0.16), mad(slot, h, near ? -0.22 : -0.42), slot,
-    { tx: Math.floor(ce[0]), ty: Math.floor(ce[1]), bx, by, rot, ent });
+  const { X, out, code, tile, ce } = entrance(bx, by, rot, ent);
+  const h = [-out[0], -out[1]], slot = slotPos(bx, by, rot, k);
+  const p0 = mad(mad(ce, out, 0.5), rt(h), LANE);
+  const extra = { tx: Math.floor(ce[0]), ty: Math.floor(ce[1]), bx, by, rot, ent };
+  if (code === 0) {
+    // Front, same side: a short curve into the bay. Other side: stay out in the aisle (clear of parked noses), then turn in.
+    const near = (k >> 1) === tile;
+    return make(key, 'lot_in', p0, mad(p0, h, near ? 0.22 : 0.16), mad(slot, h, near ? -0.22 : -0.42), slot, extra);
+  }
+  // A side entrance: in along the lot, then a smooth turn toward the building to park nose-in.
+  return make(key, 'lot_in', p0, mad(p0, h, 0.3), mad(slot, X, 0.34), slot, extra);
 }
 
 // Pull out of bay k and leave through entrance `ent`.
@@ -204,12 +215,14 @@ export function lotOutPiece(bx, by, rot, k, ent) {
   const key = `lo:${bx},${by}:${rot}:${k}>${ent}`;
   const hit = cache.get(key);
   if (hit) return hit;
-  const X = DIR[rot], T = rt(X);
-  const ce = lotCenter(bx, by, rot, ent);
-  const slot = slotPos(bx, by, rot, k), p3 = mad(mad(ce, X, 0.5), T, LANE);
-  const near = (k >> 1) === ent;
-  return make(key, 'lot_out', slot, mad(slot, X, near ? 0.27 : 0.42), mad(p3, X, near ? -0.25 : -0.16), p3,
-    { tx: Math.floor(ce[0]), ty: Math.floor(ce[1]), bx, by, rot, ent });
+  const { X, out, code, tile, ce } = entrance(bx, by, rot, ent);
+  const slot = slotPos(bx, by, rot, k), p3 = mad(mad(ce, out, 0.5), rt(out), LANE);
+  const extra = { tx: Math.floor(ce[0]), ty: Math.floor(ce[1]), bx, by, rot, ent };
+  if (code === 0) {
+    const near = (k >> 1) === tile;
+    return make(key, 'lot_out', slot, mad(slot, X, near ? 0.27 : 0.42), mad(p3, X, near ? -0.25 : -0.16), p3, extra);
+  }
+  return make(key, 'lot_out', slot, mad(slot, X, 0.34), mad(p3, out, -0.3), p3, extra);
 }
 
 // Rebuild a route piece from its cache key (used by save games: a car's route is stored as a list of keys).

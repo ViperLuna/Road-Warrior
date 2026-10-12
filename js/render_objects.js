@@ -1,4 +1,5 @@
 // Draws buildings, ghost pieces and cars (tile units, same transform as render.js).
+import { entOf } from './buildings.js';
 import { DIR } from './lanes.js';
 import { pieceValid } from './network.js';
 import { tuning } from './tuning.js';
@@ -36,14 +37,23 @@ function drawHouse(ctx, b) {
   ctx.restore();
 }
 
+// The entrance stub (in the building's own frame: x runs toward the road, lot tile i spans y in [i-1, i]). ent = tile + 2 * code:
+// code 0 is the front (the road side), 1 the -y end of the lot, 2 the +y end.
+function drawEntrance(ctx, b) {
+  const ent = entOf(b), code = ent >> 1, yc = (ent & 1) - 0.5;
+  const rect = (x, y, w, h, alongX) => { ctx.fillStyle = SHOULDER; ctx.fillRect(x, y, w, h); ctx.fillStyle = ASPHALT; if (alongX) ctx.fillRect(x, y + 0.03, w, h - 0.06); else ctx.fillRect(x + 0.03, y, w - 0.06, h); };
+  if (code === 0) rect(0.5, yc - 0.26, 0.5, 0.52, true);
+  else if (code === 1) rect(0.24, yc - 0.5, 0.52, 0.5, false);
+  else rect(0.24, yc, 0.52, 0.5, false);
+}
+
 // A small destination: one building tile with its lot tile (2 bays). Same look as the big one, half the size. `half` picks the box half.
 function drawDestSmall(ctx, b) {
   const cy = (b.half ? 1 : 0) - 0.5;                              // local y of this lot tile's centre
   ctx.save();
   ctx.translate(b.x + 1, b.y + 1);
   ctx.rotate(rotAngle(b.rot));
-  ctx.fillStyle = SHOULDER; ctx.fillRect(0.5, cy - 0.26, 0.5, 0.52);                             // the entrance
-  ctx.fillStyle = ASPHALT; ctx.fillRect(0.5, cy - 0.23, 0.5, 0.46);
+  drawEntrance(ctx, b);
   ctx.fillStyle = '#3c4046'; rrect(ctx, 0.05, cy - 0.45, 0.9, 0.9, 0.07); ctx.fill();               // the lot
   ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 0.02;
   ctx.beginPath(); ctx.moveTo(0.08, cy); ctx.lineTo(0.6, cy); ctx.stroke();                          // bay divider
@@ -70,10 +80,7 @@ function drawDest(ctx, b) {
   ctx.save();
   ctx.translate(b.x + 1, b.y + 1);
   ctx.rotate(rotAngle(b.rot));
-  for (const y0 of [b.gate ? 0.5 : -0.5]) {                         // the single entrance (reaches every bay)
-    ctx.fillStyle = SHOULDER; ctx.fillRect(0.5, y0 - 0.26, 0.5, 0.52);
-    ctx.fillStyle = ASPHALT; ctx.fillRect(0.5, y0 - 0.23, 0.5, 0.46);
-  }
+  drawEntrance(ctx, b);                                              // the single entrance (reaches every bay)
   ctx.fillStyle = '#3c4046'; rrect(ctx, 0.05, -0.95, 0.9, 1.9, 0.07); ctx.fill();                  // one lot, two tiles long
   ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 0.02;
   for (const y of [-0.5, 0, 0.5]) { ctx.beginPath(); ctx.moveTo(0.08, y); ctx.lineTo(0.6, y); ctx.stroke(); }   // bay dividers
