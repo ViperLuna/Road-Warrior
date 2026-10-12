@@ -1,6 +1,6 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
-import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt, setCone, hasCone, setSpeed } from './state.js';
+import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt, setSpeed } from './state.js';
 import { WATER, HILL } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
@@ -73,14 +73,6 @@ function stepCut(st, x, y) {
   if ((hasRoad(prev.x + ux, prev.y + uy) && hasRoad(x + ux, y + uy)) || (hasRoad(prev.x - ux, prev.y - uy) && hasRoad(x - ux, y - uy))) st.sweep = { vx: mx, vy: my };
 }
 
-// Cone: tap or drag along road tiles to put cones on them; the first tile decides whether the whole drag places or removes.
-function stepCone(st, x, y) {
-  if (!hasRoad(x, y)) return;
-  if (st.coneMode === undefined) st.coneMode = hasCone(x, y) ? 'remove' : 'place';
-  const had = hasCone(x, y);
-  setCone(x, y, st.coneMode === 'place');
-  if (st.coneMode === 'place' && !had) play('build');
-}
 
 const PLACE_MSG = {
   none: 'Tap a road tile.', badtile: "Can't go on a bridge or tunnel.", taken: 'That intersection already has one.',
@@ -94,14 +86,13 @@ const PLACE_MSG = {
 const NUMPAD_SPEED = { Numpad0: 0, Numpad1: 1, Numpad2: 1.5, Numpad3: 2 };     // numpad: speed
 const ROW_TOOL = {                                                                // number row: toolbar buttons, left to right
   Digit1: () => setTool('build'), Digit2: () => setTool('destroy'), Digit3: () => setTool('pan'),
-  Digit4: () => setTool('cut'), Digit5: () => setTool('cone'), Digit6: () => { if (game.unlocks.oneway) setOneWay(!game.oneway); },
+  Digit4: () => setTool('cut'), Digit5: () => { if (game.unlocks.oneway) setOneWay(!game.oneway); },
 };
 
 function apply(mode, x, y, st) {
   if (mode === 'build') stepBuild(st, x, y);
   else if (mode === 'destroy') { if (demolish(x, y)) play('destroy'); }
   else if (mode === 'cut') stepCut(st, x, y);
-  else if (mode === 'cone') stepCone(st, x, y);
   else if (mode === 'place') { const r = placeSpecial(game.placing, x, y); if (r === 'flipped') toast('Swapped: the other road is on top now.'); else if (r !== 'ok') toast(PLACE_MSG[r]); else play('build'); }
 }
 
@@ -215,10 +206,9 @@ export function initInput(canvas) {
     else if (e.key === 'm') press(() => setTool('pan'));
     else if (e.key === 'o' && game.unlocks.oneway) press(() => setOneWay(!game.oneway));
     else if (e.key === 'c') press(() => setTool('cut'));
-    else if (e.key === 'x') press(() => setTool('cone'));
     else if (e.key === 'r' && hover.show) { if (rotateBuildingAt(hover.x, hover.y)) play('rotate'); }
     else if (NUMPAD_SPEED[e.code] !== undefined && game.mode === 'play') press(() => setSpeed(NUMPAD_SPEED[e.code]));
-    else if (ROW_TOOL[e.code] && (e.code !== 'Digit6' || game.unlocks.oneway)) press(ROW_TOOL[e.code]);
+    else if (ROW_TOOL[e.code] && (e.code !== 'Digit5' || game.unlocks.oneway)) press(ROW_TOOL[e.code]);
     else if (e.key === 'p') { if (devSpawn()) play('spawn'); }      // dev: spawn an extra pair
   });
   addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; });

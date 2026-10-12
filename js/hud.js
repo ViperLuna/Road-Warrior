@@ -1,5 +1,5 @@
 // DOM overlay: inventory pills, goal bar, shop, toolbar, toasts, and the menu / reward / pause / game-over screens.
-import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, finishRun, buy, bestFor, isUnlocked, coneCount, cycleSpeed } from './state.js';
+import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, finishRun, buy, bestFor, isUnlocked, cycleSpeed } from './state.js';
 import { settings, setSetting, onSetting } from './settings.js';
 import { onMusic, getState as musicState, next as musicNext, prev as musicPrev, toggle as musicToggle } from './music.js';
 import { play } from './audio.js';
@@ -25,7 +25,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   toastEl = $('toast');
   const buttons = document.querySelectorAll('#toolbar button[data-tool]');
   const canvas = $('game');
-  const cursors = { cone: 'crosshair', cut: 'crosshair', build: 'crosshair', destroy: 'not-allowed', pan: 'grab', place: 'cell' };
+  const cursors = { cut: 'crosshair', build: 'crosshair', destroy: 'not-allowed', pan: 'grab', place: 'cell' };
 
   // pointerdown for instant response on touch; click keeps keyboard activation working.
   buttons.forEach(b => {
@@ -143,7 +143,6 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
       $('over-stats').innerHTML = `<div><b>${o.trips}</b><small>trips</small></div><div><b>${fmtTime(o.time)}</b><small>${o.finished ? 'played' : 'survived'}</small></div><div><b>$${o.money}</b><small>cash</small></div><div><b>${o.best}</b><small>best</small></div>`;
     }
 
-    { const n = coneCount(); $('cone-btn').textContent = n ? `Cone (${n})` : 'Cone'; }
     $('oneway-btn').hidden = !game.unlocks.oneway;
     $('oneway-btn').classList.toggle('on', game.oneway);
     $('n-road').textContent = roadsAvailable(game);
