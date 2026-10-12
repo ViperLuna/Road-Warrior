@@ -27,6 +27,9 @@
       "startChance": 0.33,
       "maxChance": 0.5,
       "rampTrips": 1500
+    },
+    "small": {
+      "chance": 0.25
     }
   },
   "specials": [

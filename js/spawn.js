@@ -1,6 +1,6 @@
 // Placing a matching house + destination pair on free land at a sensible distance.
 import { DIR } from './lanes.js';
-import { addBuilding, lotTile, reindex, accepts } from './buildings.js';
+import { addBuilding, lotTile, reindex, accepts, footprint, gateOf } from './buildings.js';
 import { createCar } from './cars.js';
 import { mulberry32 } from './rng.js';
 import { WATER, HILL, LAND } from './terrain.js';
@@ -62,7 +62,7 @@ export function spawnInitial(g, color) {
   });
 }
 
-// opts: rng, region {x0,y0,x1,y1} for the destination's top-left | anchor {x,y,rMin,rMax}, roads [min,max], color2 (make it a two-colour destination)
+// opts: rng, region {x0,y0,x1,y1} for the destination's top-left | anchor {x,y,rMin,rMax}, roads [min,max], color2 (make it a two-colour destination), small (a one-building, 2-bay destination)
 export function spawnPair(g, color, opts = {}) {
   const rng = opts.rng || Math.random;
   const [minR, maxR] = opts.roads || [5, 13];
@@ -75,12 +75,12 @@ export function spawnPair(g, color, opts = {}) {
       const a = opts.anchor, r = ri(opts.anchor.rMin || 3, opts.anchor.rMax || 8), th = rng() * 6.283;
       ax = Math.round(a.x + Math.cos(th) * r); ay = Math.round(a.y + Math.sin(th) * r);
     }
-    const tiles = [[ax, ay], [ax + 1, ay], [ax, ay + 1], [ax + 1, ay + 1]];
+    const rot = ri(0, 3), small = !!opts.small, half = small ? ri(0, 1) : 0, fake = { x: ax, y: ay, rot, small, half };
+    const tiles = small ? footprint(fake) : [[ax, ay], [ax + 1, ay], [ax, ay + 1], [ax + 1, ay + 1]];
     if (!tiles.every(([x, y]) => free(g, x, y))) continue;            // checks bounds per tile (no row wrap-around)
     const fp = new Set(tiles.map(([x, y]) => y * g.cols + x));
 
-    const rot = ri(0, 3), fake = { x: ax, y: ay, rot };
-    const lotExits = [0].map(i => { const [x, y] = lotTile(fake, i); return [x + DIR[rot][0], y + DIR[rot][1]]; });
+    const lotExits = [gateOf(fake)].map(i => { const [x, y] = lotTile(fake, i); return [x + DIR[rot][0], y + DIR[rot][1]]; });
     if (!lotExits.every(([x, y]) => passable(g, x, y, fp))) continue;
     const exitSet = new Set(lotExits.map(([x, y]) => y * g.cols + x));
 
@@ -94,6 +94,7 @@ export function spawnPair(g, color, opts = {}) {
       if (n < minR || n > maxR) continue;
       if (opts.budget !== undefined && buildCost(g, [hex, hey], exitSet, blocked, opts.budget) > opts.budget) continue;   // can the player afford the road?
       const dest = addBuilding(g, 'dest', color, ax, ay, rot);
+      if (small) { dest.small = true; dest.half = half; reindex(g); }
       if (opts.color2) dest.color2 = opts.color2;                          // a two-colour destination: either colour's cars may park here
       const house = addBuilding(g, 'house', color, hx, hy, hrot);
       g.cars.push(createCar(house));
@@ -119,7 +120,7 @@ export function spawnHouse(g, color, opts = {}) {
     const hrot = Math.floor(rng() * 4), hex = hx + DIR[hrot][0], hey = hy + DIR[hrot][1];
     const blocked = new Set([hy * g.cols + hx]);
     if (!passable(g, hex, hey, blocked)) continue;
-    const exits = new Set([d.gate ? 1 : 0].map(i => { const [x, y] = lotTile(d, i); return (y + DIR[d.rot][1]) * g.cols + x + DIR[d.rot][0]; }));
+    const exits = new Set([gateOf(d)].map(i => { const [x, y] = lotTile(d, i); return (y + DIR[d.rot][1]) * g.cols + x + DIR[d.rot][0]; }));
     const n = roadsNeeded(g, [hex, hey], exits, blocked, maxR);
     if (n < minR || n > maxR) continue;
     if (opts.budget !== undefined && buildCost(g, [hex, hey], exits, blocked, opts.budget) > opts.budget) continue;       // can the player afford the road?
@@ -171,7 +172,7 @@ export function spawnHouseAcross(g, color, opts = {}) {
   const spans = shuffled(findCrossings(g).filter(c => c.covered || (items[c.item] || 0) > 0), rng);
 
   for (const d of shuffled(dests, rng)) {
-    const exits = new Set([d.gate ? 1 : 0].map(i => { const [x, y] = lotTile(d, i); return (y + DIR[d.rot][1]) * g.cols + x + DIR[d.rot][0]; }));
+    const exits = new Set([gateOf(d)].map(i => { const [x, y] = lotTile(d, i); return (y + DIR[d.rot][1]) * g.cols + x + DIR[d.rot][0]; }));
     for (const c of spans.slice(0, 40)) {
       for (const [near, far] of [[[c.ax, c.ay], [c.bx, c.by]], [[c.bx, c.by], [c.ax, c.ay]]]) {
         const dNear = roadsNeeded(g, near, exits, null, 14);                // dest -> its shore

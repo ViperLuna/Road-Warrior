@@ -4,13 +4,19 @@ import { tidx } from './network.js';
 
 export const SLOTS = 4;
 // A destination has a single gate: lot tile `gate` (0 or 1, the player can flip it); the other lot tile is just parking.
-export const gateOf = b => (b.gate ? 1 : 0);
+// A SMALL destination is one half of that 2x2 box: its building tile, its lot tile and 2 bays. Its gate is always that lot tile (`half`,
+// 0 or 1), so it cannot be flipped, and the other half of the box is plain free ground. All the lot geometry is shared with the big one.
+export const gateOf = b => (b.small ? (b.half ? 1 : 0) : (b.gate ? 1 : 0));
+export const baysOf = b => (b.small ? [2 * gateOf(b), 2 * gateOf(b) + 1] : [0, 1, 2, 3]);      // the parking bays a destination really has
+export const destWeight = b => (b.small ? 0.5 : 1);                                              // its share of a normal destination's capacity
 
 // A destination takes cars of its own colour, and of its second colour if it is a two-colour destination (color2).
 export const accepts = (d, colorId) => d.color.id === colorId || (!!d.color2 && d.color2.id === colorId);
 
 export function footprint(b) {
-  return b.kind === 'house' ? [[b.x, b.y]] : [[b.x, b.y], [b.x + 1, b.y], [b.x, b.y + 1], [b.x + 1, b.y + 1]];
+  if (b.kind === 'house') return [[b.x, b.y]];
+  if (b.small) { const [lx, ly] = lotTile(b, gateOf(b)), X = DIR[b.rot]; return [[lx, ly], [lx - X[0], ly - X[1]]]; }      // lot tile + the building tile behind it
+  return [[b.x, b.y], [b.x + 1, b.y], [b.x, b.y + 1], [b.x + 1, b.y + 1]];
 }
 
 // Lot tile i (0|1); i increases along the building's local +y so geometry is the same for every rotation.

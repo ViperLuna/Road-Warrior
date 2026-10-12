@@ -1,7 +1,7 @@
 // One car per house. Round trip: house -> destination lot (park, dwell) -> house = 1 trip.
 import { DIR, OPP, CAR_LEN, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
 import { lightColor, lightHolds, signalState, stepLight } from './signals.js';
-import { lotTile, gateOf, accepts } from './buildings.js';
+import { lotTile, gateOf, accepts, baysOf } from './buildings.js';
 import { roadAt, roundAt, tidx, tileLanes, layerLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
 import { findPath } from './pathfind.js';
 import { tuning } from './tuning.js';
@@ -45,13 +45,14 @@ function planOut(g, car) {
   const b = car.house, D = DIR[b.rot];
   const rx = b.x + D[0], ry = b.y + D[1];
   if (!roadAt(g, rx, ry)) return false;
-  const dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && accepts(d, b.color.id) && d.slots.includes(null)));
+  const dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && accepts(d, b.color.id) && baysOf(d).some(k => d.slots[k] === null)));
   for (const d of dests) {
     const goals = [...g.ports.values()].filter(port => port.b === d);       // either entrance leads to every bay
     const res = findPath(g, rx, ry, OPP[b.rot], goals);
     if (!res) continue;
-    const here = [res.port.lot * 2, res.port.lot * 2 + 1].filter(k => d.slots[k] === null);   // prefer a bay on the entrance's side
-    const open = here.length ? here : d.slots.map((v, k) => (v === null ? k : -1)).filter(k => k >= 0);
+    const bays = baysOf(d);
+    const here = [res.port.lot * 2, res.port.lot * 2 + 1].filter(k => bays.includes(k) && d.slots[k] === null);   // prefer a bay on the entrance's side
+    const open = here.length ? here : bays.filter(k => d.slots[k] === null);
     const k = open[(Math.random() * open.length) | 0];
     d.slots[k] = car;
     car.dest = d; car.slot = k;

@@ -10,6 +10,7 @@
     "test:audio": "node tests/audio.test.mjs",
     "test:honk": "node tests/honk.test.mjs",
     "test:music": "node tests/music.test.mjs",
-    "test:dual": "node tests/dual.test.mjs"
+    "test:dual": "node tests/dual.test.mjs",
+    "test:small": "node tests/small.test.mjs"
   }
 }

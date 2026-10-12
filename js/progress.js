@@ -1,7 +1,7 @@
 // Spawn schedule, goals and rewards. Pure game logic: no DOM.
 import { prog, roadsAvailable } from './progression.js';
 import { roadConns } from './network.js';
-import { accepts } from './buildings.js';
+import { accepts, destWeight } from './buildings.js';
 import { spawnPair, spawnHouse, spawnHouseAcross, spawnPairAcross, findCrossings } from './spawn.js';
 
 export function initProgress(g) {
@@ -12,7 +12,8 @@ export function initProgress(g) {
 
 const houseCount = g => g.buildings.filter(b => b.kind === 'house').length;
 // (a two-colour destination counts as a destination for each of its colours)
-const count = (g, kind, color) => g.buildings.filter(b => b.kind === kind && (kind === 'dest' ? accepts(b, color.id) : b.color.id === color.id)).length;
+// (a small destination counts as half of one)
+const count = (g, kind, color) => g.buildings.filter(b => b.kind === kind && (kind === 'dest' ? accepts(b, color.id) : b.color.id === color.id)).reduce((n, b) => n + (kind === 'dest' ? destWeight(b) : 1), 0);
 
 function anchorNear(g) {
   const a = g.buildings[(Math.random() * g.buildings.length) | 0];
@@ -91,7 +92,8 @@ function doSpawn(g) {
   }
   for (let widen = 0; widen < 3; widen++) {
     const anchor = anchorNear(g); anchor.rMax += widen * 3;
-    if (spawnPair(g, color, { anchor, roads: sp.roadsNeeded, budget: roadsAvailable(g) })) {
+    const smallFirst = Math.random() < ((sp.small && sp.small.chance) || 0);        // a small destination is tried first some of the time, and whenever a big one does not fit
+    if ([smallFirst, !smallFirst].some(small => spawnPair(g, color, { anchor, roads: sp.roadsNeeded, budget: roadsAvailable(g), small }))) {
       if (kind === 'newColor') g.colorsUsed++;
       return { kind, color, n: 2 };
     }

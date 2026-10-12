@@ -1,7 +1,7 @@
 // Game state + the rules for placing/removing things. No drawing or input in here.
 import { generateTerrain, WATER, HILL, LAND } from './terrain.js';
 import { clearPieceCache } from './lanes.js';
-import { rotateBuilding, lotTile, reindex } from './buildings.js';
+import { rotateBuilding, lotTile, reindex, footprint } from './buildings.js';
 import { spawnInitial, spawnPair } from './spawn.js';
 import { updateSim, reseatCarsOf } from './cars.js';
 import { initProgress, checkProgress, chooseReward as pickReward } from './progress.js';
@@ -228,9 +228,21 @@ export const buildTunnel = (from, tiles, end) => buildSpan('tunnel', from, tiles
 
 export const buildingAt = (x, y) => (inBounds(x, y) ? game.buildingAt.get(tileIndex(x, y)) || null : null);
 
+// Can building `b` stand with the given rotation? (a small destination moves inside its 2x2 box when it turns, so its new tiles must be free)
+function fitsTurned(b, rot) {
+  const turned = { ...b, rot };
+  return footprint(turned).every(([x, y]) => inBounds(x, y) && game.terrain.water[tileIndex(x, y)] === LAND && !game.roads.has(tileIndex(x, y))
+    && (!game.buildingAt.has(tileIndex(x, y)) || game.buildingAt.get(tileIndex(x, y)) === b));
+}
+
 export function rotateBuildingAt(x, y) {
   const b = buildingAt(x, y);
   if (!b) return false;
+  if (b.small) {                                                // turn to the next direction where it still fits
+    const turn = [1, 2, 3].find(n => fitsTurned(b, (b.rot + n) % 4));
+    if (turn === undefined) return false;
+    b.rot = (b.rot + turn - 1) % 4;                             // (rotateBuilding adds the last quarter turn)
+  }
   rotateBuilding(game, b);
   if (b.kind === 'dest') reseatCarsOf(game, b);
   emit();
@@ -240,7 +252,7 @@ export function rotateBuildingAt(x, y) {
 // Tap the parking-lot part of a destination: move its gate to the other end of the lot.
 export function flipLotAt(x, y) {
   const b = buildingAt(x, y);
-  if (!b || b.kind !== 'dest') return false;
+  if (!b || b.kind !== 'dest' || b.small) return false;       // a small destination has only one lot tile: nothing to flip
   const onLot = [0, 1].some(i => { const [lx, ly] = lotTile(b, i); return lx === x && ly === y; });
   if (!onLot) return false;
   b.gate = b.gate ? 0 : 1;

@@ -36,7 +36,37 @@ function drawHouse(ctx, b) {
   ctx.restore();
 }
 
+// A small destination: one building tile with its lot tile (2 bays). Same look as the big one, half the size. `half` picks the box half.
+function drawDestSmall(ctx, b) {
+  const cy = (b.half ? 1 : 0) - 0.5;                              // local y of this lot tile's centre
+  ctx.save();
+  ctx.translate(b.x + 1, b.y + 1);
+  ctx.rotate(rotAngle(b.rot));
+  ctx.fillStyle = SHOULDER; ctx.fillRect(0.5, cy - 0.26, 0.5, 0.52);                             // the entrance
+  ctx.fillStyle = ASPHALT; ctx.fillRect(0.5, cy - 0.23, 0.5, 0.46);
+  ctx.fillStyle = '#3c4046'; rrect(ctx, 0.05, cy - 0.45, 0.9, 0.9, 0.07); ctx.fill();               // the lot
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 0.02;
+  ctx.beginPath(); ctx.moveTo(0.08, cy); ctx.lineTo(0.6, cy); ctx.stroke();                          // bay divider
+  ctx.beginPath(); ctx.moveTo(0.08, cy - 0.41); ctx.lineTo(0.08, cy + 0.41); ctx.stroke();           // curb line
+  ctx.setLineDash([0.07, 0.07]); ctx.strokeStyle = 'rgba(242,201,76,.5)';
+  ctx.beginPath(); ctx.moveTo(0.82, cy - 0.38); ctx.lineTo(0.82, cy + 0.38); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; rrect(ctx, -0.9, cy - 0.42, 0.84, 0.92, 0.1); ctx.fill();         // building
+  ctx.fillStyle = b.color.hex; rrect(ctx, -0.92, cy - 0.46, 0.84, 0.92, 0.1); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.2)'; rrect(ctx, -0.84, cy - 0.38, 0.68, 0.76, 0.07); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 0.025; rrect(ctx, -0.92, cy - 0.46, 0.84, 0.92, 0.1); ctx.stroke();
+  for (let n = 0; n < 2; n++) {                                   // inbound-car markers, one per bay
+    const k = (b.half ? 2 : 0) + n, y = cy + (n ? 0.22 : -0.22);
+    ctx.beginPath(); ctx.arc(-0.66, y, 0.075, 0, 6.2832);
+    if (b.slots[k]) { ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 0.02; ctx.stroke(); }
+    else { ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 0.025; ctx.stroke(); }
+  }
+  ctx.translate(-0.3, cy); ctx.rotate(-rotAngle(b.rot));
+  ctx.fillStyle = 'rgba(255,255,255,.95)'; glyph(ctx, b.color.glyph, 0.15);
+  ctx.restore();
+}
+
 function drawDest(ctx, b) {
+  if (b.small) { drawDestSmall(ctx, b); return; }
   ctx.save();
   ctx.translate(b.x + 1, b.y + 1);
   ctx.rotate(rotAngle(b.rot));
