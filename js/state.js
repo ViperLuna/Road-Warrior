@@ -57,6 +57,7 @@ export function newGame(seed, map = maps[0]) {
   game.mode = 'play'; game.reward = null; game.over = null; game.unlocks = {}; game.oneway = false; game.build4 = false;
   game.buildings = []; game.buildingAt = new Map(); game.ports = new Map(); game.nextId = 1;
   game.cars = []; game.trips = 0; game.money = 0; game.time = 0;
+  game.bestAtStart = bestFor(map.id); syncBest();                       // the best score when this run began (a record means beating that)
   clearPieceCache();
   spawnInitial(game, game.palette[0]);
   initProgress(game);
@@ -150,6 +151,7 @@ export function tick(dt) {
   }
   const worst = game.cars.reduce((m, c) => Math.max(m, c.stuck), 0);
   honkAtStuckCars(dt);
+  trackBest();
   if (worst >= tuning.gridlock.gameOverAfterSeconds) endGame();
 }
 
@@ -168,15 +170,17 @@ export function honkAtStuckCars(dt) {
   }
 }
 
-function endGame() {
-  const prev = bestFor(game.map.id);
-  const record = game.trips > prev;
-  if (record) saveBest(game.map.id, game.trips);
-  game.over = { trips: game.trips, money: game.money, time: game.time, record, best: Math.max(prev, game.trips) };
+// The run is over: gridlock took it, or the player finished it on purpose (finished = true).
+function endGame(finished = false) {
+  const prev = game.bestAtStart ?? 0, record = game.trips > prev;
+  trackBest(); flushBest();
+  game.over = { trips: game.trips, money: game.money, time: game.time, record, best: Math.max(prev, bestCache, game.trips), finished };
   game.mode = 'over';
-  notify({ type: 'over', record });
+  notify({ type: 'over', record, finished });
   emit();
 }
+// Finish the current run on purpose: the score counts (and can unlock maps) without having to lose.
+export function finishRun() { if (game.mode === 'play' || game.mode === 'pause') endGame(true); }
 
 export function chooseReward(id) { if (pickReward(game, id)) emit(); }
 
@@ -185,6 +189,18 @@ const BEST_KEY = 'roadwarrior.best';
 function readBest() { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || {}; } catch { return {}; } }
 export const bestFor = id => readBest()[id] || 0;
 function saveBest(id, trips) { try { const b = readBest(); b[id] = trips; localStorage.setItem(BEST_KEY, JSON.stringify(b)); } catch { /* storage unavailable */ } }
+
+// The best score is kept live: it goes up the moment a run passes it (a run that never jams still counts, and can unlock maps),
+// and is written to storage at most every couple of seconds, on leaving the game, and when a run ends.
+let bestCache = 0, bestDirty = false, lastBestWrite = -1e9;
+export function syncBest() { bestCache = game.map ? bestFor(game.map.id) : 0; bestDirty = false; lastBestWrite = -1e9; }
+export function trackBest() {
+  if (!game.map || game.trips <= bestCache) return;
+  const before = bestCache; bestCache = game.trips; bestDirty = true;
+  for (const m of maps) if (m.unlock && m.unlock.map === game.map.id && before < m.unlock.trips && bestCache >= m.unlock.trips) notify({ type: 'unlock', map: m });
+  if (game.time - lastBestWrite > 2) flushBest();
+}
+export function flushBest() { if (bestDirty && game.map) { saveBest(game.map.id, bestCache); bestDirty = false; lastBestWrite = game.time; } }
 export function isUnlocked(map) { return !map.unlock || bestFor(map.unlock.map) >= map.unlock.trips; }
 
 // ---- shop: spend cash on specials the goals don't hand out ----

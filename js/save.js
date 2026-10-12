@@ -5,7 +5,7 @@
 //
 //   backend = { id, load(slot) -> data|null, save(slot, data) -> bool, remove(slot) -> bool, list() -> [{ slot, savedAt }] }
 //   (every method may be async; the manager awaits them)
-import { game, refresh } from './state.js';
+import { game, refresh, syncBest, bestFor } from './state.js';
 import { maps, specialInfo } from './progression.js';
 import { terrainFromWater } from './terrain.js';
 import { reindex } from './buildings.js';
@@ -34,7 +34,7 @@ export function serialize(g = game) {
   return {
     version: SAVE_VERSION, savedAt: Date.now(),
     seed: g.seed, map: g.map.id, mode: g.mode === 'reward' ? 'reward' : 'play',
-    time: g.time, trips: g.trips, money: g.money, nextId: g.nextId, nextBridge: g.nextBridge,
+    time: g.time, trips: g.trips, money: g.money, nextId: g.nextId, nextBridge: g.nextBridge, bestAtStart: g.bestAtStart,
     inv: { ...g.inv }, unlocks: { ...g.unlocks }, oneway: !!g.oneway, build4: !!g.build4,
     progress: { spawnCount: g.spawnCount, nextSpawnAt: g.nextSpawnAt, goalCount: g.goalCount, nextGoalAt: g.nextGoalAt, prevGoalAt: g.prevGoalAt, colorsUsed: g.colorsUsed },
     reward: g.reward ? { goal: g.reward.goal, options: g.reward.options.map(o => ({ ...o, special: o.special ? o.special.id : undefined })) } : null,
@@ -60,6 +60,7 @@ export function restore(data, g = game) {
   g.nextBridge = data.nextBridge; g.nextId = data.nextId;
   g.inv = { ...data.inv }; g.unlocks = { ...data.unlocks }; g.oneway = !!data.oneway && !!g.unlocks.oneway; g.build4 = !!data.build4 && (g.inv.highway || 0) > 0;
   g.trips = data.trips; g.money = data.money; g.time = data.time;
+  g.bestAtStart = data.bestAtStart ?? bestFor(map.id); syncBest();       // (older saves: the best so far counts as the best at the start)
   Object.assign(g, data.progress);
   g.over = null;
   g.reward = data.reward ? { goal: data.reward.goal, options: data.reward.options.map(o => ({ ...o, special: o.special ? specialInfo(o.special) : undefined })) } : null;

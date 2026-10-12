@@ -1,5 +1,5 @@
 // DOM overlay: inventory pills, goal bar, shop, toolbar, toasts, and the menu / reward / pause / game-over screens.
-import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, buy, bestFor, isUnlocked, coneCount, cycleSpeed } from './state.js';
+import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, finishRun, buy, bestFor, isUnlocked, coneCount, cycleSpeed } from './state.js';
 import { settings, setSetting, onSetting } from './settings.js';
 import { onMusic, getState as musicState, next as musicNext, prev as musicPrev, toggle as musicToggle } from './music.js';
 import { play } from './audio.js';
@@ -67,6 +67,14 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   $('music-play').addEventListener('click', musicToggle);
   $('music-next').addEventListener('click', musicNext);
   $('music-prev').addEventListener('click', musicPrev);
+  // End game: counts the score without having to lose. Two taps, so it can't be hit by accident.
+  let finishTimer = 0;
+  const finishBtn = $('finish-run');
+  finishBtn.addEventListener('click', () => {
+    if (finishBtn.dataset.armed) { clearTimeout(finishTimer); delete finishBtn.dataset.armed; finishBtn.textContent = 'End game'; finishRun(); return; }
+    finishBtn.dataset.armed = '1'; finishBtn.textContent = 'Tap again to end game';
+    finishTimer = setTimeout(() => { delete finishBtn.dataset.armed; finishBtn.textContent = 'End game'; }, 3000);
+  });
   $('speed-btn').addEventListener('click', cycleSpeed);
   $('menu-btn').addEventListener('click', () => setMode('pause'));
   $('shop-btn').addEventListener('click', () => { $('shop').hidden = !$('shop').hidden; render(); });
@@ -129,8 +137,10 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     if (mode === 'reward') buildReward();
     if (mode === 'over' && game.over) {
       const o = game.over;
-      $('over-sub').innerHTML = o.record ? '<span class="record">New best!</span> Traffic ground to a halt.' : 'Traffic ground to a halt.';
-      $('over-stats').innerHTML = `<div><b>${o.trips}</b><small>trips</small></div><div><b>${fmtTime(o.time)}</b><small>survived</small></div><div><b>$${o.money}</b><small>cash</small></div><div><b>${o.best}</b><small>best</small></div>`;
+      $('over-title').textContent = o.finished ? 'Game ended' : 'Gridlock!';
+      const why = o.finished ? 'You ended this game.' : 'Traffic ground to a halt.';
+      $('over-sub').innerHTML = o.record ? `<span class="record">New best!</span> ${why}` : why;
+      $('over-stats').innerHTML = `<div><b>${o.trips}</b><small>trips</small></div><div><b>${fmtTime(o.time)}</b><small>${o.finished ? 'played' : 'survived'}</small></div><div><b>$${o.money}</b><small>cash</small></div><div><b>${o.best}</b><small>best</small></div>`;
     }
 
     { const n = coneCount(); $('cone-btn').textContent = n ? `Cone (${n})` : 'Cone'; }
@@ -194,6 +204,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   onChange(render);
   onEvent(e => {
     if (e.type === 'cash') toast(`Goal reached: +$${e.n}.`);
+    if (e.type === 'unlock') toast(`New map unlocked: ${e.map.name}!`);
     if (e.type === 'spawn') {
       const name = e.color.id;
       if (e.across) toast(e.needsBridge ? `New ${name} house across the water. You'll need a bridge.` : `New ${name} house across the river (bridge already built).`);

@@ -1,6 +1,6 @@
 import { unlock, play, playFirst } from './audio.js';
 import { loadConfig as loadMusic, start as startMusic } from './music.js';
-import { game, newGame, setPalette, setMode, tick, onChange, onEvent } from './state.js';
+import { game, newGame, setPalette, setMode, tick, onChange, onEvent, flushBest } from './state.js';
 import { setTuning } from './tuning.js';
 import { setProgression, setMaps, maps } from './progression.js';
 import { resizeView, fitView, cam, clampCam } from './camera.js';
@@ -21,7 +21,7 @@ document.getElementById('start').addEventListener('click', async () => {
 
 onEvent(e => {
   if (e.type === 'spawn') play('spawn');
-  if (e.type === 'over') play('gameover');
+  if (e.type === 'over' && !e.finished) play('gameover');          // (finishing a run on purpose is not a loss: no trombones)
   if (e.type === 'speed') {                                      // most specific first: 'speed:0>1.5', then the general kind
     const kind = e.speed === 0 ? 'pause' : e.prev === 0 ? 'speed:resume' : e.speed > e.prev ? 'speed:up' : 'speed:down';
     playFirst([`speed:${e.prev}>${e.speed}`, kind]);
@@ -101,11 +101,12 @@ async function continueGame() {
 initHud({
   onPlay: map => startMap(map),
   onRestart: () => startMap(game.map),
-  onToMenu: async () => { await saveNow(view()); await refreshSaveInfo(); setMode('menu'); },
+  onToMenu: async () => { flushBest(); await saveNow(view()); await refreshSaveInfo(); setMode('menu'); },
   onContinue: continueGame,
   getSaveInfo: () => saveInfo,
 });
 startAutosave(view);
+addEventListener('pagehide', flushBest);                // never lose the latest best score
 let wasOver = false;
 onChange(g => { if (g.mode === 'over' && !wasOver) { wasOver = true; clearSave().then(refreshSaveInfo); } else if (g.mode !== 'over') wasOver = false; });
 initInput(canvas);
