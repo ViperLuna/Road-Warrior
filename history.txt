@@ -1,3 +1,8 @@
+10.12.2026
+  New Destination Types: Single Unit and Multicolor
+  Single Unit - One tile building with 2 parking spaces. This allows more destinations when spaces start getting tight.
+  Multicolor - Two different colors access the same destination. These spawn in after 5,000 trips have been completed.
+
 10.10.2026
   Game Saves - Now implemented. Currently game saves are local browser storage. The game automatically saves every 10 seconds, when switching tabs, switching apps, locking the phone, or when you tap "Menu."
   Speed Control - Paused, 1x, 1.5x, 2x. Game loads paused by default.
