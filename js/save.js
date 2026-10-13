@@ -75,6 +75,7 @@ export function restore(data, g = game) {
   clearPieceCache();
   reindex(g);
 
+  g.accident = null; g.nextAccidentAt = undefined;                 // no accident carries over a save: the schedule starts fresh
   g.cars = data.cars.map(sc => {
     const c = createCar(byId.get(sc.house));
     Object.assign(c, {

@@ -5,7 +5,7 @@ import { roadConns, edgeLanes } from './network.js';
 import { settings } from './settings.js';
 import { lightGroups, lightColor, signalState } from './signals.js';
 import { RING_R } from './lanes.js';
-import { drawBuildings, drawGhosts, drawCars } from './render_objects.js';
+import { drawBuildings, drawGhosts, drawCars, drawAccident } from './render_objects.js';
 
 const COL = {
   hill: '#8d8977', hillTop: '#a7a290', cliff: '#5f5b4c',
@@ -104,6 +104,7 @@ export function render(ctx, W, H, dpr, game, cam, hover) {
     if (r && r.overpass !== undefined) drawDeck(ctx, game, x, y, r);
   }
   drawCars(ctx, game, 'top');
+  drawAccident(ctx, game);
 
   if (hover.show && inBounds(hover.x, hover.y)) {
     const w = isWaterAt(hover.x, hover.y) && !hasRoad(hover.x, hover.y), road = hasRoad(hover.x, hover.y), bld = buildingAt(hover.x, hover.y);

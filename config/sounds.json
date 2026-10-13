@@ -48,6 +48,15 @@
     "pitchJitter": 0.03,
     "cooldownMs": 40
   },
+  "crash": {
+    "files": [
+      "assets/sounds/destroy1.mp3",
+      "assets/sounds/destroy3.mp3"
+    ],
+    "volume": 0.9,
+    "pitchJitter": 0.03,
+    "cooldownMs": 500
+  },
   "honk": {
     "files": [
       "assets/sounds/honk1.mp3",

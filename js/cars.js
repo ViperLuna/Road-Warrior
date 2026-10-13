@@ -317,6 +317,8 @@ export function updateSim(g, dt) {
         }
         else car.dwell = 0.5;
       }
+    } else if (car.crash) {
+      car.v = 0; car.stuck = 0;                                         // wrecked: sits where it is until the police clear it
     } else {
       let p = car.route[car.idx];
       const gap = leaderGap(car);

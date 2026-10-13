@@ -4,6 +4,7 @@ import { clearPieceCache } from './lanes.js';
 import { rotateBuilding, lotTile, reindex, footprint, entOf, entrancesOf, exitTile } from './buildings.js';
 import { spawnInitial, spawnPair } from './spawn.js';
 import { updateSim, reseatCarsOf } from './cars.js';
+import { stepAccidents } from './accident.js';
 import { initProgress, checkProgress, chooseReward as pickReward } from './progress.js';
 import { prog, maps, specialInfo, roadsAvailable } from './progression.js';
 import { roadConns, tileLanes, layerLanes, netChanged } from './network.js';
@@ -56,7 +57,7 @@ export function newGame(seed, map = maps[0]) {
   game.inv = { ...START_INVENTORY };
   game.mode = 'play'; game.reward = null; game.over = null; game.unlocks = {}; game.oneway = false; game.build4 = false;
   game.buildings = []; game.buildingAt = new Map(); game.ports = new Map(); game.nextId = 1;
-  game.cars = []; game.trips = 0; game.money = 0; game.time = 0;
+  game.cars = []; game.trips = 0; game.money = 0; game.time = 0; game.accident = null; game.nextAccidentAt = undefined;
   game.bestAtStart = bestFor(map.id); syncBest();                       // the best score when this run began (a record means beating that)
   clearPieceCache();
   spawnInitial(game, game.palette[0]);
@@ -149,6 +150,7 @@ export function tick(dt) {
     checkProgress(game, notify);
     fire();
   }
+  stepAccidents(game, dt, notify);
   const worst = game.cars.reduce((m, c) => Math.max(m, c.stuck), 0);
   honkAtStuckCars(dt);
   trackBest();

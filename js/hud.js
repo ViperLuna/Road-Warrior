@@ -203,6 +203,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   onChange(render);
   onEvent(e => {
     if (e.type === 'cash') toast(`Goal reached: +$${e.n}.`);
+    if (e.type === 'accident') toast('Accident! Police are on the scene.');
     if (e.type === 'unlock') toast(`New map unlocked: ${e.map.name}!`);
     if (e.type === 'spawn') {
       const name = e.color.id;

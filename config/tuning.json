@@ -29,6 +29,17 @@
     "honkSlowSeconds": 5,
     "honkFastSeconds": 1.2
   },
+  "accidents": {
+    "afterTrips": 1000,
+    "durationSeconds": 15,
+    "firstDelaySeconds": 90,
+    "minGapSeconds": 150,
+    "maxGapSeconds": 300,
+    "rampTrips": 4000,
+    "rampShrink": 0.5,
+    "minSpeed": 0.5,
+    "closeTiles": 0.8
+  },
   "trips": {
     "parkedSeconds": 1.6,
     "rewardPerTrip": 5,

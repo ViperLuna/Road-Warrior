@@ -191,3 +191,34 @@ export function drawCars(ctx, g, layer = 'top') {
     ctx.restore();
   }
 }
+
+// The accident scene: hazard flashers on the two wrecks and two police cars (red/blue light bars) that fade in and out.
+export function drawAccident(ctx, g) {
+  const a = g.accident;
+  if (!a) return;
+  const fade = Math.min(1, a.age / 0.6, Math.max(0, a.left) / 0.6), blink = Math.floor(g.time * 4) % 2 === 0;
+  ctx.save();
+  ctx.globalAlpha = fade;
+  for (const c of a.cars) {                                                       // amber hazard lights at the four corners
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.a);
+    ctx.fillStyle = blink ? '#ffb300' : 'rgba(255,179,0,.25)';
+    for (const [x, y] of [[0.16, -0.1], [0.16, 0.1], [-0.16, -0.1], [-0.16, 0.1]]) { ctx.beginPath(); ctx.arc(x, y, 0.03, 0, 6.2832); ctx.fill(); }
+    ctx.restore();
+  }
+  a.police.forEach((p, i) => {
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a);
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; rrect(ctx, -0.17, -0.08, 0.34, 0.2, 0.05); ctx.fill();
+    ctx.fillStyle = '#f4f6f8'; rrect(ctx, -0.17, -0.1, 0.34, 0.2, 0.05); ctx.fill();
+    ctx.fillStyle = '#1c2a3a'; ctx.fillRect(-0.12, -0.1, 0.13, 0.2);              // dark doors / roof band
+    ctx.fillStyle = 'rgba(15,25,35,.75)'; ctx.fillRect(0.02, -0.075, 0.07, 0.15);
+    const red = (Math.floor(g.time * 5) + i) % 2 === 0;
+    ctx.fillStyle = red ? '#ff2b2b' : '#2b6bff'; ctx.fillRect(-0.05, -0.09, 0.05, 0.08);
+    ctx.fillStyle = red ? '#2b6bff' : '#ff2b2b'; ctx.fillRect(-0.05, 0.01, 0.05, 0.08);
+    ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 0.018; rrect(ctx, -0.17, -0.1, 0.34, 0.2, 0.05); ctx.stroke();
+    ctx.restore();
+    const glow = ctx.createRadialGradient(p.x, p.y, 0.02, p.x, p.y, 0.45);        // light spill on the road
+    glow.addColorStop(0, red ? 'rgba(255,40,40,.35)' : 'rgba(40,100,255,.35)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(p.x, p.y, 0.45, 0, 6.2832); ctx.fill();
+  });
+  ctx.restore();
+}
