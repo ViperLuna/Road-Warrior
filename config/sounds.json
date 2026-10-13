@@ -50,11 +50,15 @@
   },
   "crash": {
     "files": [
-      "assets/sounds/destroy1.mp3",
-      "assets/sounds/destroy3.mp3"
+      "assets/sounds/crash1.mp3",
+      "assets/sounds/crash2.mp3",
+      "assets/sounds/crash3.mp3",
+      "assets/sounds/crash4.mp3",
+      "assets/sounds/crash5.mp3"
     ],
     "volume": 0.9,
-    "pitchJitter": 0.03,
+    "pitchJitter": 0.04,
+    "volumeJitter": 0.08,
     "cooldownMs": 500
   },
   "honk": {
