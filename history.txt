@@ -4,7 +4,7 @@ TBD:
 10.12.2026
   New Destination Types: Single Unit and Multicolor
   Single Unit - One tile building with 2 parking spaces. This allows more destinations when spaces start getting tight.
-  Multicolor - Two different colors access the same destination. These spawn in after 5,000 trips have been completed.
+  Multicolor - Two different colors access the same destination. These spawn in after 3,000 trips have been completed.
 
   Parking Lot exits are no longer limited to the front entrance. They can be toggled to any available side.
 
