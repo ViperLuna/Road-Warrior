@@ -15,7 +15,7 @@ function fitZoom() {
 
 function updateLimits() {
   const fit = fitZoom();
-  cam.minZ = Math.max(4, fit * 0.75);
+  cam.minZ = Math.max(3, fit * 0.75);
   cam.maxZ = Math.max(100, fit * 6);
 }
 
