@@ -13,6 +13,7 @@
     "test:dual": "node tests/dual.test.mjs",
     "test:small": "node tests/small.test.mjs",
     "test:best": "node tests/best.test.mjs",
-    "test:entrances": "node tests/entrances.test.mjs"
+    "test:entrances": "node tests/entrances.test.mjs",
+    "test:overpass-driveway": "node tests/overpass_driveway.test.mjs"
   }
 }

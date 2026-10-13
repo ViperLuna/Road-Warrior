@@ -1,6 +1,6 @@
 // Draws everything in tile units (1 tile = 1 unit); the camera transform does the scaling.
 import { WATER, HILL } from './terrain.js';
-import { hasRoad, tileIndex, inBounds, buildingAt } from './state.js';
+import { hasRoad, tileIndex, inBounds, buildingAt, overpassFit } from './state.js';
 import { roadConns, edgeLanes } from './network.js';
 import { settings } from './settings.js';
 import { lightGroups, lightColor, signalState } from './signals.js';
@@ -113,7 +113,7 @@ export function render(ctx, W, H, dpr, game, cam, hover) {
     else if (game.tool === 'build') ok = !w && !isHillAt(hover.x, hover.y) && !road && game.inv.road > 0;
     else if (game.tool === 'place') {
       const r = game.roads.get(tileIndex(hover.x, hover.y));
-      ok = !!r && !r.bridge && !r.tunnel && (game.placing === 'overpass' ? (r.overpass !== undefined || (!r.special && roadConns(game, hover.x, hover.y).length === 4)) : !r.special && roadConns(game, hover.x, hover.y).length >= 3);
+      ok = !!r && !r.bridge && !r.tunnel && (game.placing === 'overpass' ? (r.overpass !== undefined || (!r.special && typeof overpassFit(hover.x, hover.y) === 'object')) : !r.special && roadConns(game, hover.x, hover.y).length >= 3);
     }
     ctx.strokeStyle = game.tool === 'pan' ? 'rgba(255,255,255,.5)' : ok ? 'rgba(255,255,255,.95)' : 'rgba(255,90,80,.95)';
     ctx.lineWidth = 2.5 / cam.z;

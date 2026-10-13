@@ -81,6 +81,7 @@ const PLACE_MSG = {
   highway: 'Roundabouts only fit on regular streets.',
   mismatch: "An overpass needs the same road size on both sides of each road. One side here is a different size (check bridge ends and road/highway joins).",
   notcrossing: 'An overpass goes on a straight crossing of two roads (4 roads meeting, same size on both sides of each).',
+  driveway: "The overpass can't come from a driveway. A building can only be at the end of the road that runs underneath it.",
 };
 
 const NUMPAD_SPEED = { Numpad0: 0, Numpad1: 1, Numpad2: 1.5, Numpad3: 2 };     // numpad: speed

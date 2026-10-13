@@ -321,29 +321,43 @@ function overpassLanesAlong(x, y, a) {
   return Math.min(...sides.map(d => { const n = game.roads.get(tileIndex(x + SIDES[d][0], y + SIDES[d][1])); return n ? layerLanes(game, x + SIDES[d][0], y + SIDES[d][1], d) : 2; }));
 }
 
-// Returns 'ok' | 'flipped' | 'none' | 'badtile' | 'taken' | 'notjunction' | 'notcrossing' | 'mismatch' | 'highway' | 'toonear' | 'empty'
+// Where an overpass at (x,y) could go: { top, lanes } (top = the deck's axis, 0 north-south / 1 east-west), or why not.
+// Two straight roads crossing with nothing else joining, except that one end of the road UNDER the deck may be a building's driveway or
+// lot entrance (an overpass often has to sit right next to a building). The deck itself can never come from a driveway.
+export function overpassFit(x, y) {
+  if (roadConns(game, x, y).length !== 4) return 'notcrossing';
+  const isRoad = d => game.roads.has(tileIndex(x + SIDES[d][0], y + SIDES[d][1]));
+  const open = a => [a, a + 2].filter(d => !isRoad(d)).length;                 // arms of axis a that are a building's entrance, not a road
+  if (open(0) && open(1)) return 'driveway';                                    // each way has a building at one end: one of them would be the deck
+  if (open(0) === 2 || open(1) === 2) return 'notcrossing';                     // a way with no road in it at all
+  const along = d => layerLanes(game, x + SIDES[d][0], y + SIDES[d][1], d);     // an overpass neighbour counts by the road running our way
+  const deckAxes = [0, 1].filter(a => !open(a));                                // the axes made of two roads
+  if (!deckAxes.every(a => along(a) === along(a + 2))) return 'mismatch';
+  const lanes = [0, 1].map(a => overpassLanesAlong(x, y, a));
+  const top = deckAxes.length === 1 ? deckAxes[0] : (lanes[0] > lanes[1] ? 0 : 1);   // the bigger road goes over; a tie puts east-west on top
+  return { top, lanes: lanes[top] };
+}
+
+// Returns 'ok' | 'flipped' | 'none' | 'badtile' | 'taken' | 'notjunction' | 'notcrossing' | 'mismatch' | 'driveway' | 'highway' | 'toonear' | 'empty'
 export function placeSpecial(id, x, y) {
   if (!hasRoad(x, y)) return 'none';
   const r = game.roads.get(tileIndex(x, y));
   if (r.bridge || r.tunnel) return 'badtile';
   if (id === 'overpass' && r.overpass !== undefined) {           // tap an overpass again: swap which road goes over
-    r.overpass = 1 - r.overpass;
+    const next = 1 - r.overpass;
+    if ([next, next + 2].some(d => !game.roads.has(tileIndex(x + SIDES[d][0], y + SIDES[d][1])))) return 'driveway';   // not onto a road that ends at a building
+    r.overpass = next;
     r.lanes = overpassLanesAlong(x, y, r.overpass);
     emit();
     return 'flipped';
   }
   if (r.special || r.overpass !== undefined) return 'taken';
   if ((game.inv[id] || 0) <= 0) return 'empty';
-  if (id === 'overpass') {                                      // two straight roads (either size) crossing, with nothing else joining
-    if (roadConns(game, x, y).length !== 4) return 'notcrossing';
-    const lanes = [0, 1].map(a => overpassLanesAlong(x, y, a));
-    const n = d => game.roads.get(tileIndex(x + SIDES[d][0], y + SIDES[d][1]));
-    if (![0, 1, 2, 3].every(n)) return 'notcrossing';          // a house or lot gate on one arm: not a plain street crossing
-    const along = d => layerLanes(game, x + SIDES[d][0], y + SIDES[d][1], d);   // an overpass neighbour counts by the road running our way
-    if (![0, 1].every(a => along(a) === along(a + 2))) return 'mismatch';
-    const top = lanes[0] > lanes[1] ? 0 : 1;                    // the bigger road goes over; a tie puts east-west on top
-    r.overpass = top;
-    r.lanes = lanes[top];
+  if (id === 'overpass') {
+    const fit = overpassFit(x, y);
+    if (typeof fit === 'string') return fit;
+    r.overpass = fit.top;
+    r.lanes = fit.lanes;
     game.inv[id]--;                                             // (the tool stays on so the player can tap it to swap)
     emit();
     return 'ok';
