@@ -1,7 +1,8 @@
-// Road accidents. After a while (tuning.accidents.afterTrips) two cars that are close together on a plain road tile bump:
+// Road accidents. After a while (milestones.accidents.afterTrips) two cars that are close together on a plain road tile bump:
 // both stop dead (one knocked to a slant), police show up, and after durationSeconds everything clears and the cars drive on.
 // The wreck blocks its lane like any stopped car, so traffic behind it queues and its patience keeps running: that is the point.
 import { tuning } from './tuning.js';
+import { milestones } from './progression.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -51,13 +52,13 @@ export function stepAccidents(g, dt, notify) {
     if (a.left <= 0) {
       for (const c of a.cars) { c.crash = false; c.stuck = 0; }
       g.accident = null;
-      const k = Math.min(1, Math.max(0, (g.trips - cfg.afterTrips) / cfg.rampTrips));
+      const k = Math.min(1, Math.max(0, (g.trips - milestones.accidents.afterTrips) / cfg.rampTrips));
       g.nextAccidentAt = g.time + rand(cfg.minGapSeconds, cfg.maxGapSeconds) * (1 - cfg.rampShrink * k);
       notify({ type: 'cleared' });
     }
     return;
   }
-  if (g.trips < cfg.afterTrips) return;
+  if (g.trips < milestones.accidents.afterTrips) return;
   if (g.nextAccidentAt === undefined) g.nextAccidentAt = g.time + cfg.firstDelaySeconds + rand(0, cfg.firstDelaySeconds);
   if (g.time < g.nextAccidentAt) return;
   const pair = findPair(g);

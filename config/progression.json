@@ -23,7 +23,6 @@
       14
     ],
     "dual": {
-      "afterTrips": 2000,
       "startChance": 0.33,
       "maxChance": 0.5,
       "rampTrips": 1500
@@ -31,15 +30,7 @@
     "small": {
       "chance": 0.25
     },
-    "stadium": {
-      "afterTrips": 3000,
-      "maps": [
-        "highlands",
-        "metro"
-      ]
-    },
     "portals": {
-      "afterTrips": 4000,
       "everyTrips": 400,
       "maxCount": 4
     }

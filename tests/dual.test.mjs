@@ -3,13 +3,14 @@ import { fileURLToPath } from 'url';
 const R = fileURLToPath(new URL('../', import.meta.url));
 const st = await import(R + 'js/state.js');
 const { setTuning, tuning } = await import(R + 'js/tuning.js');
-const { setProgression, setMaps, maps } = await import(R + 'js/progression.js');
+const { setProgression, setMaps, setMilestones, milestones, maps } = await import(R + 'js/progression.js');
 const { addBuilding, reindex } = await import(R + 'js/buildings.js');
 const { createCar } = await import(R + 'js/cars.js');
 const { pieceValid, layerLanes, edgeLanes } = await import(R + 'js/network.js');
 setTuning(JSON.parse(fs.readFileSync(R + 'config/tuning.json')));
 setProgression(JSON.parse(fs.readFileSync(R + 'config/progression.json')));
 setMaps(JSON.parse(fs.readFileSync(R + 'config/maps.json')));
+setMilestones(JSON.parse(fs.readFileSync(R + 'config/milestones.json')));
 tuning.gridlock.gameOverAfterSeconds = 1e9;
 const palette = JSON.parse(fs.readFileSync(R + 'config/colors.json')).colors; st.setPalette(palette);
 const g = st.game;
@@ -73,10 +74,10 @@ function scene() {
 // ---- how often they appear
 {
   const sp = prog.spawns.dual; const fake = (trips, colorsUsed) => ({ trips, colorsUsed });
-  ok(dualChance(fake(0, 3)) === 0 && dualChance(fake(sp.afterTrips - 1, 3)) === 0, 'none before afterTrips');
-  ok(dualChance(fake(sp.afterTrips, 1)) === 0, 'none with only one colour in play');
-  ok(Math.abs(dualChance(fake(sp.afterTrips, 3)) - sp.startChance) < 1e-9, 'starts at startChance');
-  ok(Math.abs(dualChance(fake(sp.afterTrips + sp.rampTrips * 10, 3)) - sp.maxChance) < 1e-9, 'climbs to maxChance and stays there');
-  ok(dualChance(fake(sp.afterTrips + sp.rampTrips / 2, 3)) > sp.startChance && dualChance(fake(sp.afterTrips + sp.rampTrips / 2, 3)) < sp.maxChance, 'in between while ramping');
+  ok(dualChance(fake(0, 3)) === 0 && dualChance(fake(milestones.dual.afterTrips - 1, 3)) === 0, 'none before afterTrips');
+  ok(dualChance(fake(milestones.dual.afterTrips, 1)) === 0, 'none with only one colour in play');
+  ok(Math.abs(dualChance(fake(milestones.dual.afterTrips, 3)) - sp.startChance) < 1e-9, 'starts at startChance');
+  ok(Math.abs(dualChance(fake(milestones.dual.afterTrips + sp.rampTrips * 10, 3)) - sp.maxChance) < 1e-9, 'climbs to maxChance and stays there');
+  ok(dualChance(fake(milestones.dual.afterTrips + sp.rampTrips / 2, 3)) > sp.startChance && dualChance(fake(milestones.dual.afterTrips + sp.rampTrips / 2, 3)) < sp.maxChance, 'in between while ramping');
 }
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);

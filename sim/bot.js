@@ -13,7 +13,7 @@ import {
 import { DIR, OPP } from "../js/lanes.js";
 import { findPath } from "../js/pathfind.js";
 import { roadConns, netVersion } from "../js/network.js";
-import { lotTile, gateOf, entOf, entrancesOf, exitTile } from "../js/buildings.js";
+import { lotTile, gateOf, entOf, entsOf, entrancesOf, exitTile } from "../js/buildings.js";
 import { stadiumOf, gatesOf, gateConnected } from "../js/outside.js";
 import { prog, specialInfo } from "../js/progression.js";
 import { WATER, HILL, LAND } from "../js/terrain.js";
@@ -100,7 +100,7 @@ export function createBot(opts = {}) {
 
 const gateTile = (d) => lotTile(d, gateOf(d));
 const exitOf = (h) => [h.x + DIR[h.rot][0], h.y + DIR[h.rot][1]];
-const gateExit = (d) => exitTile(d);
+const gateExit = (d) => d.exit || exitTile(d);
 const destsOf = (g, color) =>
   g.buildings.filter((b) => b.kind === "dest" && (b.color.id === color.id || (b.color2 && b.color2.id === color.id)));
 
@@ -295,7 +295,7 @@ function connectGates(g, bot) {
   if (!arena) return;
   for (const gate of gatesOf(g)) {
     if (gateConnected(g, gate, arena)) continue;
-    const plan = planRoad(g, gate, [arena]);
+    const plan = planRoad(g, gate, entsOf(arena).map((ent) => ({ exit: exitTile(arena, ent) })));
     if (plan) build(g, plan, bot);
   }
 }

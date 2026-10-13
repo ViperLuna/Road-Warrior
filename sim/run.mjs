@@ -1,5 +1,5 @@
 
-//   node sim/run.mjs --games 1000 [--map riverbend|lakeside|highlands|all] [--minutes 30] [--seed 1] [--reward smart|cash|special] [--bot flip,cut] [--junctions heat|none|light|roundabout|hot-light|hot-roundabout, comma list runs each on the same seeds] [--resave 60] [--workers 12] [--out sim/out/run.jsonl] [--set tuning.gridlock.gameOverAfterSeconds=60] [--set progression.economy.roadCost=3]
+//   node sim/run.mjs --games 1000 [--map riverbend|lakeside|highlands|all] [--minutes 30] [--seed 1] [--reward smart|cash|special] [--bot flip,cut] [--junctions heat|none|light|roundabout|hot-light|hot-roundabout, comma list runs each on the same seeds] [--resave 60] [--workers 12] [--out sim/out/run.jsonl] [--set tuning.gridlock.gameOverAfterSeconds=60] [--set progression.economy.roadCost=3] [--set milestones.stadium.afterTrips=200]
 //   node sim/run.mjs --replay <seed> --map riverbend
 
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
@@ -25,15 +25,15 @@ async function loadGame(overrides) {
   const { mulberry32 } = await import('../js/rng.js');
   const state = await import('../js/state.js');
   const { setTuning, tuning } = await import('../js/tuning.js');
-  const { setProgression, setMaps, maps, prog } = await import('../js/progression.js');
+  const { setProgression, setMaps, setMilestones, milestones, maps, prog } = await import('../js/progression.js');
   const bot = await import('./bot.js');
   const json = f => JSON.parse(readFileSync(join(root, 'config', f), 'utf8'));
   state.setPalette(json('colors.json').colors);
-  setTuning(json('tuning.json')); setProgression(json('progression.json')); setMaps(json('maps.json'));
+  setTuning(json('tuning.json')); setProgression(json('progression.json')); setMilestones(json('milestones.json')); setMaps(json('maps.json'));
   for (const s of overrides) {
     const [path, raw] = s.split('='), keys = path.split('.');
-    let o = keys[0] === 'tuning' ? tuning : keys[0] === 'progression' ? prog : null;
-    if (!o) throw new Error('--set must start with tuning. or progression.');
+    let o = keys[0] === 'tuning' ? tuning : keys[0] === 'progression' ? prog : keys[0] === 'milestones' ? milestones : null;
+    if (!o) throw new Error('--set must start with tuning., progression. or milestones.');
     for (const k of keys.slice(1, -1)) o = o[k];
     o[keys.at(-1)] = JSON.parse(raw);
   }

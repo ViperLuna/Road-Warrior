@@ -7,10 +7,12 @@
 //   (every method may be async; the manager awaits them)
 import { game, refresh, syncBest, bestFor } from './state.js';
 import { maps, specialInfo } from './progression.js';
+import { tuning } from './tuning.js';
 import { terrainFromWater } from './terrain.js';
 import { reindex, SPECIAL_COLORS } from './buildings.js';
 import { clearPieceCache, pieceFromKey } from './lanes.js';
 import { createCar } from './cars.js';
+import { resetOutside } from './outside.js';
 
 export const SAVE_VERSION = 1;
 const PLAYABLE = new Set(['play', 'reward', 'pause']);
@@ -41,7 +43,7 @@ export function serialize(g = game) {
     terrain: { water: encodeGrid(g.terrain.water), start: g.terrain.start },
     roads: [...g.roads.entries()].map(([k, t]) => [k, t.sig ? { ...t, sig: { ...t.sig, dem: [...t.sig.dem] } } : { ...t }]),
     bridges: [...g.bridges.entries()],
-    outside: { since: g.outsideSince, nextAt: g.nextOutsideAt },
+    outside: { since: g.outsideSince, nextAt: g.nextOutsideAt, hordeAt: g.hordeAt, hordeLeft: g.hordeLeft, hordeCount: g.hordeCount, hordeNextCar: g.hordeNextCar, hordeDeadline: g.hordeDeadline },
     buildings: g.buildings.map(b => ({ ...b, color: b.color.id, color2: b.color2 ? b.color2.id : undefined, slots: b.slots ? b.slots.map(c => (c ? c.id : null)) : null })),
     cars: carData,
   };
@@ -71,12 +73,14 @@ export function restore(data, g = game) {
   g.speed = 0;                      // come back paused: no surprise traffic while you find your bearings
 
   const slotsById = new Map();
-  g.buildings = data.buildings.map(b => { const o = { ...b, color: color(b.color) }; if (b.color2) o.color2 = color(b.color2); else delete o.color2; slotsById.set(o.id, b.slots); return o; });
+  g.buildings = data.buildings.map(b => { const o = { ...b, color: color(b.color) };
+    if (o.stadium && !o.gates) { delete o.small; delete o.half; delete o.ent; o.gates = tuning.stadium.gateTiles.slice(0, tuning.stadium.gates).sort((a, c) => a - c); }       // (a stadium saved before it had several gates)
+    if (b.color2) o.color2 = color(b.color2); else delete o.color2; slotsById.set(o.id, b.slots); return o; });
   const byId = new Map(g.buildings.map(b => [b.id, b]));
   clearPieceCache();
   reindex(g);
 
-  g.accident = null; g.nextAccidentAt = undefined; g.outsideSince = data.outside ? data.outside.since : undefined; g.nextOutsideAt = data.outside ? data.outside.nextAt : undefined;                 // no accident carries over a save: the schedule starts fresh
+  g.accident = null; g.nextAccidentAt = undefined; resetOutside(g); if (data.outside) { const o = data.outside; g.outsideSince = o.since; g.nextOutsideAt = o.nextAt; g.hordeAt = o.hordeAt; g.hordeLeft = o.hordeLeft || 0; g.hordeCount = o.hordeCount || 0; g.hordeNextCar = o.hordeNextCar || 0; g.hordeDeadline = o.hordeDeadline || 0; }                 // no accident carries over a save: the schedule starts fresh
   g.cars = data.cars.map(sc => {
     const c = createCar(byId.get(sc.house));
     Object.assign(c, {

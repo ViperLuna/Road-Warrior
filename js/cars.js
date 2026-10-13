@@ -1,7 +1,7 @@
 // One car per house. Round trip: house -> destination lot (park, dwell) -> house = 1 trip.
-import { DIR, OPP, CAR_LEN, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
+import { DIR, OPP, CAR_LEN, lotSpace, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
 import { lightColor, lightHolds, signalState, stepLight } from './signals.js';
-import { entOf, entSide, exitTile, accepts, baysOf, bayPiece } from './buildings.js';
+import { entOf, entSide, exitTile, accepts, baysOf, bayPiece, hasEnt } from './buildings.js';
 import { roadAt, roundAt, tidx, tileLanes, layerLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
 import { findPath } from './pathfind.js';
 import { tuning } from './tuning.js';
@@ -55,12 +55,22 @@ function planOut(g, car) {
   }
   for (const d of dests) {
     const goals = [...g.ports.values()].filter(port => port.b === d);       // either entrance leads to every bay
-    const res = findPath(g, rx, ry, OPP[b.rot], goals);
+    let res;
+    if (d.stadium && goals.length > 1) {
+      // A stadium has several gates: take the one that is cheapest to reach once the cars already on their way to it are counted, so a crowd
+      // spreads over the gates it can reach instead of all queuing at the nearest.
+      for (const port of goals) {
+        const r = findPath(g, rx, ry, OPP[b.rot], [port]);
+        if (!r) continue;
+        r.score = r.cost + tuning.stadium.gateQueuePenalty * g.cars.filter(c => c.state === 'out' && c.lot && c.lot.ent === port.ent && c.dest === d).length;
+        if (!res || r.score < res.score) res = r;
+      }
+    } else res = findPath(g, rx, ry, OPP[b.rot], goals);
     if (!res) continue;
     const bays = baysOf(d);
     const here = d.stadium ? [] : [res.port.lot * 2, res.port.lot * 2 + 1].filter(k => bays.includes(k) && d.slots[k] === null);   // prefer a bay on the entrance's side
     const open = here.length ? here : bays.filter(k => d.slots[k] === null);
-    const slot = open[(Math.random() * open.length) | 0], k = bayPiece(d, slot);      // (the stadium has far more bays than its lot has places to park)
+    const slot = open[(Math.random() * open.length) | 0], k = bayPiece(d, slot, res.port.ent);      // (the stadium has far more bays than its lot has places to park)
     d.slots[slot] = car;
     car.dest = d; car.slot = slot;
     car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: res.port.ent, k };
@@ -114,8 +124,9 @@ function planBack(g, car) {
 // cars still driving in finish their (ghost) route and are re-seated on arrival (see updateSim).
 export function reseatCar(car, d) {
   car.homeRoute = null;                                          // the old way home no longer fits the new lot
-  car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: entOf(d), k: bayPiece(d, car.slot) };
-  const p = lotInPiece(d.x, d.y, d.rot, entOf(d), bayPiece(d, car.slot));
+  const ent = d.stadium && car.lot && hasEnt(d, car.lot.ent) ? car.lot.ent : entOf(d);       // (a stadium car stays at the gate it came in by)
+  car.lot = { bx: d.x, by: d.y, rot: d.rot, ent, k: bayPiece(d, car.slot, ent) };
+  const p = lotInPiece(d.x, d.y, d.rot, ent, car.lot.k);
   car.route = [p]; car.idx = 0; car.s = p.len; car.v = 0; car.stuck = 0;
   pointAt(p, p.len, car);
 }
@@ -328,7 +339,7 @@ export function updateSim(g, dt) {
     } else if (car.state === 'dwell') {
       car.dwell -= dt;
       if (car.dwell <= 0) {
-        const lk = 'L' + car.lot.bx + ',' + car.lot.by;
+        const lk = lotSpace(car.lot.bx, car.lot.by, car.lot.ent);
         if ((inside.get(lk) || []).length || claims.has(lk)) car.dwell = 0.1;          // lot is busy or claimed
         else if (planBack(g, car)) {
           car.dest.slots[car.slot] = null; car.dest = null; start(car, 'back');
@@ -356,7 +367,7 @@ export function updateSim(g, dt) {
         p = car.route[car.idx];
       }
       if (arrived) {
-        if (car.state === 'out' && car.dest && (car.lot.rot !== car.dest.rot || car.lot.ent !== entOf(car.dest))) reseatCar(car, car.dest);     // the lot was rotated while we drove in
+        if (car.state === 'out' && car.dest && (car.lot.rot !== car.dest.rot || !hasEnt(car.dest, car.lot.ent))) reseatCar(car, car.dest);     // the lot was rotated while we drove in
         const last = car.route[car.route.length - 1];
         pointAt(last, last.len, car);
         car.v = 0; car.route = [last]; car.idx = 0; car.s = last.len; car.stuck = 0; car.hold = false; car.entry = null;

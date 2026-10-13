@@ -152,7 +152,7 @@ export function tick(dt) {
     fire();
   }
   stepAccidents(game, dt, notify);
-  stepOutside(game, dt);
+  stepOutside(game, dt, notify);
   const worst = game.cars.reduce((m, c) => Math.max(m, c.stuck), 0);
   honkAtStuckCars(dt);
   trackBest();
@@ -258,7 +258,7 @@ function fitsTurned(b, rot) {
 export function rotateBuildingAt(x, y) {
   const b = buildingAt(x, y);
   if (!b || b.kind === 'portal') return false;                  // (a side-road gate stays where it is)
-  if (b.small) {                                                // turn to the next direction where it still fits
+  if (b.small || b.stadium) {                                   // turn to the next direction where it still fits
     const turn = [1, 2, 3].find(n => fitsTurned(b, (b.rot + n) % 4));
     if (turn === undefined) return false;
     b.rot = (b.rot + turn - 1) % 4;                             // (rotateBuilding adds the last quarter turn)

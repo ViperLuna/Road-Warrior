@@ -3,8 +3,8 @@ import { fileURLToPath } from 'url';
 const R = fileURLToPath(new URL('../', import.meta.url));
 const st = await import(R + 'js/state.js');
 const { setTuning, tuning } = await import(R + 'js/tuning.js');
-const { setProgression, setMaps, maps, prog } = await import(R + 'js/progression.js');
-const { addBuilding, reindex, lotTile, exitTile, footprint } = await import(R + 'js/buildings.js');
+const { setProgression, setMaps, setMilestones, milestones, maps, prog } = await import(R + 'js/progression.js');
+const { addBuilding, reindex, lotTile, exitTile, footprint, entsOf, entTile } = await import(R + 'js/buildings.js');
 const { createCar } = await import(R + 'js/cars.js');
 const { spawnStadium, spawnPortal } = await import(R + 'js/spawn.js');
 const { stadiumOf, gatesOf, gateConnected, visitorInterval } = await import(R + 'js/outside.js');
@@ -13,6 +13,7 @@ const { serialize, restore } = await import(R + 'js/save.js');
 setTuning(JSON.parse(fs.readFileSync(R + 'config/tuning.json')));
 setProgression(JSON.parse(fs.readFileSync(R + 'config/progression.json')));
 setMaps(JSON.parse(fs.readFileSync(R + 'config/maps.json')));
+setMilestones(JSON.parse(fs.readFileSync(R + 'config/milestones.json')));
 const palette = JSON.parse(fs.readFileSync(R + 'config/colors.json')).colors; st.setPalette(palette);
 const g = st.game; let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : (fail++, console.log('FAIL:', m)); };
 const events = []; st.onEvent(e => events.push(e));
@@ -49,17 +50,20 @@ const arena = spawnStadium(g, { budget: 500 });
 ok(!!arena && arena.stadium && arena.kind === 'dest', 'a stadium spawns near the roads');
 if (arena) {
   const fp = footprint(arena);
-  ok(fp.length === 16 && new Set(fp.map(([x, y]) => x + ',' + y)).size === 16, 'the stadium covers 16 distinct tiles');
+  ok(fp.length === 12 && new Set(fp.map(([x, y]) => x + ',' + y)).size === 12, 'the stadium covers 12 distinct tiles (4 wide, 3 deep)');
   ok(fp.every(([x, y]) => g.buildingAt.get(y * g.cols + x) === arena), 'and they are all registered as the stadium');
-  ok([...g.ports.values()].filter(p => p.b === arena).length === 1, 'one gate');
+  const ports = [...g.ports.values()].filter(p => p.b === arena);
+  ok(ports.length === tuning.stadium.gates && ports.length === 2, 'two gates to start (' + ports.length + ')');
+  ok(new Set(ports.map(p => p.x + ',' + p.y)).size === 2 && ports.every(p => fp.some(([x, y]) => x === p.x && y === p.y)), 'on different tiles of the front row');
+  const exits = entsOf(arena).map(e => exitTile(arena, e)); ok(new Set(exits.map(e => e.join())).size === 2 && exits.every(([x, y]) => !g.buildingAt.has(y * g.cols + x)), 'each gate has a free tile for its road');
   ok(arena.slots.length === tuning.stadium.capacity, 'virtual capacity');
 }
 // stadium only on the listed maps and only with every colour in play, at 3000 trips
-S(); base(); g.trips = prog.spawns.stadium.afterTrips - 1; checkProgress(g, st.onEvent ? () => {} : null);
+S(); base(); g.trips = milestones.stadium.afterTrips - 1; checkProgress(g, st.onEvent ? () => {} : null);
 ok(!stadiumOf(g), 'no stadium before the threshold');
-S(); base(); g.trips = prog.spawns.stadium.afterTrips; g.colorsUsed = 2; checkProgress(g, e => events.push(e));
+S(); base(); g.trips = milestones.stadium.afterTrips; g.colorsUsed = 2; checkProgress(g, e => events.push(e));
 ok(!stadiumOf(g), 'no stadium until every colour is in play');
-S(); base(); g.trips = prog.spawns.stadium.afterTrips; checkProgress(g, e => events.push(e));
+S(); base(); g.trips = milestones.stadium.afterTrips; checkProgress(g, e => events.push(e));
 ok(!!stadiumOf(g) && events.some(e => e.type === 'stadium'), 'the stadium appears at the threshold');
 st.newGame(5, maps[0]); g.colorsUsed = palette.length; g.trips = 5000; checkProgress(g, () => {});
 ok(!stadiumOf(g), 'not on a small map');
@@ -89,14 +93,28 @@ if (A3 && gate) {
   ok(!gateConnected(g, gate), 'gate is not connected until a road is built');
   tickN(30); ok(!g.cars.some(c => c.outside), 'no visitors without a road');
   pave(gx, gy, sx, sy);
+  for (const e of entsOf(A3)) { const [ex, ey] = exitTile(A3, e); pave(gx, gy, ex, ey); }               // a road to every gate
   ok(gateConnected(g, gate), 'gate connects once the road is built');
   const money0 = g.money, trips0 = g.trips; let seen = 0, inside = 0, maxInside = 0;
   for (let i = 0; i < 60 * 400; i++) { st.tick(1 / 60); const v = g.cars.filter(c => c.outside); seen = Math.max(seen, v.length); inside = v.filter(c => c.state === 'dwell').length; maxInside = Math.max(maxInside, inside); }
+  ok(true, 'ran'); const gatesUsed = new Set();
   ok(seen >= 2 && maxInside >= 1, `visitors come, park and wait (peak ${seen} cars, ${maxInside} parked)`);
   ok(g.cars.some(c => c.outside) && g.cars.filter(c => c.outside).every(c => palette.some(p => p.id === c.color.id)), 'visitors carry palette colours');
   ok(new Set(g.cars.filter(c => c.outside).map(c => c.color.id)).size >= 1, 'colour present');
   ok(g.money > money0 && g.trips === trips0 || g.trips >= trips0, 'visitors pay a little and do not count as trips (' + (g.money - money0) + ' cash)');
   const left = g.nextId; ok(g.cars.every(c => c.outside || g.buildings.includes(c.house)), 'every non-visitor car still has its house');
+  // a horde: a crowd launched one after another, much faster than the trickle
+  { const a = stadiumOf(g); for (const c of g.cars) if (c.outside) c.dwell = 0.01; g.nextOutsideAt = 1e9; tickN(120);
+    events.length = 0; g.hordeAt = g.time; g.nextOutsideAt = 1e9; const before = g.visitorsLaunched, ents = new Set();
+    for (let i = 0; i < 60 * 40; i++) { st.tick(1 / 60); for (const c of g.cars) if (c.outside && c.lot) ents.add(c.lot.ent); }
+    const ev = events.find(e => e.type === 'horde'); const got = g.visitorsLaunched - before;
+    ok(!!ev && ev.size >= tuning.outside.horde.sizeStart, 'a horde event announces itself (size ' + (ev && ev.size) + ')');
+    ok(got >= Math.min(ev ? ev.size : 99, a.slots.length) * 0.7, `the horde arrives in a rush (${got} cars in 40 s, steady trickle would be ~1)`);
+    ok(ents.size === 2, 'a crowd uses both gates (' + [...ents] + ')');
+    ok(g.hordeAt > g.time + tuning.outside.horde.everyMinutes[0] * 60 - 60, 'the next horde is scheduled minutes away');
+    ok(g.hordeCount >= 1, 'counted');
+    const e1 = events.find(e => e.type === 'horde').size; g.hordeAt = g.time; tickN(2); const e2 = events.filter(e => e.type === 'horde').pop().size;
+    ok(e2 > e1 || e2 === tuning.outside.horde.sizeMax, 'each horde is bigger (' + e1 + ' -> ' + e2 + ')'); }
   // interval shrinks minute by minute
   const i0 = visitorInterval({ time: 0, outsideSince: 0 }), i1 = visitorInterval({ time: 600, outsideSince: 0 }), i2 = visitorInterval({ time: 6000, outsideSince: 0 });
   ok(i0 === tuning.outside.startIntervalSeconds && i1 < i0 && i2 === tuning.outside.minIntervalSeconds, `interval shrinks (${i0}s -> ${i1.toFixed(1)}s -> ${i2}s)`);
@@ -104,6 +122,7 @@ if (A3 && gate) {
   // a save in the middle keeps visitors and the schedule
   const data = JSON.parse(JSON.stringify(serialize())); const n = g.cars.filter(c => c.outside).length, since = g.outsideSince;
   restore(data);
+  ok(g.hordeCount === data.outside.hordeCount, 'horde count survives a load');
   ok(g.cars.filter(c => c.outside).length === n && g.outsideSince === since && !!stadiumOf(g) && gatesOf(g).length === 1, 'save/restore keeps visitors, stadium, gate and schedule');
   tickN(60); ok(true, 'game keeps running after a load');
   // visitors leave the map when the trip is over: no leak

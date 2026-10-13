@@ -1,6 +1,6 @@
 // Placing a matching house + destination pair on free land at a sensible distance.
 import { DIR } from './lanes.js';
-import { addBuilding, lotTile, reindex, accepts, footprint, entOf, entrancesOf, exitTile, SPECIAL_COLORS } from './buildings.js';
+import { addBuilding, lotTile, reindex, accepts, footprint, entOf, entsOf, entrancesOf, exitTile, SPECIAL_COLORS } from './buildings.js';
 import { tuning } from './tuning.js';
 import { createCar } from './cars.js';
 import { mulberry32 } from './rng.js';
@@ -229,24 +229,27 @@ export function spawnPairAcross(g, color, opts = {}) {
 // The stadium and the side-road gates (see DESIGN.md, "Stadium and the outside").
 // ---------------------------------------------------------------------------------------------------------
 
-// A stadium (a 4x4 destination that takes every colour) near the existing roads: close enough that the player can afford to connect it.
-// opts: budget (road pieces they can spend), roads [min, max] new pieces to reach a road. Returns the stadium or null.
+// The tiles a new stadium has gates on: the first `tuning.stadium.gates` of `gateTiles` (lot tiles -1, 0, 1, 2 along the front), in lot order.
+export const stadiumGates = () => tuning.stadium.gateTiles.slice(0, Math.max(1, tuning.stadium.gates)).sort((a, b) => a - b);
+
+// A stadium (a 4x3 destination that takes every colour, with several gates in its front row) near the existing roads: close enough that the
+// player can afford to connect it. opts: budget (road pieces they can spend), roads [min, max] new pieces to reach a road. Returns the stadium or null.
 export function spawnStadium(g, opts = {}) {
   const rng = opts.rng || Math.random, [minR, maxR] = opts.roads || [3, 14], budget = opts.budget ?? Infinity;
   const roadTiles = new Set(g.roads.keys());
   if (!roadTiles.size || !g.buildings.length) return null;
-  for (let attempt = 0; attempt < 400; attempt++) {
+  for (let attempt = 0; attempt < 600; attempt++) {
     const a = g.buildings[Math.floor(rng() * g.buildings.length)], r = 4 + Math.floor(rng() * 10), th = rng() * 6.283;
     const ax = Math.round(a.x + Math.cos(th) * r), ay = Math.round(a.y + Math.sin(th) * r);
-    const rot = Math.floor(rng() * 4), half = Math.floor(rng() * 2), fake = { kind: 'dest', x: ax, y: ay, rot, small: true, stadium: true, half, ent: half };
+    const rot = Math.floor(rng() * 4), fake = { kind: 'dest', x: ax, y: ay, rot, stadium: true, gates: stadiumGates() };
     const tiles = footprint(fake);
     if (!tiles.every(([x, y]) => free(g, x, y))) continue;
-    const fp = new Set(tiles.map(([x, y]) => y * g.cols + x)), [ex, ey] = exitTile(fake, half);
-    if (!passable(g, ex, ey, fp)) continue;
-    const cost = buildCost(g, [ex, ey], roadTiles, fp, Math.min(budget, maxR));
+    const fp = new Set(tiles.map(([x, y]) => y * g.cols + x)), exits = entsOf(fake).map(e => exitTile(fake, e));
+    if (!exits.every(([x, y]) => passable(g, x, y, fp))) continue;                     // every gate must have somewhere for a road to arrive
+    const cost = Math.min(...exits.map(e => buildCost(g, e, roadTiles, fp, Math.min(budget, maxR))));
     if (!Number.isFinite(cost) || cost < minR) continue;
     const d = addBuilding(g, 'dest', SPECIAL_COLORS.stadium, ax, ay, rot);
-    d.small = true; d.stadium = true; d.half = half; d.ent = half;
+    d.stadium = true; d.gates = fake.gates;
     d.slots = new Array(tuning.stadium.capacity).fill(null);
     reindex(g);
     return d;
@@ -262,7 +265,7 @@ export const edgeTile = (g, edge, t) => (edge === 0 ? [t, 0] : edge === 2 ? [t, 
 // Returns the gate or null.
 export function spawnPortal(g, edge, stadium, opts = {}) {
   const rng = opts.rng || Math.random, budget = opts.budget ?? Infinity, span = edge % 2 === 0 ? g.cols : g.rows, rot = (edge + 2) % 4;
-  const [tx, ty] = exitTile(stadium), target = new Set([ty * g.cols + tx]);
+  const target = new Set(entsOf(stadium).map(e => exitTile(stadium, e)).map(([x, y]) => y * g.cols + x));
   for (let attempt = 0; attempt < 80; attempt++) {
     const [x, y] = edgeTile(g, edge, 2 + Math.floor(rng() * (span - 4)));
     if (!free(g, x, y)) continue;

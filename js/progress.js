@@ -1,5 +1,5 @@
 // Spawn schedule, goals and rewards. Pure game logic: no DOM.
-import { prog, roadsAvailable } from './progression.js';
+import { prog, milestones, roadsAvailable } from './progression.js';
 import { roadConns } from './network.js';
 import { accepts, destWeight } from './buildings.js';
 import { spawnPair, spawnHouse, spawnHouseAcross, spawnPairAcross, findCrossings, spawnStadium, spawnPortal, EDGE_NAMES } from './spawn.js';
@@ -37,8 +37,8 @@ export function crossChance(g) {
 // over the next `rampTrips`. (progression.json -> spawns.dual; chance 0 turns it off.)
 export function dualChance(g) {
   const d = prog.spawns.dual;
-  if (!d || g.colorsUsed < 2 || g.trips < d.afterTrips) return 0;
-  const k = Math.max(0, Math.min(1, (g.trips - d.afterTrips) / Math.max(1, d.rampTrips)));
+  if (!d || g.colorsUsed < 2 || g.trips < milestones.dual.afterTrips) return 0;
+  const k = Math.max(0, Math.min(1, (g.trips - milestones.dual.afterTrips) / Math.max(1, d.rampTrips)));
   return d.startChance + (d.maxChance - d.startChance) * k;
 }
 
@@ -144,7 +144,7 @@ export function coloursConnected(g, share = 0.9) {
 // The stadium (3k trips, big maps, once every colour is in play), then the side-road gates (4k trips, one at a time, one per edge,
 // each only once the last one reaches the stadium and every house is connected). Returns nothing; reports through notify.
 function spawnOutsideThings(g, notify) {
-  const sp = prog.spawns, st = sp.stadium, po = sp.portals;
+  const st = milestones.stadium, po = { ...prog.spawns.portals, ...milestones.portals };
   if (st && !stadiumOf(g)) {
     if (g.trips >= st.afterTrips && st.maps.includes(g.map.id) && g.colorsUsed >= g.palette.length && !(g.nextStadiumTry > g.trips)) {
       const d = spawnStadium(g, { budget: roadsAvailable(g) });

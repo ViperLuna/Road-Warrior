@@ -2,7 +2,7 @@ import { unlock, play, playFirst } from './audio.js';
 import { loadConfig as loadMusic, start as startMusic } from './music.js';
 import { game, newGame, setPalette, setMode, tick, onChange, onEvent, flushBest } from './state.js';
 import { setTuning } from './tuning.js';
-import { setProgression, setMaps, maps } from './progression.js';
+import { setProgression, setMaps, setMilestones, maps } from './progression.js';
 import { resizeView, fitView, cam, clampCam } from './camera.js';
 import { configure, restore, saveNow, loadSaved, clearSave, describeSave, startAutosave } from './save.js';
 import { render } from './render.js';
@@ -72,7 +72,7 @@ function startMap(map) {
 
 const loadJson = url => fetch(url).then(r => r.json());
 setPalette((await loadJson('config/colors.json')).colors);
-for (const [url, apply] of [['config/tuning.json', setTuning], ['config/progression.json', setProgression], ['config/maps.json', setMaps], ['config/save.json', configure]]) {
+for (const [url, apply] of [['config/tuning.json', setTuning], ['config/progression.json', setProgression], ['config/milestones.json', setMilestones], ['config/maps.json', setMaps], ['config/save.json', configure]]) {
   try { apply(await loadJson(url)); } catch (e) { console.warn(url + ' not loaded, using defaults', e); }
 }
 

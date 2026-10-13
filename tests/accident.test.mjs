@@ -3,13 +3,14 @@ import { fileURLToPath } from 'url';
 const R = fileURLToPath(new URL('../', import.meta.url));
 const st = await import(R + 'js/state.js');
 const { setTuning, tuning } = await import(R + 'js/tuning.js');
-const { setProgression, setMaps, maps } = await import(R + 'js/progression.js');
+const { setProgression, setMaps, setMilestones, milestones, maps } = await import(R + 'js/progression.js');
 const { addBuilding, reindex, lotTile } = await import(R + 'js/buildings.js');
 const { createCar } = await import(R + 'js/cars.js');
 const { serialize, restore } = await import(R + 'js/save.js');
 setTuning(JSON.parse(fs.readFileSync(R + 'config/tuning.json')));
 setProgression(JSON.parse(fs.readFileSync(R + 'config/progression.json')));
 setMaps(JSON.parse(fs.readFileSync(R + 'config/maps.json')));
+setMilestones(JSON.parse(fs.readFileSync(R + 'config/milestones.json')));
 const palette = JSON.parse(fs.readFileSync(R + 'config/colors.json')).colors; st.setPalette(palette);
 const g = st.game; let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : (fail++, console.log('FAIL:', m)); };
 const events = []; st.onEvent(e => events.push(e));
@@ -24,13 +25,13 @@ const S = (trips) => {
 const tickN = secs => { for (let i = 0; i < secs * 60; i++) st.tick(1 / 60); };
 
 // before the threshold nothing ever happens
-S(tuning.accidents.afterTrips - 900); g.trips = 10;
+S(milestones.accidents.afterTrips - 900); g.trips = 10;
 let seen = false; for (let i = 0; i < 60 * 400; i++) { st.tick(1 / 60); g.trips = Math.min(g.trips, 100); if (g.accident) seen = true; }
 ok(!seen && !events.some(e => e.type === 'accident'), 'no accidents before the trip threshold');
 
 // after it one happens; wrecks hold still for the duration, then clear and everyone carries on
-S(tuning.accidents.afterTrips);
-let t = 0; while (!g.accident && t++ < 60 * 900) { st.tick(1 / 60); g.trips = Math.max(g.trips, tuning.accidents.afterTrips); g.nextGoalAt = 1e9; }
+S(milestones.accidents.afterTrips);
+let t = 0; while (!g.accident && t++ < 60 * 900) { st.tick(1 / 60); g.trips = Math.max(g.trips, milestones.accidents.afterTrips); g.nextGoalAt = 1e9; }
 ok(!!g.accident, 'an accident happens once past the threshold (t=' + (t / 60).toFixed(0) + 's)');
 const acc = g.accident;
 if (acc) {
@@ -53,7 +54,7 @@ if (acc) {
 }
 
 // a save made mid-accident loads without a wreck, and the schedule starts fresh
-S(tuning.accidents.afterTrips); t = 0; while (!g.accident && t++ < 60 * 900) { st.tick(1 / 60); g.trips = Math.max(g.trips, tuning.accidents.afterTrips); }
+S(milestones.accidents.afterTrips); t = 0; while (!g.accident && t++ < 60 * 900) { st.tick(1 / 60); g.trips = Math.max(g.trips, milestones.accidents.afterTrips); }
 if (g.accident) { const data = JSON.parse(JSON.stringify(serialize())); restore(data); ok(g.accident === null && g.nextAccidentAt === undefined && !g.cars.some(c => c.crash), 'restore clears accident state'); }
 st.newGame(6, maps[0]); ok(g.accident === null, 'new game starts with no accident');
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);

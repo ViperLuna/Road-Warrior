@@ -13,7 +13,9 @@ const cache = new Map();
 let uid = 0;
 export const clearPieceCache = () => cache.clear();
 
-const spaceKey = p => (p.kind === 'road' ? p.tx + ',' + p.ty : p.kind === 'lot_in' || p.kind === 'lot_out' ? 'L' + p.bx + ',' + p.by : null);
+// (a lot is one space; each gate of a stadium is its own, so a crowd can use several at once)
+const spaceKey = p => (p.kind === 'road' ? p.tx + ',' + p.ty : p.kind === 'lot_in' || p.kind === 'lot_out' ? lotSpace(p.bx, p.by, p.ent) : null);
+export const lotSpace = (bx, by, ent) => 'L' + bx + ',' + by + (ent >= 8 ? ':' + ent : '');
 
 function bez(p0, c1, c2, p3, t) {
   const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
@@ -187,9 +189,9 @@ export function slotPos(bx, by, rot, k) {
 
 // Entrances: ent = tile + 2 * code (see buildings.js). `out` is the way the entrance faces: from the lot toward the road tile outside it.
 function entrance(bx, by, rot, ent) {
-  const X = DIR[rot], T = rt(X), code = ent >> 1;
+  const X = DIR[rot], T = rt(X), stadium = ent >= 8, code = stadium ? 0 : ent >> 1, tile = stadium ? ent - 9 : ent & 1;     // (stadium gates: ent 8..11 = lot tile -1..2, front only)
   const out = code === 0 ? X : code === 1 ? [-T[0], -T[1]] : T;
-  return { X, T, out, code, tile: ent & 1, ce: lotCenter(bx, by, rot, ent & 1) };
+  return { X, T, out, code, tile, ce: lotCenter(bx, by, rot, tile) };
 }
 
 // Drive in through entrance `ent` and park in bay k. (Inside a lot cars may overlap: only the road itself is kept clear.)
@@ -236,7 +238,7 @@ export function pieceFromKey(key) {
   if ((m = /^rb:(\d+),(\d+):(\d)>(\d)$/.exec(key))) return roundPiece(+m[1], +m[2], +m[3], +m[4]);
   if ((m = /^ho:(\d+),(\d+):(\d)$/.exec(key))) return houseOutPiece(+m[1], +m[2], +m[3]);
   if ((m = /^hi:(\d+),(\d+):(\d)$/.exec(key))) return houseInPiece(+m[1], +m[2], +m[3]);
-  if ((m = /^li:(\d+),(\d+):(\d):(\d)>(\d)$/.exec(key))) return lotInPiece(+m[1], +m[2], +m[3], +m[4], +m[5]);
-  if ((m = /^lo:(\d+),(\d+):(\d):(\d)>(\d)$/.exec(key))) return lotOutPiece(+m[1], +m[2], +m[3], +m[4], +m[5]);
+  if ((m = /^li:(\d+),(\d+):(\d):(\d+)>(-?\d+)$/.exec(key))) return lotInPiece(+m[1], +m[2], +m[3], +m[4], +m[5]);
+  if ((m = /^lo:(\d+),(\d+):(\d):(-?\d+)>(\d+)$/.exec(key))) return lotOutPiece(+m[1], +m[2], +m[3], +m[4], +m[5]);
   throw new Error('unknown piece key ' + key);
 }

@@ -1,5 +1,5 @@
 // Draws buildings, ghost pieces and cars (tile units, same transform as render.js).
-import { entOf } from './buildings.js';
+import { entOf, entsOf, entTile } from './buildings.js';
 import { DIR } from './lanes.js';
 import { pieceValid } from './network.js';
 import { tuning } from './tuning.js';
@@ -75,28 +75,32 @@ function drawDestSmall(ctx, b) {
   ctx.restore();
 }
 
-// The stadium: a 4x4 block. Local frame as the small destination (+x toward the road, +y along the lot); the gate's lot tile is the front row.
+// The stadium: a 4-wide, 3-deep oval arena. Local frame as the small destination (+x toward the road, +y along the front); the front row is
+// the lot row, so lot tile i spans y in [i-1, i] and the block covers x in [-2, 1], y in [-2, 2]. Each gate is a short road stub into the front.
 function drawStadium(ctx, b) {
-  const cy = (b.half ? 1 : 0) - 0.5, y0 = cy - 1.5, cap = b.slots.length;
-  const full = b.slots.reduce((n, c) => n + (c ? 1 : 0), 0) / Math.max(1, cap);
+  const cap = b.slots.length, full = b.slots.reduce((n, c) => n + (c ? 1 : 0), 0) / Math.max(1, cap);
   ctx.save();
   ctx.translate(b.x + 1, b.y + 1);
   ctx.rotate(rotAngle(b.rot));
-  ctx.fillStyle = '#3c4046'; rrect(ctx, -3, y0, 4, 4, 0.12); ctx.fill();                              // the forecourt and everything under the arena
-  drawEntrance(ctx, b);                                                                               // the gate road, on top of the forecourt
-  ctx.setLineDash([0.07, 0.07]); ctx.strokeStyle = 'rgba(242,201,76,.6)'; ctx.lineWidth = 0.02;
-  ctx.beginPath(); ctx.moveTo(1, cy); ctx.lineTo(0.1, cy); ctx.stroke(); ctx.setLineDash([]);
-  ctx.fillStyle = 'rgba(0,0,0,.28)'; rrect(ctx, -2.92, y0 + 0.08, 2.9, 3.9, 0.95); ctx.fill();          // arena: shadow, stands, pitch
-  ctx.fillStyle = '#cfd8dc'; rrect(ctx, -2.95, y0 + 0.05, 2.9, 3.9, 0.95); ctx.fill();
-  ctx.fillStyle = '#8fa0a8'; rrect(ctx, -2.7, y0 + 0.3, 2.4, 3.4, 0.75); ctx.fill();
-  ctx.fillStyle = '#3f8f4f'; rrect(ctx, -2.45, y0 + 0.55, 1.9, 2.9, 0.55); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; rrect(ctx, -1.92, -1.92, 2.9, 3.9, 0.85); ctx.fill();            // arena: shadow, stands, pitch
+  ctx.fillStyle = '#cfd8dc'; rrect(ctx, -1.97, -1.97, 2.94, 3.94, 0.85); ctx.fill();
+  ctx.fillStyle = '#8fa0a8'; rrect(ctx, -1.72, -1.72, 2.44, 3.44, 0.7); ctx.fill();
+  ctx.fillStyle = '#3f8f4f'; rrect(ctx, -1.47, -1.47, 1.94, 2.94, 0.5); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 0.03;
-  ctx.beginPath(); ctx.moveTo(-1.5, y0 + 0.55); ctx.lineTo(-1.5, y0 + 3.45); ctx.stroke();               // halfway line
-  ctx.beginPath(); ctx.arc(-1.5, y0 + 2, 0.4, 0, 6.2832); ctx.stroke();
-  ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 0.025; rrect(ctx, -2.95, y0 + 0.05, 2.9, 3.9, 0.95); ctx.stroke();
-  for (let n = 0; n < 10; n++) {                                                                      // how full it is: a row of lights along the front
+  ctx.beginPath(); ctx.moveTo(-0.5, -1.47); ctx.lineTo(-0.5, 1.47); ctx.stroke();                     // halfway line
+  ctx.beginPath(); ctx.arc(-0.5, 0, 0.4, 0, 6.2832); ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 0.025; rrect(ctx, -1.97, -1.97, 2.94, 3.94, 0.85); ctx.stroke();
+  for (const ent of entsOf(b)) {                                                                       // a gate: the road stub, a dark opening and a yellow line
+    const yc = entTile(ent) - 0.5;
+    ctx.fillStyle = SHOULDER; ctx.fillRect(0.45, yc - 0.26, 0.55, 0.52);
+    ctx.fillStyle = ASPHALT; ctx.fillRect(0.45, yc - 0.23, 0.55, 0.46);
+    ctx.fillStyle = '#2b2e33'; rrect(ctx, 0.2, yc - 0.3, 0.3, 0.6, 0.06); ctx.fill();
+    ctx.setLineDash([0.06, 0.06]); ctx.strokeStyle = 'rgba(242,201,76,.65)'; ctx.lineWidth = 0.02;
+    ctx.beginPath(); ctx.moveTo(1, yc); ctx.lineTo(0.5, yc); ctx.stroke(); ctx.setLineDash([]);
+  }
+  for (let n = 0; n < 10; n++) {                                                                       // how full it is: a row of lights along the back
     ctx.fillStyle = n < Math.round(full * 10) ? '#ffcc33' : 'rgba(255,255,255,.2)';
-    ctx.beginPath(); ctx.arc(-0.12, y0 + 0.25 + n * 0.37, 0.07, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(-1.84, -1.5 + n * 0.33, 0.07, 0, 6.2832); ctx.fill();
   }
   ctx.restore();
 }
