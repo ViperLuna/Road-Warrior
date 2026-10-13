@@ -55,6 +55,25 @@ scene();
   ok(orangeHouses.every(h => g.cars.find(c => c.house === h)), 'orange cars exist');
 }
 
+// ---- follow the house's own car: out of the driveway, UNDER the deck, and back again
+{
+  scene(); st.placeSpecial('overpass', 16, 11);
+  const house = g.buildings.find(b => b.kind === 'house' && b.color.id === 'orange' && b.x === 16 && b.y === 12);
+  const car = g.cars.find(c => c.house === house);
+  let prev = car.state, trips = 0, home = 0, under = { out: false, back: false }, worst = 0;
+  for (let i = 0; i < 60 * 120; i++) {
+    st.tick(1 / 60);
+    const p = car.route[car.idx];
+    if ((car.state === 'out' || car.state === 'back') && p && p.kind === 'road' && p.tx === 16 && p.ty === 11 && p.under) under[car.state] = true;
+    if (prev !== 'out' && car.state === 'out') trips++;
+    if (prev === 'back' && car.state === 'home') home++;
+    worst = Math.max(worst, car.stuck); prev = car.state;
+  }
+  ok(trips >= 5 && home >= 4, 'the house\'s car makes trip after trip (' + trips + ' started, ' + home + ' completed)');
+  ok(under.out && under.back, 'it drives UNDER the deck both ways (out: ' + under.out + ', back: ' + under.back + ')');
+  ok(worst < 5, 'and never waits (worst ' + worst.toFixed(1) + ' s)');
+}
+
 // ---- a destination lot's entrance can be the end of the street underneath too
 scene('dest');
 {
