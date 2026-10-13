@@ -75,7 +75,50 @@ function drawDestSmall(ctx, b) {
   ctx.restore();
 }
 
+// The stadium: a 4x4 block. Local frame as the small destination (+x toward the road, +y along the lot); the gate's lot tile is the front row.
+function drawStadium(ctx, b) {
+  const cy = (b.half ? 1 : 0) - 0.5, y0 = cy - 1.5, cap = b.slots.length;
+  const full = b.slots.reduce((n, c) => n + (c ? 1 : 0), 0) / Math.max(1, cap);
+  ctx.save();
+  ctx.translate(b.x + 1, b.y + 1);
+  ctx.rotate(rotAngle(b.rot));
+  ctx.fillStyle = '#3c4046'; rrect(ctx, -3, y0, 4, 4, 0.12); ctx.fill();                              // the forecourt and everything under the arena
+  drawEntrance(ctx, b);                                                                               // the gate road, on top of the forecourt
+  ctx.setLineDash([0.07, 0.07]); ctx.strokeStyle = 'rgba(242,201,76,.6)'; ctx.lineWidth = 0.02;
+  ctx.beginPath(); ctx.moveTo(1, cy); ctx.lineTo(0.1, cy); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; rrect(ctx, -2.92, y0 + 0.08, 2.9, 3.9, 0.95); ctx.fill();          // arena: shadow, stands, pitch
+  ctx.fillStyle = '#cfd8dc'; rrect(ctx, -2.95, y0 + 0.05, 2.9, 3.9, 0.95); ctx.fill();
+  ctx.fillStyle = '#8fa0a8'; rrect(ctx, -2.7, y0 + 0.3, 2.4, 3.4, 0.75); ctx.fill();
+  ctx.fillStyle = '#3f8f4f'; rrect(ctx, -2.45, y0 + 0.55, 1.9, 2.9, 0.55); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 0.03;
+  ctx.beginPath(); ctx.moveTo(-1.5, y0 + 0.55); ctx.lineTo(-1.5, y0 + 3.45); ctx.stroke();               // halfway line
+  ctx.beginPath(); ctx.arc(-1.5, y0 + 2, 0.4, 0, 6.2832); ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 0.025; rrect(ctx, -2.95, y0 + 0.05, 2.9, 3.9, 0.95); ctx.stroke();
+  for (let n = 0; n < 10; n++) {                                                                      // how full it is: a row of lights along the front
+    ctx.fillStyle = n < Math.round(full * 10) ? '#ffcc33' : 'rgba(255,255,255,.2)';
+    ctx.beginPath(); ctx.arc(-0.12, y0 + 0.25 + n * 0.37, 0.07, 0, 6.2832); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// A side-road gate on the map edge: one asphalt tile where the road goes off the map. Local +x points in from the edge.
+function drawPortal(ctx, b, t) {
+  ctx.save();
+  ctx.translate(b.x + 0.5, b.y + 0.5);
+  ctx.rotate(rotAngle(b.rot));
+  ctx.fillStyle = SHOULDER; ctx.fillRect(-0.5, -0.31, 1, 0.62);
+  ctx.fillStyle = ASPHALT; ctx.fillRect(-0.5, -0.27, 1, 0.54);
+  ctx.setLineDash([0.08, 0.08]); ctx.strokeStyle = 'rgba(242,201,76,.7)'; ctx.lineWidth = 0.02;
+  ctx.beginPath(); ctx.moveTo(-0.5, 0); ctx.lineTo(0.5, 0); ctx.stroke(); ctx.setLineDash([]);
+  const pulse = 0.5 + 0.5 * Math.sin(t * 3);
+  ctx.strokeStyle = `rgba(255,255,255,${0.55 + 0.35 * pulse})`; ctx.lineWidth = 0.05; ctx.lineJoin = 'round';
+  for (const x of [-0.12, 0.14]) { ctx.beginPath(); ctx.moveTo(x - 0.07, -0.13); ctx.lineTo(x + 0.07, 0); ctx.lineTo(x - 0.07, 0.13); ctx.stroke(); }
+  ctx.fillStyle = '#e2b93b'; ctx.fillRect(-0.5, -0.31, 0.07, 0.62);                                     // the edge-of-map bar
+  ctx.restore();
+}
+
 function drawDest(ctx, b) {
+  if (b.stadium) { drawStadium(ctx, b); return; }
   if (b.small) { drawDestSmall(ctx, b); return; }
   ctx.save();
   ctx.translate(b.x + 1, b.y + 1);
@@ -120,13 +163,14 @@ const POP = 0.6;   // seconds for a new building's pop-in
 export function drawBuildings(ctx, g) {
   for (const b of g.buildings) {
     const age = g.time - b.born;
-    if (age >= POP) { b.kind === 'house' ? drawHouse(ctx, b) : drawDest(ctx, b); continue; }
+    const draw = () => (b.kind === 'house' ? drawHouse(ctx, b) : b.kind === 'portal' ? drawPortal(ctx, b, g.time) : drawDest(ctx, b));
+    if (age >= POP) { draw(); continue; }
     const k = Math.max(0, age / POP), c = 1.70158 + 1;
     const scale = Math.max(0.01, 1 + c * Math.pow(k - 1, 3) + 1.70158 * Math.pow(k - 1, 2));   // easeOutBack
     const cx = b.x + (b.kind === 'house' ? 0.5 : 1), cy = b.y + (b.kind === 'house' ? 0.5 : 1);
     ctx.save();
     ctx.translate(cx, cy); ctx.scale(scale, scale); ctx.translate(-cx, -cy);
-    b.kind === 'house' ? drawHouse(ctx, b) : drawDest(ctx, b);
+    draw();
     ctx.restore();
     ctx.strokeStyle = `rgba(255,255,255,${0.8 * (1 - k)})`; ctx.lineWidth = 0.06;       // expanding ping
     ctx.beginPath(); ctx.arc(cx, cy, (b.kind === 'house' ? 0.5 : 1) + k * 1.4, 0, 6.2832); ctx.stroke();
@@ -177,7 +221,7 @@ export function drawCars(ctx, g, layer = 'top') {
     ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(car.x, car.y, r, 0, 6.2832); ctx.fill();
   }
   for (const car of g.cars) {
-    if (car.state === 'home') continue;
+    if (car.state === 'home' || (car.state === 'dwell' && car.dest && car.dest.stadium)) continue;       // (cars inside the stadium are out of sight)
     if ((layer === 'under') !== isUnder(car)) continue;
     const under = g.roads.get(Math.floor(car.y) * g.cols + Math.floor(car.x));
     if (under && under.tunnel && under.portal === undefined) continue;        // inside the hill: out of sight

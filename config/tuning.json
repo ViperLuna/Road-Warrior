@@ -40,6 +40,19 @@
     "minSpeed": 0.5,
     "closeTiles": 0.8
   },
+  "stadium": {
+    "capacity": 40,
+    "stayMinSeconds": 20,
+    "stayMaxSeconds": 45,
+    "houseChance": 0.08
+  },
+  "outside": {
+    "startIntervalSeconds": 30,
+    "minIntervalSeconds": 3,
+    "decayPerMinute": 0.95,
+    "maxVisitors": 40,
+    "rewardPerTrip": 2
+  },
   "trips": {
     "parkedSeconds": 1.6,
     "rewardPerTrip": 5,

@@ -86,6 +86,7 @@ function playGame(G, seed, mapId, opts, junctions = 'heat') {
     unconnectedAtEnd: houses.filter(h => !h.connected).length, unconnectedHouseSec, roads: g.roads.size,
     goals: g.goalCount, goalTimes, tripsAtMin, warnings, worstStuckSurvived: +worstStuckSurvived.toFixed(1), peakCarsMoving: peakCars,
     intersections: inters.length, lit: inters.filter(r => r.special === 'light').length, roundabouts: inters.filter(r => r.special === 'roundabout').length,
+    outside: { stadium: g.buildings.some(b => b.stadium), gates: g.buildings.filter(b => b.kind === 'portal').length, visitors: g.visitorsLaunched || 0 },
     ...ev, bot: bot.stats, ms: Math.round(performance.now() - t0),
   };
   if (rec.end === 'gridlock') {

@@ -1,6 +1,7 @@
 // Placing a matching house + destination pair on free land at a sensible distance.
 import { DIR } from './lanes.js';
-import { addBuilding, lotTile, reindex, accepts, footprint, entOf, entrancesOf, exitTile } from './buildings.js';
+import { addBuilding, lotTile, reindex, accepts, footprint, entOf, entrancesOf, exitTile, SPECIAL_COLORS } from './buildings.js';
+import { tuning } from './tuning.js';
 import { createCar } from './cars.js';
 import { mulberry32 } from './rng.js';
 import { WATER, HILL, LAND } from './terrain.js';
@@ -219,6 +220,56 @@ export function spawnPairAcross(g, color, opts = {}) {
     if (res) return { dest, ...res };
     g.buildings.splice(g.buildings.indexOf(dest), 1);                   // no room across the water: undo
     reindex(g);
+  }
+  return null;
+}
+
+
+// ---------------------------------------------------------------------------------------------------------
+// The stadium and the side-road gates (see DESIGN.md, "Stadium and the outside").
+// ---------------------------------------------------------------------------------------------------------
+
+// A stadium (a 4x4 destination that takes every colour) near the existing roads: close enough that the player can afford to connect it.
+// opts: budget (road pieces they can spend), roads [min, max] new pieces to reach a road. Returns the stadium or null.
+export function spawnStadium(g, opts = {}) {
+  const rng = opts.rng || Math.random, [minR, maxR] = opts.roads || [3, 14], budget = opts.budget ?? Infinity;
+  const roadTiles = new Set(g.roads.keys());
+  if (!roadTiles.size || !g.buildings.length) return null;
+  for (let attempt = 0; attempt < 400; attempt++) {
+    const a = g.buildings[Math.floor(rng() * g.buildings.length)], r = 4 + Math.floor(rng() * 10), th = rng() * 6.283;
+    const ax = Math.round(a.x + Math.cos(th) * r), ay = Math.round(a.y + Math.sin(th) * r);
+    const rot = Math.floor(rng() * 4), half = Math.floor(rng() * 2), fake = { kind: 'dest', x: ax, y: ay, rot, small: true, stadium: true, half, ent: half };
+    const tiles = footprint(fake);
+    if (!tiles.every(([x, y]) => free(g, x, y))) continue;
+    const fp = new Set(tiles.map(([x, y]) => y * g.cols + x)), [ex, ey] = exitTile(fake, half);
+    if (!passable(g, ex, ey, fp)) continue;
+    const cost = buildCost(g, [ex, ey], roadTiles, fp, Math.min(budget, maxR));
+    if (!Number.isFinite(cost) || cost < minR) continue;
+    const d = addBuilding(g, 'dest', SPECIAL_COLORS.stadium, ax, ay, rot);
+    d.small = true; d.stadium = true; d.half = half; d.ent = half;
+    d.slots = new Array(tuning.stadium.capacity).fill(null);
+    reindex(g);
+    return d;
+  }
+  return null;
+}
+
+// Map-edge sides: 0 north, 1 east, 2 south, 3 west (the same numbers as a building's rot). A gate faces inward.
+export const EDGE_NAMES = ['north', 'east', 'south', 'west'];
+export const edgeTile = (g, edge, t) => (edge === 0 ? [t, 0] : edge === 2 ? [t, g.rows - 1] : edge === 1 ? [g.cols - 1, t] : [0, t]);
+
+// A side-road gate on one edge of the map, placed where the player could still lay a road from it to the stadium (existing roads are free).
+// Returns the gate or null.
+export function spawnPortal(g, edge, stadium, opts = {}) {
+  const rng = opts.rng || Math.random, budget = opts.budget ?? Infinity, span = edge % 2 === 0 ? g.cols : g.rows, rot = (edge + 2) % 4;
+  const [tx, ty] = exitTile(stadium), target = new Set([ty * g.cols + tx]);
+  for (let attempt = 0; attempt < 80; attempt++) {
+    const [x, y] = edgeTile(g, edge, 2 + Math.floor(rng() * (span - 4)));
+    if (!free(g, x, y)) continue;
+    const ex = x + DIR[rot][0], ey = y + DIR[rot][1], blocked = new Set([y * g.cols + x]);
+    if (!passable(g, ex, ey, blocked)) continue;
+    if (!Number.isFinite(buildCost(g, [ex, ey], target, blocked, budget))) continue;
+    return addBuilding(g, 'portal', SPECIAL_COLORS.outside, x, y, rot);
   }
   return null;
 }

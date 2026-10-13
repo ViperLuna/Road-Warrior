@@ -2,7 +2,7 @@
 export const prog = {
   goals: { firstAtTrips: 10, minIncrement: 10, tripsPerHouse: 8, cashPlain: 80, cashWithSpecial: 20 },
   economy: { roadCost: 2 },
-  spawns: { firstAtTrips: 4, minEveryTrips: 4, tripsPerHouse: 2.5, sameColorSpawns: 2, newColorEverySpawns: 3, housesPerSpawn: 2, maxHousesPerDestination: 3, roadsNeeded: [4, 14], small: { chance: 0.25 }, dual: { afterTrips: 3000, startChance: 0.33, maxChance: 0.5, rampTrips: 1500 } },
+  spawns: { firstAtTrips: 4, minEveryTrips: 4, tripsPerHouse: 2.5, sameColorSpawns: 2, newColorEverySpawns: 3, housesPerSpawn: 2, maxHousesPerDestination: 3, roadsNeeded: [4, 14], small: { chance: 0.25 }, dual: { afterTrips: 2000, startChance: 0.33, maxChance: 0.5, rampTrips: 1500 }, stadium: { afterTrips: 3000, maps: ['highlands', 'metro'] }, portals: { afterTrips: 4000, everyTrips: 400, maxCount: 4 } },
   specials: [{ id: 'bridge', name: 'Bridge', enabled: true, weight: 1, cost: 40, description: 'Drag a road across water.' }],
 };
 export const maps = [{ id: 'riverbend', name: 'Riverbend', cols: 32, rows: 22, unlock: null }];

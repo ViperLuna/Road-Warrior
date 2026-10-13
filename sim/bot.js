@@ -14,6 +14,7 @@ import { DIR, OPP } from "../js/lanes.js";
 import { findPath } from "../js/pathfind.js";
 import { roadConns, netVersion } from "../js/network.js";
 import { lotTile, gateOf, entOf, entrancesOf, exitTile } from "../js/buildings.js";
+import { stadiumOf, gatesOf, gateConnected } from "../js/outside.js";
 import { prog, specialInfo } from "../js/progression.js";
 import { WATER, HILL, LAND } from "../js/terrain.js";
 
@@ -288,6 +289,17 @@ function maybeFlip(g, h, bot) {
   }
 }
 
+// Side-road gates: lay road from each gate to the stadium (over the city's own roads where it can, like a player would).
+function connectGates(g, bot) {
+  const arena = stadiumOf(g);
+  if (!arena) return;
+  for (const gate of gatesOf(g)) {
+    if (gateConnected(g, gate, arena)) continue;
+    const plan = planRoad(g, gate, [arena]);
+    if (plan) build(g, plan, bot);
+  }
+}
+
 function connectHouses(g, bot) {
   const dests = new Map();
   for (const d of g.buildings) {
@@ -423,6 +435,7 @@ export function botTick(g, bot) {
   bot.next = g.time + step;
   trackHeat(g, bot);
   connectHouses(g, bot);
+  connectGates(g, bot);
   placeSpecials(g, bot);
   if (g.time >= bot.nextTidy) {
     bot.nextTidy = g.time + 30;

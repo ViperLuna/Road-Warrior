@@ -6,6 +6,8 @@ export const tuning = {
   junctions: { stopSeconds: 1.0 },
   gridlock: { warnAfterSeconds: 12, gameOverAfterSeconds: 40, honkSlowSeconds: 5, honkFastSeconds: 1.2 },
   accidents: { afterTrips: 1000, durationSeconds: 15, firstDelaySeconds: 90, minGapSeconds: 150, maxGapSeconds: 300, rampTrips: 4000, rampShrink: 0.5, minSpeed: 0.5, closeTiles: 0.8 },
+  stadium: { capacity: 40, stayMinSeconds: 20, stayMaxSeconds: 45, houseChance: 0.08 },
+  outside: { startIntervalSeconds: 30, minIntervalSeconds: 3, decayPerMinute: 0.95, maxVisitors: 40, rewardPerTrip: 2 },
   trips: { parkedSeconds: 1.6, rewardPerTrip: 5, homeCooldownMinSeconds: 1.5, homeCooldownMaxSeconds: 3.5 },
 };
 

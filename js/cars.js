@@ -1,7 +1,7 @@
 // One car per house. Round trip: house -> destination lot (park, dwell) -> house = 1 trip.
 import { DIR, OPP, CAR_LEN, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
 import { lightColor, lightHolds, signalState, stepLight } from './signals.js';
-import { entOf, entSide, exitTile, accepts, baysOf } from './buildings.js';
+import { entOf, entSide, exitTile, accepts, baysOf, bayPiece } from './buildings.js';
 import { roadAt, roundAt, tidx, tileLanes, layerLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
 import { findPath } from './pathfind.js';
 import { tuning } from './tuning.js';
@@ -45,17 +45,24 @@ function planOut(g, car) {
   const b = car.house, D = DIR[b.rot];
   const rx = b.x + D[0], ry = b.y + D[1];
   if (!roadAt(g, rx, ry)) return false;
-  const dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && accepts(d, b.color.id) && baysOf(d).some(k => d.slots[k] === null)));
+  const hasRoom = d => baysOf(d).some(k => d.slots[k] === null);
+  let dests;
+  if (car.outside) dests = g.buildings.filter(d => d.stadium && hasRoom(d));                 // visitors from outside only ever come for the stadium
+  else {
+    dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && !d.stadium && accepts(d, b.color.id) && hasRoom(d)));
+    const arena = g.buildings.find(d => d.stadium && hasRoom(d));                            // the stadium takes any colour: now and then a house car goes there
+    if (arena && Math.random() < tuning.stadium.houseChance) dests.unshift(arena);
+  }
   for (const d of dests) {
     const goals = [...g.ports.values()].filter(port => port.b === d);       // either entrance leads to every bay
     const res = findPath(g, rx, ry, OPP[b.rot], goals);
     if (!res) continue;
     const bays = baysOf(d);
-    const here = [res.port.lot * 2, res.port.lot * 2 + 1].filter(k => bays.includes(k) && d.slots[k] === null);   // prefer a bay on the entrance's side
+    const here = d.stadium ? [] : [res.port.lot * 2, res.port.lot * 2 + 1].filter(k => bays.includes(k) && d.slots[k] === null);   // prefer a bay on the entrance's side
     const open = here.length ? here : bays.filter(k => d.slots[k] === null);
-    const k = open[(Math.random() * open.length) | 0];
-    d.slots[k] = car;
-    car.dest = d; car.slot = k;
+    const slot = open[(Math.random() * open.length) | 0], k = bayPiece(d, slot);      // (the stadium has far more bays than its lot has places to park)
+    d.slots[slot] = car;
+    car.dest = d; car.slot = slot;
     car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: res.port.ent, k };
     const rp = roadPieces(g, res.steps, Math.random() < 0.5 ? 0 : 1);
     car.route = [houseOutPiece(b.x, b.y, b.rot), ...rp, lotInPiece(d.x, d.y, d.rot, res.port.ent, k)];
@@ -65,6 +72,18 @@ function planOut(g, car) {
     return true;
   }
   return false;
+}
+
+// A visitor from the outside: a car of any colour leaves `gate` (a side-road gate) for the stadium. Returns the car, or null if
+// the gate has no road to the stadium (or the stadium is full) right now.
+export function launchOutside(g, gate, color) {
+  const car = createCar(gate);
+  car.id = g.nextId++; car.outside = true; car.color = color;
+  if (!planOut(g, car)) return null;
+  start(car, 'out');
+  g.cars.push(car);
+  g.visitorsLaunched = (g.visitorsLaunched || 0) + 1;
+  return car;
 }
 
 // No live road leads home any more: use the remembered way back (ghost pieces), if there is one.
@@ -95,8 +114,8 @@ function planBack(g, car) {
 // cars still driving in finish their (ghost) route and are re-seated on arrival (see updateSim).
 export function reseatCar(car, d) {
   car.homeRoute = null;                                          // the old way home no longer fits the new lot
-  car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: entOf(d), k: car.slot };
-  const p = lotInPiece(d.x, d.y, d.rot, entOf(d), car.slot);
+  car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: entOf(d), k: bayPiece(d, car.slot) };
+  const p = lotInPiece(d.x, d.y, d.rot, entOf(d), bayPiece(d, car.slot));
   car.route = [p]; car.idx = 0; car.s = p.len; car.v = 0; car.stuck = 0;
   pointAt(p, p.len, car);
 }
@@ -341,7 +360,8 @@ export function updateSim(g, dt) {
         const last = car.route[car.route.length - 1];
         pointAt(last, last.len, car);
         car.v = 0; car.route = [last]; car.idx = 0; car.s = last.len; car.stuck = 0; car.hold = false; car.entry = null;
-        if (car.state === 'out') { car.state = 'dwell'; car.dwell = tuning.trips.parkedSeconds; }
+        if (car.state === 'out') { car.state = 'dwell'; car.dwell = car.dest && car.dest.stadium ? tuning.stadium.stayMinSeconds + Math.random() * (tuning.stadium.stayMaxSeconds - tuning.stadium.stayMinSeconds) : tuning.trips.parkedSeconds; }
+        else if (car.outside) { car.gone = true; g.money += tuning.outside.rewardPerTrip; changed = true; }        // back out through the side road: gone (no score, a little cash)
         else {
           const t = tuning.trips;
           car.state = 'home'; car.homeRoute = null; car.cooldown = t.homeCooldownMinSeconds + Math.random() * (t.homeCooldownMaxSeconds - t.homeCooldownMinSeconds);
@@ -359,5 +379,6 @@ export function updateSim(g, dt) {
       }
     }
   }
+  if (g.cars.some(c => c.gone)) g.cars = g.cars.filter(c => !c.gone);
   return changed;
 }

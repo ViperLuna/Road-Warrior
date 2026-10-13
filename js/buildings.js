@@ -3,6 +3,11 @@ import { DIR, rt } from './lanes.js';
 import { tidx } from './network.js';
 
 export const SLOTS = 4;
+// Colours that are not in the palette: the stadium takes every colour; the side-road gates belong to "the outside".
+export const SPECIAL_COLORS = {
+  stadium: { id: 'stadium', hex: '#cfd8dc', glyph: 'diamond' },
+  outside: { id: 'outside', hex: '#8a95a0', glyph: 'diamond' },
+};
 // A destination has a single entrance. It is written as `ent` = tile + 2 * code:
 //   tile (0|1)  which lot tile it sits on (tile 0 is the building's -T end of the lot, tile 1 the +T end; T = a clockwise quarter turn from the front)
 //   code        0 = the front (the road side), 1 = the -T end of the lot, 2 = the +T end
@@ -20,9 +25,11 @@ export const entCode = ent => ent >> 1;
 export const entSide = (rot, ent) => (ent >> 1 === 0 ? rot : ent >> 1 === 1 ? (rot + 3) % 4 : (rot + 1) % 4);   // which way the entrance faces (a DIR index)
 // The entrances a destination can use, in the order tapping its lot cycles through them: clockwise round the lot, the same
 // way a building turns.
-export const entrancesOf = b => (b.small ? [entOf(b) & 1, (entOf(b) & 1) + 4, (entOf(b) & 1) + 2] : [0, 1, 5, 2]);
-export const baysOf = b => (b.small ? [2 * gateOf(b), 2 * gateOf(b) + 1] : [0, 1, 2, 3]);      // the parking bays a destination really has
-export const destWeight = b => (b.small ? 0.5 : 1);                                              // its share of a normal destination's capacity
+export const entrancesOf = b => (b.stadium ? [entOf(b) & 1] : b.small ? [entOf(b) & 1, (entOf(b) & 1) + 4, (entOf(b) & 1) + 2] : [0, 1, 5, 2]);
+export const baysOf = b => (b.stadium ? b.slots.map((_, i) => i) : b.small ? [2 * gateOf(b), 2 * gateOf(b) + 1] : [0, 1, 2, 3]);      // the parking bays a destination really has
+// The stadium has many (virtual) bays but one gate: every car parks in one of the two physical bays of the gate's lot tile, out of sight.
+export const bayPiece = (b, k) => (b.stadium ? 2 * gateOf(b) + (k & 1) : k);
+export const destWeight = b => (b.stadium ? 0 : b.small ? 0.5 : 1);                                              // its share of a normal destination's capacity
 
 // The road tile just outside entrance `ent` of destination (or box) b: where the road must reach.
 export function exitTile(b, ent = entOf(b)) {
@@ -34,7 +41,12 @@ export function exitTile(b, ent = entOf(b)) {
 export const accepts = (d, colorId) => d.color.id === colorId || (!!d.color2 && d.color2.id === colorId);
 
 export function footprint(b) {
-  if (b.kind === 'house') return [[b.x, b.y]];
+  if (b.kind === 'house' || b.kind === 'portal') return [[b.x, b.y]];
+  if (b.stadium) {                                                   // a 4x4 block: the gate's lot tile is in the front row, 3 rows of arena behind it
+    const [lx, ly] = lotTile(b, gateOf(b)), X = DIR[b.rot], T = rt(X), out = [];
+    for (let k = 0; k < 4; k++) for (let j = -1; j <= 2; j++) out.push([lx - X[0] * k + T[0] * j, ly - X[1] * k + T[1] * j]);
+    return out;
+  }
   if (b.small) { const [lx, ly] = lotTile(b, gateOf(b)), X = DIR[b.rot]; return [[lx, ly], [lx - X[0], ly - X[1]]]; }      // lot tile + the building tile behind it
   return [[b.x, b.y], [b.x + 1, b.y], [b.x, b.y + 1], [b.x + 1, b.y + 1]];
 }
@@ -50,7 +62,7 @@ export function reindex(g) {
   g.ports = new Map();
   for (const b of g.buildings) {
     for (const [x, y] of footprint(b)) g.buildingAt.set(tidx(g, x, y), b);
-    if (b.kind === 'house') g.ports.set(tidx(g, b.x, b.y), { b, x: b.x, y: b.y, side: b.rot, kind: 'house', lot: 0 });
+    if (b.kind === 'house' || b.kind === 'portal') g.ports.set(tidx(g, b.x, b.y), { b, x: b.x, y: b.y, side: b.rot, kind: 'house', lot: 0 });
     else {
       const ent = entOf(b), i = ent & 1, [x, y] = lotTile(b, i);
       g.ports.set(tidx(g, x, y), { b, x, y, side: entSide(b.rot, ent), kind: 'lot', lot: i, ent });

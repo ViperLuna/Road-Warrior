@@ -30,6 +30,18 @@
     },
     "small": {
       "chance": 0.25
+    },
+    "stadium": {
+      "afterTrips": 3000,
+      "maps": [
+        "highlands",
+        "metro"
+      ]
+    },
+    "portals": {
+      "afterTrips": 4000,
+      "everyTrips": 400,
+      "maxCount": 4
     }
   },
   "specials": [

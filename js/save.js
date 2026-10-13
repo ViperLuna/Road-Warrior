@@ -8,7 +8,7 @@
 import { game, refresh, syncBest, bestFor } from './state.js';
 import { maps, specialInfo } from './progression.js';
 import { terrainFromWater } from './terrain.js';
-import { reindex } from './buildings.js';
+import { reindex, SPECIAL_COLORS } from './buildings.js';
 import { clearPieceCache, pieceFromKey } from './lanes.js';
 import { createCar } from './cars.js';
 
@@ -29,7 +29,7 @@ export function serialize(g = game) {
   const carData = g.cars.map(c => ({
     id: c.id, house: c.house.id, state: c.state, idx: c.idx, s: c.s, v: c.v, x: c.x, y: c.y, a: c.a,
     dest: c.dest ? c.dest.id : null, slot: c.slot, lot: c.lot ? { ...c.lot } : null, dwell: c.dwell, cooldown: c.cooldown,
-    route: c.route.map(p => p.key), home: c.homeRoute ? c.homeRoute.map(p => p.key) : null, stuck: c.stuck, holdT: c.holdT || 0,
+    outside: c.outside ? c.color.id : undefined, route: c.route.map(p => p.key), home: c.homeRoute ? c.homeRoute.map(p => p.key) : null, stuck: c.stuck, holdT: c.holdT || 0,
   }));
   return {
     version: SAVE_VERSION, savedAt: Date.now(),
@@ -41,6 +41,7 @@ export function serialize(g = game) {
     terrain: { water: encodeGrid(g.terrain.water), start: g.terrain.start },
     roads: [...g.roads.entries()].map(([k, t]) => [k, t.sig ? { ...t, sig: { ...t.sig, dem: [...t.sig.dem] } } : { ...t }]),
     bridges: [...g.bridges.entries()],
+    outside: { since: g.outsideSince, nextAt: g.nextOutsideAt },
     buildings: g.buildings.map(b => ({ ...b, color: b.color.id, color2: b.color2 ? b.color2.id : undefined, slots: b.slots ? b.slots.map(c => (c ? c.id : null)) : null })),
     cars: carData,
   };
@@ -51,7 +52,7 @@ export function restore(data, g = game) {
   if (!data || data.version !== SAVE_VERSION) throw new Error('unsupported save version ' + (data && data.version));
   const map = maps.find(m => m.id === data.map);
   if (!map) throw new Error('unknown map ' + data.map);
-  const color = id => g.palette.find(c => c.id === id);
+  const color = id => SPECIAL_COLORS[id] || g.palette.find(c => c.id === id);
 
   g.seed = data.seed >>> 0; g.map = map; g.cols = map.cols; g.rows = map.rows;
   g.terrain = terrainFromWater(g.seed, g.cols, g.rows, decodeGrid(data.terrain.water, g.cols * g.rows), data.terrain.start);
@@ -75,7 +76,7 @@ export function restore(data, g = game) {
   clearPieceCache();
   reindex(g);
 
-  g.accident = null; g.nextAccidentAt = undefined;                 // no accident carries over a save: the schedule starts fresh
+  g.accident = null; g.nextAccidentAt = undefined; g.outsideSince = data.outside ? data.outside.since : undefined; g.nextOutsideAt = data.outside ? data.outside.nextAt : undefined;                 // no accident carries over a save: the schedule starts fresh
   g.cars = data.cars.map(sc => {
     const c = createCar(byId.get(sc.house));
     Object.assign(c, {
@@ -83,6 +84,7 @@ export function restore(data, g = game) {
       dwell: sc.dwell, cooldown: sc.cooldown, stuck: sc.stuck, holdT: sc.holdT, dest: sc.dest != null ? byId.get(sc.dest) || null : null,
       route: sc.route.map(pieceFromKey), homeRoute: sc.home ? sc.home.map(pieceFromKey) : null,
     });
+    if (sc.outside) { c.outside = true; c.color = color(sc.outside); }
     return c;
   });
   const carById = new Map(g.cars.map(c => [c.id, c]));
