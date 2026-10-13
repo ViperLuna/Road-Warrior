@@ -23,7 +23,7 @@
       14
     ],
     "dual": {
-      "afterTrips": 5000,
+      "afterTrips": 3000,
       "startChance": 0.33,
       "maxChance": 0.5,
       "rampTrips": 1500
