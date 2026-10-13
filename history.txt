@@ -8,6 +8,8 @@ TBD:
 
   Parking Lot exits are no longer limited to the front entrance. They can be toggled to any available side.
 
+  End Game Option - You can end your game at any time and record your trip count. Ending the game is equivalent to losing to gridlock or impatience.
+
   Construction Cones Removed
   Cones were initially meant to block traffic while working on a road to stop cars from getting stuck in a parking lot after reaching their destination. This is no longer an issue because cars automatically build ghost roads to ensure they return back to their homes if a route back home is no longer available. The cone will remain in the game, however, for a possible future difficulty setting.
 
@@ -20,7 +22,7 @@ TBD:
   Traffic is even smoother now with much better roundabout control. Cars can turn right on red. 
 
 10.09.2026
-  Roads adjacent to other roads can be cut from each other to remove unwanted intersections. Use the cut tool and swipe the branch between tiles to remove it. Swiping again will replace it.
+  Intersection Cuts - Roads adjacent to other roads can be cut from each other to remove unwanted intersections. Use the cut tool and swipe the branch between tiles to remove it. Swiping again will replace it. You can toggle cut views in the settings. Cuts are always visible while using the cut tool.
   Destination building parking lots can be flipped to change which side of the lot exits to the road. Tap the building to rotate it and tap the parking lot to flip the exits.
   Traffic jams is still a difficult work in progress.
   Traffic is smoother with less unnecessary gridlock. A car that would not otherwise be locked will force itself forward to reset its impatience timer. They may phase through other cars if the game notices traffic is stopped with nothing blocking it.
