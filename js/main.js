@@ -28,7 +28,7 @@ onEvent(e => {
   }
   if (e.type === 'accident') play('crash');
   if (e.type === 'impatient') play('unserved');
-  if (e.type === 'whistle') play('crowd');                       // (registered in config/sounds.json once the crowd recordings exist)
+  if (e.type === 'whistle') play('crowd');                     
   if (e.type === 'honk') play('honk', { volume: 0.7 + 0.3 * e.k });          // angrier cars are a bit louder
 });          // sound effects hook into game events here
 

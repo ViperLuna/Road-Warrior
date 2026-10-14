@@ -48,6 +48,18 @@
     "pitchJitter": 0.03,
     "cooldownMs": 40
   },
+  "crowd": {
+    "files": [
+      "assets/sounds/crowd1.mp3",
+      "assets/sounds/crowd2.mp3",
+      "assets/sounds/crowd3.mp3",
+      "assets/sounds/crowd4.mp3"
+    ],
+    "volume": 0.6,
+    "pitchJitter": 0.03,
+    "volumeJitter": 0.08,
+    "cooldownMs": 3000
+  },
   "crash": {
     "files": [
       "assets/sounds/crash1.mp3",
