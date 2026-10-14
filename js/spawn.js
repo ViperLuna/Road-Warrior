@@ -3,7 +3,7 @@ import { DIR } from './lanes.js';
 import { addBuilding, lotTile, reindex, accepts, footprint, entOf, entsOf, entrancesOf, exitTile, SPECIAL_COLORS } from './buildings.js';
 import { tuning } from './tuning.js';
 import { clearRoadTile } from './network.js';
-import { createCar } from './cars.js';
+import { createCar, razeBuilding } from './cars.js';
 import { mulberry32 } from './rng.js';
 import { WATER, HILL, LAND } from './terrain.js';
 
@@ -243,11 +243,21 @@ function clearArea(fake, side) {
 
 // Where a stadium could go. `clear` = nothing is free, so it may stand on plain road: it clears a 5x4 area (see clearArea) and the spot
 // with the fewest road pieces in that area wins. Returns { fake, fp, area, exits, cost, roads } or null. opts: budget, roads [min, max].
-function findStadiumSpot(g, opts, clear) {
+function findStadiumSpot(g, opts, clear, raze = false) {
   const rng = opts.rng || Math.random, [minR, maxR] = opts.roads || [3, 14], budget = opts.budget ?? Infinity;
   const roadTiles = new Set(g.roads.keys());
   if (!roadTiles.size || !g.buildings.length) return null;
-  const ground = (x, y) => x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] === LAND && !g.buildingAt.has(y * g.cols + x);
+  const ground = (x, y) => x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] === LAND && (!g.buildingAt.has(y * g.cols + x) || (raze && g.buildingAt.get(y * g.cols + x).kind !== 'portal'));
+  // What clearing the area would cost: road pieces, and (when razing) the buildings under it. A destination may only go if every colour it
+  // serves keeps another destination, so nobody is left without one.
+  const victims = area => {
+    const set = new Set(area.map(([x, y]) => g.buildingAt.get(y * g.cols + x)).filter(Boolean));
+    for (const d of set) {
+      if (d.kind !== 'dest') continue;
+      for (const c of [d.color, d.color2]) if (c && g.buildings.some(h => h.kind === 'house' && h.color.id === c.id && !set.has(h)) && !g.buildings.some(o => o.kind === 'dest' && !o.stadium && !set.has(o) && accepts(o, c.id))) return null;
+    }
+    return [...set];
+  };
   const clearable = (x, y) => { const r = g.roads.get(y * g.cols + x); return !r || !(r.bridge || r.tunnel || r.overpass !== undefined); };
   let best = null;
   for (let attempt = 0; attempt < (clear ? 1500 : 600); attempt++) {
@@ -266,11 +276,13 @@ function findStadiumSpot(g, opts, clear) {
     for (const side of [-2, 3]) {
       const area = clearArea(fake, side);
       if (!area.every(([x, y]) => ground(x, y) && clearable(x, y))) continue;
-      const roads = area.filter(([x, y]) => g.roads.has(y * g.cols + x)).length;
+      const gone = raze ? victims(area) : [];
+      if (!gone) continue;
+      const roads = area.filter(([x, y]) => g.roads.has(y * g.cols + x)).length + gone.reduce((n, b) => n + (b.kind === 'house' ? 6 : 15), 0);
       if (best && roads >= best.roads) continue;
       const left = new Set([...roadTiles].filter(k => !area.some(([x, y]) => y * g.cols + x === k)));
-      const cost = Math.min(...exits.map(e => buildCost(g, e, left, fp, maxR + 6)));
-      if (Number.isFinite(cost)) best = { fake, fp, area, exits, cost, roads };
+      const cost = raze ? 0 : Math.min(...exits.map(e => buildCost(g, e, left, fp, maxR + 6)));       // (when razing, the buildings in the way are not gone yet: do not count them as walls)
+      if (Number.isFinite(cost)) best = { fake, fp, area, exits, cost, roads, gone };
     }
     if (best && best.roads === 0) break;
   }
@@ -294,15 +306,17 @@ export function spawnStadium(g, opts = {}) {
 }
 
 // The same, but when there is no free room anywhere (the map is covered in roads) it takes the spot with the fewest plain road pieces
-// (never a bridge, tunnel or overpass; never a building) and clears the whole 5x4 area around it first: they go back to the player's stock. Returns { stadium, cleared } or null.
+// (never a bridge, tunnel or overpass; never a building) and clears the whole 5x4 area around it first: they go back to the player's stock. Returns { stadium, cleared, razed } or null. If even that finds nothing it knocks buildings down as well (houses first, never the last destination of a colour, never a side-road gate).
 export function spawnStadiumClearing(g, opts = {}) {
   const free1 = spawnStadium(g, opts);
   if (free1) return { stadium: free1, cleared: 0 };
-  const spot = findStadiumSpot(g, opts, true);
+  let spot = findStadiumSpot(g, opts, true), razed = [];
+  if (!spot) { spot = findStadiumSpot(g, opts, true, true); if (spot) razed = spot.gone; }       // really no room: knock buildings down too
   if (!spot) return null;
+  for (const b of razed) razeBuilding(g, b);
   let cleared = 0;
   for (const [x, y] of spot.area) if (g.roads.has(y * g.cols + x) && clearRoadTile(g, x, y)) cleared++;
-  return { stadium: placeStadium(g, spot), cleared };
+  return { stadium: placeStadium(g, spot), cleared, razed: razed.length };
 }
 
 // Map-edge sides: 0 north, 1 east, 2 south, 3 west (the same numbers as a building's rot). A gate faces inward.

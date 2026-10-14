@@ -148,7 +148,7 @@ function spawnOutsideThings(g, notify) {
   if (st && !stadiumOf(g)) {
     if (g.trips >= st.afterTrips && st.maps.includes(g.map.id) && g.colorsUsed >= g.palette.length && !(g.nextStadiumTry > g.trips)) {
       const made = spawnStadiumClearing(g, { budget: roadsAvailable(g) });         // (if the map is full of roads it is built anyway, over the fewest it can)
-      if (made) notify({ type: 'stadium', x: made.stadium.x, y: made.stadium.y, cleared: made.cleared });
+      if (made) notify({ type: 'stadium', x: made.stadium.x, y: made.stadium.y, cleared: made.cleared, razed: made.razed });
       else g.nextStadiumTry = g.trips + 10;
     }
     return;

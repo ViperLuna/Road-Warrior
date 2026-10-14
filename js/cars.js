@@ -1,7 +1,7 @@
 // One car per house. Round trip: house -> destination lot (park, dwell) -> house = 1 trip.
 import { DIR, OPP, CAR_LEN, lotSpace, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
 import { lightColor, lightHolds, signalState, stepLight } from './signals.js';
-import { entOf, entSide, exitTile, accepts, baysOf, bayPiece, hasEnt } from './buildings.js';
+import { entOf, entSide, exitTile, accepts, baysOf, bayPiece, hasEnt, reindex as reindexAll } from './buildings.js';
 import { roadAt, roundAt, tidx, tileLanes, layerLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
 import { findPath } from './pathfind.js';
 import { tuning } from './tuning.js';
@@ -82,6 +82,24 @@ function planOut(g, car) {
     return true;
   }
   return false;
+}
+
+// Knock a building down (a stadium is being built over it). A house takes its car with it; a destination sends the cars heading
+// there or parked there home again. Reindexes the map.
+export function razeBuilding(g, b) {
+  for (const c of g.cars.slice()) {
+    if (b.kind === 'house' && c.house === b) {
+      if (c.dest && c.dest.slots && c.dest.slots[c.slot] === c) c.dest.slots[c.slot] = null;
+      g.cars.splice(g.cars.indexOf(c), 1);
+    } else if (b.kind === 'dest' && c.dest === b && (c.state === 'out' || c.state === 'dwell')) {
+      if (c.outside) { c.gone = true; continue; }
+      c.dest = null; c.slot = -1; c.lot = null; c.homeRoute = null;
+      c.state = 'home'; c.route = []; c.idx = 0; c.s = 0; c.v = 0; c.stuck = 0; c.cooldown = 1 + Math.random() * 1.5;
+    }
+  }
+  g.cars = g.cars.filter(c => !c.gone);
+  g.buildings.splice(g.buildings.indexOf(b), 1);
+  reindexAll(g);
 }
 
 // A visitor from the outside: a car of any colour leaves `gate` (a side-road gate) for the stadium. Returns the car, or null if

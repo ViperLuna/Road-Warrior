@@ -155,4 +155,30 @@ if (big) {
   ok(new Set([...g.buildings.map(b => b.id)]).size === g.buildings.length && g.buildings.filter(b => b.kind !== 'portal').every(b => footprint(b).every(([x, y]) => g.buildingAt.get(y * g.cols + x) === b)), 'no building was overwritten');
   tickN(30); ok(true, 'the game runs on');
 }
+// ---- no room at all, even over roads: buildings go too (a stadium is "donated" and the buildings make way) ----
+{
+  const T = await import(R + 'js/terrain.js');
+  S(); g.terrain.water.fill(T.WATER);
+  for (let y = 8; y < 18; y++) for (let x = 8; x < 22; x++) g.terrain.water[y * g.cols + x] = T.LAND;       // a 14x10 island
+  const blue = palette[0], orange = palette[1];
+  const d1 = addBuilding(g, 'dest', blue, 8, 8, 2), d2 = addBuilding(g, 'dest', blue, 19, 8, 2), d3 = addBuilding(g, 'dest', orange, 13, 8, 2);
+  const hs = [];
+  for (let x = 8; x < 22; x += 2) for (const y of [11, 13, 15, 17]) { const h = addBuilding(g, 'house', x % 4 ? blue : orange, x, y, 0); const c = createCar(h); g.cars.push(c); hs.push(h); }
+  for (let x = 9; x < 22; x += 2) for (const y of [12, 14, 16]) st.buildRoad(x, y);
+  g.colorsUsed = palette.length; g.trips = milestones.stadium.afterTrips; events.length = 0;
+  const bCount = g.buildings.length, cCount = g.cars.length;
+  checkProgress(g, e => events.push(e));
+  const ev = events.find(e => e.type === 'stadium'), big = stadiumOf(g);
+  ok(!!big && !!ev && ev.razed > 0, 'the stadium is built even when buildings have to go (' + (ev && ev.razed) + ' razed, ' + (ev && ev.cleared) + ' road pieces)');
+  if (big) {
+    ok(g.buildings.length === bCount - ev.razed + 1, 'those buildings are gone');
+    ok(footprint(big).every(([x, y]) => g.buildingAt.get(y * g.cols + x) === big), 'and the stadium stands where they were');
+    ok(g.cars.every(c => g.buildings.includes(c.house)), 'every car still has a house');
+    ok(g.cars.every(c => !c.dest || g.buildings.includes(c.dest)), 'no car is heading for a razed destination');
+    ok(g.buildings.every(b => !b.slots || b.slots.every(c => !c || g.cars.includes(c))), 'no bay holds a car that is gone');
+    ok(g.buildings.some(b => b.kind === 'dest' && !b.stadium && b.color.id === blue.id) && g.buildings.some(b => b.kind === 'dest' && !b.stadium && b.color.id === orange.id), 'every colour still has a destination');
+    ok(cCount - g.cars.length <= ev.razed, 'only razed houses lost their cars (' + (cCount - g.cars.length) + ')');
+    tickN(60); ok(true, 'the game runs on');
+  }
+}
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);
