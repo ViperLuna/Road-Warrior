@@ -43,7 +43,7 @@ import {
   streetLegs,
 } from "./bot.js";
 
-export const BRAIN_VERSION = 4;
+export const BRAIN_VERSION = 5;
 const step = 0.5;
 const ITEMS = [
   "bridge",
@@ -80,7 +80,7 @@ const GLOBALS = [
   "heatMax",
   "heatSum",
 ];
-const SLOTS = 8;
+const SLOTS = 9;
 
 const SCORED = TYPES.filter((t) => t !== "noop");
 export const INPUTS = [
@@ -197,6 +197,40 @@ function globals(g, brain, miss) {
   ];
 }
 
+const planClean = (g, from, to, opts = {}) =>
+  planRoad(g, from, to, { noBlocks: true, ...opts });
+
+function newJunctions(g, plan) {
+  const added = new Set();
+  for (const p of plan)
+    if (!p.span && !g.roads.has(p.y * g.cols + p.x))
+      added.add(p.y * g.cols + p.x);
+  const road = (x, y, withNew) =>
+    x >= 0 &&
+    y >= 0 &&
+    x < g.cols &&
+    y < g.rows &&
+    (g.roads.has(y * g.cols + x) || (withNew && added.has(y * g.cols + x)));
+  const legs = (x, y, withNew) =>
+    DIR.reduce((n, [dx, dy]) => n + (road(x + dx, y + dy, withNew) ? 1 : 0), 0);
+  const look = new Set();
+  for (const k of added) {
+    const x = k % g.cols,
+      y = (k / g.cols) | 0;
+    look.add(k);
+    for (const [dx, dy] of DIR)
+      if (road(x + dx, y + dy, false)) look.add((y + dy) * g.cols + x + dx);
+  }
+  let n = 0;
+  for (const k of look) {
+    const x = k % g.cols,
+      y = (k / g.cols) | 0;
+    if (legs(x, y, true) >= 3 && !(g.roads.has(k) && legs(x, y, false) >= 3))
+      n++;
+  }
+  return n;
+}
+
 const planStats = (g, plan, heat = new Map()) => {
   let tiles = 0,
     spans = 0,
@@ -221,7 +255,7 @@ const planStats = (g, plan, heat = new Map()) => {
     }
     prev = p;
   }
-  return { tiles, spans, bends, heat: hot };
+  return { tiles, spans, bends, heat: hot, joins: newJunctions(g, plan) };
 };
 
 function trial(g, setup, fn) {
@@ -334,7 +368,7 @@ function candidates(g, brain) {
 
   const seen = new Set();
   const costOf = (h, to) => {
-    const p = planRoad(g, h, to);
+    const p = planClean(g, h, to);
     return p ? planCost(g, p) : Infinity;
   };
   const variants = [
@@ -385,7 +419,7 @@ function candidates(g, brain) {
       const plans = trial(g, setup, () =>
         variants.map(([name, opts, hw]) => [
           name,
-          planRoad(g, h, to, opts),
+          planClean(g, h, to, opts),
           hw,
         ]),
       );
@@ -421,12 +455,13 @@ function candidates(g, brain) {
             turned ? 1 : 0,
             moved ? 1 : 0,
             partial,
+            s.joins / 5,
           ],
           () =>
             applySetup(g, setup) &&
             buildWith(g, brain, plan, hw) &&
             unreached(g, h).length === 0,
-          `Connected the ${h.color.id} house (${s.tiles} road${s.tiles === 1 ? "" : "s"}, ${s.bends} bend${s.bends === 1 ? "" : "s"}${s.spans ? `, ${s.spans} span` : ""}${how ? ", " + how : ""})`,
+          `Connected the ${h.color.id} house (${s.tiles} road${s.tiles === 1 ? "" : "s"}, ${s.bends} bend${s.bends === 1 ? "" : "s"}${s.spans ? `, ${s.spans} span` : ""}${s.joins ? `, ${s.joins} new junction${s.joins === 1 ? "" : "s"}` : ""}${how ? ", " + how : ""})`,
           [bounds(h), ...(moved ? [bounds(setup.b)] : [])],
           "connect:" +
             h.id +
@@ -443,14 +478,24 @@ function candidates(g, brain) {
     const pseudo = entsOf(arena).map((ent) => ({ exit: exitTile(arena, ent) }));
     const urg = urgencyOf(g, arena.id);
     const tryPlan = (from, to, label) => {
-      const plan = planRoad(g, from, to);
+      const plan = planClean(g, from, to);
       if (!plan) return;
       const s = planStats(g, plan);
       if (affordable(g, s))
         C(
           "connect",
           null,
-          [s.tiles / 20, s.spans / 2, urg, 0, s.bends / 10, 0, 0, 0],
+          [
+            s.tiles / 20,
+            s.spans / 2,
+            urg,
+            0,
+            s.bends / 10,
+            0,
+            0,
+            0,
+            s.joins / 5,
+          ],
           () => build(g, plan, brain),
           label,
           [bounds(arena)],
@@ -487,7 +532,7 @@ function candidates(g, brain) {
     );
     const h = car && car.house;
     if (!h || h.kind !== "house" || miss.has(h.id)) continue;
-    const plan = planRoad(g, h, destsOf(g, h.color), {
+    const plan = planClean(g, h, destsOf(g, h.color), {
       extra: (q) => (q === k ? 50 : heatOf(q) * 0.5),
       adj: 0.5,
     });
@@ -498,9 +543,9 @@ function candidates(g, brain) {
     C(
       "reroute",
       null,
-      [s.tiles / 20, v / 20, s.spans / 2, 0, 0, 0],
+      [s.tiles / 20, v / 20, s.spans / 2, 0, 0, 0, 0, 0, s.joins / 5],
       () => build(g, plan, brain),
-      `Built a bypass around a busy spot (${s.tiles} roads)`,
+      `Built a bypass around a busy spot (${s.tiles} roads, ${s.joins} new junction${s.joins === 1 ? "" : "s"})`,
       [tileSpot(g, k)],
       "reroute:" + k,
     );
