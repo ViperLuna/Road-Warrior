@@ -116,13 +116,13 @@ function drawPortal(ctx, b, t) {
   ctx.beginPath(); ctx.moveTo(-0.5, 0); ctx.lineTo(0.5, 0); ctx.stroke(); ctx.setLineDash([]);
   const pulse = 0.5 + 0.5 * Math.sin(t * 3);
   ctx.strokeStyle = `rgba(255,255,255,${0.55 + 0.35 * pulse})`; ctx.lineWidth = 0.05; ctx.lineJoin = 'round';
-  for (const x of [-0.12, 0.14]) { ctx.beginPath(); ctx.moveTo(x - 0.07, -0.13); ctx.lineTo(x + 0.07, 0); ctx.lineTo(x - 0.07, 0.13); ctx.stroke(); }
+  for (const x of [0.12, 0.32]) { ctx.beginPath(); ctx.moveTo(x - 0.07, -0.13); ctx.lineTo(x + 0.07, 0); ctx.lineTo(x - 0.07, 0.13); ctx.stroke(); }       // arrows pointing into the map
   ctx.fillStyle = '#e2b93b'; ctx.fillRect(-0.5, -0.31, 0.07, 0.62);                                     // the edge-of-map bar
-  ctx.rotate(-rotAngle(b.rot));                                                                         // the icon stays upright: a round badge with a city skyline
-  ctx.fillStyle = 'rgba(20,30,40,.88)'; ctx.beginPath(); ctx.arc(0.02, 0, 0.2, 0, 6.2832); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 0.025; ctx.beginPath(); ctx.arc(0.02, 0, 0.2, 0, 6.2832); ctx.stroke();
+  ctx.translate(-0.2, 0); ctx.rotate(-rotAngle(b.rot));                                                  // the icon stays upright: a round badge with a city skyline, by the map edge
+  ctx.fillStyle = 'rgba(20,30,40,.88)'; ctx.beginPath(); ctx.arc(0, 0, 0.17, 0, 6.2832); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 0.022; ctx.beginPath(); ctx.arc(0, 0, 0.17, 0, 6.2832); ctx.stroke();
   ctx.fillStyle = '#e8eef2';
-  for (const [x, y, w, h] of [[-0.12, -0.02, 0.07, 0.15], [-0.04, -0.12, 0.08, 0.25], [0.05, -0.06, 0.07, 0.19], [0.13, 0.02, 0.05, 0.11]]) ctx.fillRect(x, y, w, h);
+  for (const [x, y, w, h] of [[-0.11, -0.01, 0.06, 0.12], [-0.045, -0.1, 0.07, 0.21], [0.035, -0.05, 0.06, 0.16], [0.105, 0.02, 0.04, 0.09]]) ctx.fillRect(x, y, w, h);
   ctx.restore();
 }
 
