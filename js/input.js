@@ -1,6 +1,6 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
-import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt, setSpeed, toggleSpeed } from './state.js';
+import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt, setSpeed, setDevSpeed, toggleSpeed } from './state.js';
 import { WATER, HILL } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
@@ -88,6 +88,8 @@ const PLACE_MSG = {
 // Letter hotkeys for the pills (clicking the pill, so it does exactly what tapping it does): V overpass, H highway, O roundabout.
 const SPECIAL_KEY = { v: 'overpass', h: 'highway', o: 'roundabout' };
 const NUMPAD_SPEED = { Numpad0: 0, Numpad1: 1, Numpad2: 1.5, Numpad3: 2 };     // numpad: speed
+const DEV = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(location.hostname) || /[#&]dev\b/.test(location.hash);
+const DEV_SPEED = { Numpad3: 3, Numpad4: 4, Numpad5: 5, Numpad6: 6, Numpad7: 7, Numpad8: 8, Numpad9: 9, Numpad0: 10 };
 const ROW_TOOL = {                                                                // number row: toolbar buttons, left to right
   Digit1: () => setTool('build'), Digit2: () => setTool('destroy'), Digit3: () => setTool('pan'),
   Digit4: () => setTool('cut'), Digit5: () => { if (game.unlocks.oneway) setOneWay(!game.oneway); },
@@ -212,6 +214,7 @@ export function initInput(canvas) {
     else if (SPECIAL_KEY[e.key] && game.mode === 'play') { const pill = document.querySelector(`#specials [data-special="${SPECIAL_KEY[e.key]}"]`); if (pill) press(() => pill.click()); }       // (only if that pill is showing: you own one / it is unlocked)
     else if (e.key === 'c') press(() => setTool('cut'));
     else if (e.key === 'r' && hover.show) { if (rotateBuildingAt(hover.x, hover.y)) play('rotate'); }
+    else if (DEV && e.shiftKey && DEV_SPEED[e.code] && game.mode === 'play') press(() => setDevSpeed(DEV_SPEED[e.code]));
     else if (NUMPAD_SPEED[e.code] !== undefined && game.mode === 'play') press(() => setSpeed(NUMPAD_SPEED[e.code]));
     else if (ROW_TOOL[e.code] && (e.code !== 'Digit5' || game.unlocks.oneway)) press(ROW_TOOL[e.code]);
     else if (e.key === 'p') { if (devSpawn()) play('spawn'); }      // dev: spawn an extra pair

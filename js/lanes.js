@@ -238,7 +238,7 @@ export function pieceFromKey(key) {
   if ((m = /^rb:(\d+),(\d+):(\d)>(\d)$/.exec(key))) return roundPiece(+m[1], +m[2], +m[3], +m[4]);
   if ((m = /^ho:(\d+),(\d+):(\d)$/.exec(key))) return houseOutPiece(+m[1], +m[2], +m[3]);
   if ((m = /^hi:(\d+),(\d+):(\d)$/.exec(key))) return houseInPiece(+m[1], +m[2], +m[3]);
-  if ((m = /^li:(\d+),(\d+):(\d):(\d+)>(-?\d+)$/.exec(key))) return lotInPiece(+m[1], +m[2], +m[3], +m[4], +m[5]);
-  if ((m = /^lo:(\d+),(\d+):(\d):(-?\d+)>(\d+)$/.exec(key))) return lotOutPiece(+m[1], +m[2], +m[3], +m[4], +m[5]);
+  if ((m = /^li:(-?\d+),(-?\d+):(\d):(-?\d+)>(-?\d+)$/.exec(key))) return lotInPiece(+m[1], +m[2], +m[3], +m[4], +m[5]);
+  if ((m = /^lo:(-?\d+),(-?\d+):(\d):(-?\d+)>(-?\d+)$/.exec(key))) return lotOutPiece(+m[1], +m[2], +m[3], +m[4], +m[5]);
   throw new Error('unknown piece key ' + key);
 }

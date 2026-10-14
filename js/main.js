@@ -1,13 +1,13 @@
 import { unlock, play, playFirst } from './audio.js';
 import { loadConfig as loadMusic, start as startMusic } from './music.js';
-import { game, newGame, setPalette, setMode, tick, onChange, onEvent, flushBest } from './state.js';
+import { game, newGame, setPalette, setMode, tick, onChange, onEvent, flushBest, addLog } from './state.js';
 import { setTuning } from './tuning.js';
 import { setProgression, setMaps, setMilestones, maps } from './progression.js';
 import { resizeView, fitView, cam, clampCam } from './camera.js';
 import { configure, restore, saveNow, loadSaved, clearSave, describeSave, startAutosave } from './save.js';
 import { render } from './render.js';
 import { initInput, hover } from './input.js';
-import { initHud } from './hud.js';
+import { initHud, note } from './hud.js';
 
 const splash = document.getElementById('splash');
 const musicReady = loadMusic();                       // fetch the playlist while the splash is showing
@@ -28,7 +28,7 @@ onEvent(e => {
   }
   if (e.type === 'accident') play('crash');
   if (e.type === 'impatient') play('unserved');
-  if (e.type === 'whistle') play('crowd');                     
+  if (e.type === 'whistle') play('crowd');
   if (e.type === 'honk') play('honk', { volume: 0.7 + 0.3 * e.k });          // angrier cars are a bit louder
 });          // sound effects hook into game events here
 
@@ -65,11 +65,26 @@ function resize() {
 const randomSeed = () => (Math.random() * 1e9) >>> 0;
 let devSeed = (() => { const m = location.hash.match(/seed=(\d+)/); return m ? Number(m[1]) : null; })();   // #seed=123 replays a map once
 
+const brainUrl = (() => { const m = location.hash.match(/brain(?:=([^&]+))?/); return m ? decodeURIComponent(m[1] || 'brains/best.json') : null; })();
+const brainLook = /[#&]look\b/.test(location.hash);
+const brainMod = brainUrl ? await import('../sim/brain.js') : null;
+const brainFile = brainUrl ? await fetch(brainUrl).then(r => r.json()).catch(e => { console.warn('no brain at ' + brainUrl, e); return null; }) : null;
+let brain = null;
+const hashOf = () => '#seed=' + game.seed + (brainUrl ? '&brain' + (brainUrl === 'brains/best.json' ? '' : '=' + encodeURIComponent(brainUrl)) + (brainLook ? '&look' : '') : '');
+function wakeBrain() {
+  brain = null;
+  if (!brainFile) return note(`No bot: couldn't load ${brainUrl} (train one with npm run train). You're playing yourself.`);
+  try { brain = brainMod.createBrain(brainFile, { onDecision: (text, spots) => addLog('Bot: ' + text, spots), lookahead: brainLook ? { every: 10, horizon: 30, k: 2 } : null }); }
+  catch (e) { return note(`No bot: ${e.message}. You're playing yourself.`); }
+  note(`The bot is playing (trained ${brainFile.meta.gen} generations, games up to ${Math.round(brainFile.meta.cap / 60)} min${brainLook ? ', looking ahead' : ''}). Its moves go in the log.`);
+}
+
 function startMap(map) {
   newGame(devSeed ?? randomSeed(), map);
   devSeed = null;
   fitView(game.cols, game.rows);
-  history.replaceState(null, '', '#seed=' + game.seed);
+  history.replaceState(null, '', hashOf());
+  wakeBrain();
 }
 
 const loadJson = url => fetch(url).then(r => r.json());
@@ -98,7 +113,8 @@ async function continueGame() {
   fitView(game.cols, game.rows);                  // tells the camera the real map size (and zoom limits) first...
   if (d.view) Object.assign(cam, d.view);          // ...then puts the player's saved view back
   clampCam();
-  history.replaceState(null, '', '#seed=' + game.seed);
+  history.replaceState(null, '', hashOf());
+  wakeBrain();
 }
 
 initHud({
@@ -126,7 +142,7 @@ const STEP = 1 / 60;
 let last = performance.now(), acc = 0;
 (function frame(now) {
   acc += Math.min(0.1, (now - last) / 1000) * game.speed; last = now;
-  while (acc >= STEP) { tick(STEP); acc -= STEP; }
+  while (acc >= STEP) { if (brain) brainMod.brainTick(game, brain); tick(STEP); acc -= STEP; }
   render(ctx, W, H, dpr, game, cam, hover);
   requestAnimationFrame(frame);
 })(last);

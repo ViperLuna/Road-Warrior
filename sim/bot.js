@@ -102,7 +102,7 @@ export function createBot(opts = {}) {
 const gateTile = (d) => lotTile(d, gateOf(d));
 const exitOf = (h) => [h.x + DIR[h.rot][0], h.y + DIR[h.rot][1]];
 const gateExit = (d) => d.exit || exitTile(d);
-const destsOf = (g, color) =>
+export const destsOf = (g, color) =>
   g.buildings.filter((b) => b.kind === "dest" && (b.color.id === color.id || (b.color2 && b.color2.id === color.id)));
 
 export function unreached(g, h) {
@@ -120,7 +120,8 @@ const canGet = (g, item) =>
   (g.inv[item] || 0) > 0 ||
   (specialInfo(item)?.enabled && g.money >= specialInfo(item).cost);
 
-function planRoad(g, h, dests = destsOf(g, h.color)) {
+export function planRoad(g, h, dests = destsOf(g, h.color), opts = {}) {
+  const adjW = opts.adj ?? 0.3, extra = opts.extra || (() => 0);
   const { cols, rows } = g,
     W = g.terrain.water,
     N = cols * rows;
@@ -134,7 +135,7 @@ function planRoad(g, h, dests = destsOf(g, h.color)) {
       0,
     );
   const stepCost = (x, y, k) =>
-    g.roads.has(k) ? 0.1 : 1 + 0.3 * adjRoads(x, y);
+    (g.roads.has(k) ? 0.1 : 1 + adjW * adjRoads(x, y)) + extra(k);
 
   const targets = new Set(
     dests
@@ -224,7 +225,7 @@ function planRoad(g, h, dests = destsOf(g, h.color)) {
   return out.reverse();
 }
 
-function build(g, plan, bot) {
+export function build(g, plan, bot) {
   const newTiles = plan.filter(
     (p) => !p.span && !g.roads.has(p.y * g.cols + p.x),
   ).length;
@@ -262,7 +263,7 @@ function build(g, plan, bot) {
   return true;
 }
 
-const planCost = (g, plan) =>
+export const planCost = (g, plan) =>
   plan
     ? plan.reduce((n, p) => n + (p.span ? 8 : g.roads.has(p.y * g.cols + p.x) ? 0 : 1), 0)
     : Infinity;
@@ -291,11 +292,11 @@ function maybeFlip(g, h, bot) {
 }
 
 // Can a car leave building b (a house or a gate) for building d?
-const reaches = (g, b, d) => {
+export const reaches = (g, b, d) => {
   const reach = reachablePorts(g, b.x + DIR[b.rot][0], b.y + DIR[b.rot][1], OPP[b.rot]);
   return [...g.ports].some(([k, p]) => p.b === d && reach.has(k));
 };
-const colorsIn = (g) => g.palette.slice(0, Math.max(1, g.colorsUsed));
+export const colorsIn = (g) => g.palette.slice(0, Math.max(1, g.colorsUsed));
 
 // The stadium must be reached by a house of every colour; each side-road gate by the stadium and a destination of every colour. Lay the road
 // from a house (or the gate) the way a player would: over the city's own roads where it can.
@@ -381,7 +382,7 @@ function tidyCuts(g, bot) {
   }
 }
 
-function trackHeat(g, bot) {
+export function trackHeat(g, bot) {
   for (const [k, v] of bot.heat) {
     const nv = v * 0.98;
     if (nv < 0.05) bot.heat.delete(k);
