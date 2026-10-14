@@ -1,0 +1,18 @@
+(DRAFT for history.txt. Paste the new block at the top, under the TBD section, and delete the old "Building Patience - Currently Off" line. Trim whatever you like.)
+
+10.14.2026
+  Building Patience - Now ON. A house with no road to a destination of its colour, a destination no house of its colours can reach, the stadium, and the side roads all get a countdown: 60 seconds of quiet, then a warning toast, a pulsing red ring and 60 more seconds. If it still isn't connected when that runs out, the game is over. Connect it in time and the clock resets. If you break a connection later, the clock starts over. Pausing stops every clock, so you can pause and build.
+
+  Accidents (after 1,000 trips) - Now and then two cars bump and block their lane for 20 seconds while the police show up. Cars behind them still get angry.
+  Multicolor destinations now start after 2,000 trips (was 3,000).
+  Stadium (after 3,000 trips, Highlands and Metro) - A 4x3 stadium is donated to the city. Cars of any colour can go there, and it has two gates. It must be connected to houses of every colour (at least one of each to start). If there is no room for it, it clears a 5x4 area, roads first and buildings only if it has to.
+  Side Roads (after 4,000 trips) - Two roads to other cities appear on two edges of the map. They can't be demolished. Each must connect to the stadium and to destinations of every colour. Once connected, cars of any colour arrive from outside to visit the stadium, more and more often as the minutes go by. Every few minutes a horde of them shows up at once.
+  A popup explains the stadium and the side roads and the clock only starts when you tap OK.
+
+  A road with a blinking, jammed car on it can't be demolished until the jam clears.
+  History Log - New "Log" button. It lists the toasts (new buildings, accidents, traffic jams, the stadium, side roads, patience warnings). Tap one and the camera flies to the place and highlights it. Accidents remember where they were, even after they clear.
+  Countdown chips under the top bar show how long the stadium or the side roads have left. Tap one to fly there.
+
+  New map: Metro (100 x 66), unlocked with 150 trips on Highlands.
+  Sound effects and music - 13 songs, random order, volume and mute for each in Settings. Number keys and the numpad work as the buttons.
+  Your best score updates live now, so a run that never jams still counts.
