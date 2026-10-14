@@ -60,10 +60,10 @@
     "maxVisitors": 40,
     "rewardPerTrip": 2,
     "horde": {
-      "firstAfterMinutes": 4,
+      "firstAfterMinutes": 5,
       "everyMinutes": [
         5,
-        8
+        10
       ],
       "sizeStart": 12,
       "sizeGrowth": 3,
