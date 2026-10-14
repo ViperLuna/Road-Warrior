@@ -156,7 +156,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     if (!items.length) { list.innerHTML = '<div class="empty">Nothing yet. Messages about new buildings, accidents and patience show up here.</div>'; return; }
     for (const e of items) {
       const hasSpot = e.spots && e.spots.length, row = document.createElement(hasSpot ? 'button' : 'div');
-      row.className = 'entry' + (/not connected|left!|no longer/.test(e.text) ? ' bad' : ''); if (hasSpot) row.type = 'button';
+      row.className = 'entry' + (/not connected|left!|no longer|jammed/.test(e.text) ? ' bad' : ''); if (hasSpot) row.type = 'button';
       row.innerHTML = `<time>${fmtTime(e.t)}</time><span></span>${hasSpot ? '<span class="pin" aria-hidden="true">\u25ce</span>' : ''}`;
       row.children[1].textContent = e.text;
       if (hasSpot) row.addEventListener('click', () => {
@@ -270,6 +270,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     if (e.type === 'jam-locked') toast("Can't demolish this: cars are jammed here. Clear the jam first.");
     if (e.type === 'horde') note(`Event at the stadium! A crowd of ${e.size} is on its way.`, e.spots);
     if (e.type === 'accident') { const x = Math.floor(e.x), y = Math.floor(e.y); note('Accident! Police are on the scene.', [{ x0: x, y0: y, x1: x, y1: y }], { ref: 'accident', x: e.x, y: e.y }); }
+    if (e.type === 'jam') note('Traffic is jammed up here. The cars are getting angry!', e.spots, { ref: 'jam' });
     if (e.type === 'impatient') note(`${IMPATIENT[e.kind](e.label)} ${e.seconds} seconds left!`, e.spots);
     if (e.type === 'disconnected') toast(`${e.label} is no longer connected.`);                       // (just a toast, not logged: roads are being edited. If it is still broken when its warning starts, THAT toast is logged)
     if (e.type === 'unlock') note(`New map unlocked: ${e.map.name}!`);
