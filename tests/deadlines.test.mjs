@@ -107,4 +107,9 @@ pave(11, 20, 28, 20); tickN(20); const A8 = spawnStadium(g, { budget: 900 }); g.
 const data = JSON.parse(JSON.stringify(serialize())); restore(data);
 ok(g.mode === 'notice' && !!D.pendingNotice(g), 'a popup that was waiting is waiting again after a load');
 ok(g.watches.some(w => w.kind === 'house' && w.t > 10), 'house clocks carry over a load');
+// ---- the message log: capped, kept with the game ----
+S(); for (let i = 0; i < 260; i++) st.addLog('message ' + i, i % 2 ? [{ x0: i, y0: 1, x1: i, y1: 1 }] : []);
+ok(g.log.length === st.LOG_MAX && g.log.at(-1).text === 'message 259' && g.log[0].text === 'message 60', 'the log keeps the newest ' + st.LOG_MAX);
+const lg = JSON.parse(JSON.stringify(serialize())); restore(lg);
+ok(g.log.length === st.LOG_MAX && g.log.at(-1).spots.length === 1 && g.log.at(-1).t === lg.log.at(-1).t, 'and comes back after a load, spots included');
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);
