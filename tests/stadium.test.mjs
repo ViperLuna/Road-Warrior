@@ -95,6 +95,8 @@ if (A3 && gate) {
   pave(gx, gy, sx, sy);
   for (const e of entsOf(A3)) { const [ex, ey] = exitTile(A3, e); pave(gx, gy, ex, ey); }               // a road to every gate
   ok(gateConnected(g, gate), 'gate connects once the road is built');
+  ok(g.roads.get(gy * g.cols + gx).locked === true, 'the first piece of the side road is locked');
+  ok(st.demolish(gx, gy) === false && g.roads.has(gy * g.cols + gx), 'it cannot be demolished');
   const money0 = g.money, trips0 = g.trips; let seen = 0, inside = 0, maxInside = 0;
   for (let i = 0; i < 60 * 400; i++) { st.tick(1 / 60); const v = g.cars.filter(c => c.outside); seen = Math.max(seen, v.length); inside = v.filter(c => c.state === 'dwell').length; maxInside = Math.max(maxInside, inside); }
   ok(true, 'ran'); const gatesUsed = new Set();

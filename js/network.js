@@ -70,7 +70,7 @@ export function pieceValid(g, p) {
 // into the player's stock as itself. Returns false if there was no plain road there.
 export function clearRoadTile(g, x, y) {
   const k = tidx(g, x, y), r = g.roads.get(k);
-  if (!r || r.bridge || r.tunnel || r.overpass !== undefined) return false;
+  if (!r || r.bridge || r.tunnel || r.overpass !== undefined || r.locked) return false;
   if (r.special) g.inv[r.special] = (g.inv[r.special] || 0) + 1;
   g.roads.delete(k);
   DIR.forEach(([dx, dy], d) => {

@@ -415,6 +415,7 @@ export function buildRoad(x, y) {
 export function demolish(x, y) {
   if (!hasRoad(x, y)) return false;
   const r = game.roads.get(tileIndex(x, y));
+  if (r.locked) return false;                       // the first piece of a side road stays
   if (r.bridge || r.tunnel) {                       // removing any span tile removes the whole bridge / tunnel
     const id = r.bridge || r.tunnel;
     for (const k of game.bridges.get(id) || []) game.roads.delete(k);
