@@ -1,7 +1,7 @@
 // One car per house. Round trip: house -> destination lot (park, dwell) -> house = 1 trip.
 import { DIR, OPP, CAR_LEN, lotSpace, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
 import { lightColor, lightHolds, signalState, stepLight } from './signals.js';
-import { entOf, entSide, exitTile, accepts, baysOf, bayPiece, hasEnt, reindex as reindexAll } from './buildings.js';
+import { entOf, entsOf, entSide, exitTile, accepts, baysOf, bayPiece, hasEnt, reindex as reindexAll } from './buildings.js';
 import { roadAt, roundAt, tidx, tileLanes, layerLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
 import { findPath } from './pathfind.js';
 import { tuning } from './tuning.js';
@@ -47,7 +47,7 @@ function planOut(g, car) {
   if (!roadAt(g, rx, ry)) return false;
   const hasRoom = d => baysOf(d).some(k => d.slots[k] === null);
   let dests;
-  if (car.outside) dests = g.buildings.filter(d => d.stadium && hasRoom(d));                 // visitors from outside only ever come for the stadium
+  if (car.outside || car.forceStadium) dests = g.buildings.filter(d => d.stadium && hasRoom(d));                 // visitors from outside only ever come for the stadium
   else {
     dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && !d.stadium && accepts(d, b.color.id) && hasRoom(d)));
     const arena = g.buildings.find(d => d.stadium && hasRoom(d));                            // the stadium takes any colour: now and then a house car goes there
@@ -127,6 +127,17 @@ export function launchOutside(g, gate, color) {
   return car;
 }
 
+// A house car heads for the stadium (it joins a crowd). Returns the car or null if none of the idle ones can get there.
+export function sendHouseCarToStadium(g) {
+  for (const car of shuffle(g.cars.filter(c => c.state === 'home' && !c.outside))) {
+    car.forceStadium = true;
+    const ok = planOut(g, car);
+    car.forceStadium = false;
+    if (ok) { start(car, 'out'); return car; }
+  }
+  return null;
+}
+
 // No live road leads home any more: use the remembered way back (ghost pieces), if there is one.
 function ghostHome(car) {
   if (!car.homeRoute) return false;
@@ -135,19 +146,20 @@ function ghostHome(car) {
 }
 
 // Leave through whichever connected entrance gives the cheapest way home.
-function planBack(g, car) {
+function planBack(g, car, ent0 = car.lot.ent) {
   const L = car.lot;
   const home = g.ports.get(tidx(g, car.house.x, car.house.y));
   if (!home) return ghostHome(car);
   let best = null, bestEnt = 0;
-  for (const ent of [L.ent]) {                                  // the lot's single entrance
+  for (const ent of [ent0]) {                                   // (the entrance this car leaves by)
     const [rx, ry] = exitTile({ x: L.bx, y: L.by, rot: L.rot }, ent);
     if (!roadAt(g, rx, ry)) continue;
     const res = findPath(g, rx, ry, OPP[entSide(L.rot, ent)], [home]);
     if (res && (!best || res.cost < best.cost - 1e-6)) { best = res; bestEnt = ent; }
   }
   if (!best) return ghostHome(car);
-  car.route = [lotOutPiece(L.bx, L.by, L.rot, L.k, bestEnt), ...roadPieces(g, best.steps, Math.random() < 0.5 ? 0 : 1), houseInPiece(home.x, home.y, home.b.rot)];
+  const bay = car.dest && car.dest.stadium ? bayPiece(car.dest, car.slot, bestEnt) : L.k;
+  car.route = [lotOutPiece(L.bx, L.by, L.rot, bay, bestEnt), ...roadPieces(g, best.steps, Math.random() < 0.5 ? 0 : 1), houseInPiece(home.x, home.y, home.b.rot)];
   return true;
 }
 
@@ -370,13 +382,20 @@ export function updateSim(g, dt) {
     } else if (car.state === 'dwell') {
       car.dwell -= dt;
       if (car.dwell <= 0) {
-        const lk = lotSpace(car.lot.bx, car.lot.by, car.lot.ent);
-        if ((inside.get(lk) || []).length || claims.has(lk)) car.dwell = 0.1;          // lot is busy or claimed
-        else if (planBack(g, car)) {
-          car.dest.slots[car.slot] = null; car.dest = null; start(car, 'back');
-          (inside.get(lk) || inside.set(lk, []).get(lk)).push(car);          // lot is busy for the next car this very tick
+        // A stadium has several gates: a car leaves by a random one that is free (and has a road home). Anything else leaves the way it came.
+        const ents = car.dest && car.dest.stadium ? shuffle(entsOf(car.dest)) : [car.lot.ent];
+        let left = false, anyFree = false;
+        for (const ent of ents) {
+          const lk = lotSpace(car.lot.bx, car.lot.by, ent);
+          if ((inside.get(lk) || []).length || claims.has(lk)) continue;          // lot is busy or claimed
+          anyFree = true;
+          if (planBack(g, car, ent)) {
+            car.dest.slots[car.slot] = null; car.dest = null; start(car, 'back');
+            (inside.get(lk) || inside.set(lk, []).get(lk)).push(car);          // lot is busy for the next car this very tick
+            left = true; break;
+          }
         }
-        else car.dwell = 0.5;
+        if (!left) car.dwell = anyFree ? 0.5 : 0.1;
       }
     } else if (car.crash) {
       car.v = 0; car.stuck = 0;                                         // wrecked: sits where it is until the police clear it
@@ -402,7 +421,7 @@ export function updateSim(g, dt) {
         const last = car.route[car.route.length - 1];
         pointAt(last, last.len, car);
         car.v = 0; car.route = [last]; car.idx = 0; car.s = last.len; car.stuck = 0; car.hold = false; car.entry = null;
-        if (car.state === 'out') { car.state = 'dwell'; car.dwell = car.dest && car.dest.stadium ? tuning.stadium.stayMinSeconds + Math.random() * (tuning.stadium.stayMaxSeconds - tuning.stadium.stayMinSeconds) : tuning.trips.parkedSeconds; }
+        if (car.state === 'out') { car.state = 'dwell'; car.dwell = car.dest && car.dest.stadium ? (g.match && g.match.phase !== 'none' ? 1e9 : tuning.stadium.stayMinSeconds + Math.random() * (tuning.stadium.stayMaxSeconds - tuning.stadium.stayMinSeconds)) : tuning.trips.parkedSeconds;  }       // (during a match everyone in the stadium stays until the final whistle)
         else if (car.outside) { car.gone = true; g.money += tuning.outside.rewardPerTrip; changed = true; }        // back out through the side road: gone (no score, a little cash)
         else {
           const t = tuning.trips;

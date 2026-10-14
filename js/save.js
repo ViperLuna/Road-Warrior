@@ -46,7 +46,7 @@ export function serialize(g = game) {
     bridges: [...g.bridges.entries()],
     watches: (g.watches || []).map(({ key, kind, ids, ack, stage, t, notice }) => ({ key, kind, ids, ack, stage, t, notice })),
     log: g.log || [], nextLogId: g.nextLogId || 1,
-    outside: { since: g.outsideSince, nextAt: g.nextOutsideAt, hordeAt: g.hordeAt, hordeLeft: g.hordeLeft, hordeCount: g.hordeCount, hordeNextCar: g.hordeNextCar, hordeDeadline: g.hordeDeadline },
+    outside: { since: g.outsideSince, nextAt: g.nextOutsideAt, hordeAt: g.hordeAt, hordeLeft: g.hordeLeft, hordeCount: g.hordeCount, hordeNextCar: g.hordeNextCar, hordeDeadline: g.hordeDeadline, match: g.match },
     buildings: g.buildings.map(b => ({ ...b, color: b.color.id, color2: b.color2 ? b.color2.id : undefined, slots: b.slots ? b.slots.map(c => (c ? c.id : null)) : null })),
     cars: carData,
   };
@@ -83,7 +83,7 @@ export function restore(data, g = game) {
   clearPieceCache();
   reindex(g);
 
-  g.accident = null; g.nextAccidentAt = undefined; resetOutside(g); if (data.outside) { const o = data.outside; g.outsideSince = o.since; g.nextOutsideAt = o.nextAt; g.hordeAt = o.hordeAt; g.hordeLeft = o.hordeLeft || 0; g.hordeCount = o.hordeCount || 0; g.hordeNextCar = o.hordeNextCar || 0; g.hordeDeadline = o.hordeDeadline || 0; }                 // no accident carries over a save: the schedule starts fresh
+  g.accident = null; g.nextAccidentAt = undefined; resetOutside(g); if (data.outside) { const o = data.outside; g.outsideSince = o.since; g.nextOutsideAt = o.nextAt; g.hordeAt = o.hordeAt; g.hordeLeft = o.hordeLeft || 0; g.hordeCount = o.hordeCount || 0; g.hordeNextCar = o.hordeNextCar || 0; g.hordeDeadline = o.hordeDeadline || 0; if (o.match) g.match = o.match; }                 // no accident carries over a save: the schedule starts fresh
   g.jams = [];
   g.log = data.log || []; g.nextLogId = data.nextLogId || (g.log.length ? g.log[g.log.length - 1].id + 1 : 1);
   g.watches = (data.watches || []).map(w => ({ ...w, ok: false, fresh: false })); g.seenNet = undefined; g.netEditedAt = g.time; g.watchKey = '';

@@ -269,6 +269,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     if (e.type === 'gate-info') toast(e.demolish ? "That's the road to another city. It can't be demolished." : "This is an expansion to another city you can't see. Visitors come in through here.");
     if (e.type === 'jam-locked') toast("Can't demolish this: cars are jammed here. Clear the jam first.");
     if (e.type === 'horde') note(`A game is being hosted at the stadium! A crowd of ${e.size} is on its way.`, e.spots);
+    if (e.type === 'whistle') note('Full time! The crowd is leaving the stadium.', e.spots);
     if (e.type === 'accident') { const x = Math.floor(e.x), y = Math.floor(e.y); note('Accident! Police are on the scene.', [{ x0: x, y0: y, x1: x, y1: y }], { ref: 'accident', x: e.x, y: e.y }); }
     if (e.type === 'jam') note('Traffic is jammed up here. The cars are getting angry!', e.spots, { ref: 'jam' });
     if (e.type === 'impatient') note(`${IMPATIENT[e.kind](e.label)} ${e.seconds} seconds left!`, e.spots);

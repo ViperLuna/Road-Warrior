@@ -51,7 +51,9 @@
     "stayMinSeconds": 20,
     "stayMaxSeconds": 45,
     "houseChance": 0.08,
-    "gateQueuePenalty": 1.5
+    "gateQueuePenalty": 1.5,
+    "matchSeconds": 60,
+    "exitSpreadSeconds": 10
   },
   "outside": {
     "startIntervalSeconds": 30,
@@ -69,7 +71,8 @@
       "sizeGrowth": 3,
       "sizeMax": 32,
       "spacingSeconds": 0.9,
-      "giveUpSeconds": 40
+      "giveUpSeconds": 40,
+      "houseShare": 0.3
     }
   },
   "jams": {

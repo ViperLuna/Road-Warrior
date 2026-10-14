@@ -118,6 +118,19 @@ if (A3 && gate) {
     ok(g.hordeCount >= 1, 'counted');
     const e1 = events.find(e => e.type === 'horde').size; g.hordeAt = g.time; tickN(2); const e2 = events.filter(e => e.type === 'horde').pop().size;
     ok(e2 > e1 || e2 === tuning.outside.horde.sizeMax, 'each horde is bigger (' + e1 + ' -> ' + e2 + ')'); }
+  // a whole match: the crowd stays for the match, then the whistle sends everyone out by random gates
+  { const a = stadiumOf(g); for (const c of g.cars) if (c.outside) c.dwell = 0.01; g.nextOutsideAt = 1e9; g.hordeLeft = 0; g.match = { phase: 'none', whistleAt: 0 }; tickN(150);
+    events.length = 0; g.hordeAt = g.time; const inStadium = () => g.cars.filter(c => c.state === 'dwell' && c.dest === a).length;
+    for (let i = 0; i < 60 * 60 && !(g.hordeLeft === 0 && g.match.phase === 'play' && g.hordeCount > 0 && events.some(e => e.type === 'horde')); i++) st.tick(1 / 60);
+    ok(g.match.phase === 'play' && g.match.whistleAt > g.time + 30, 'after the last arrival the game is on (whistle in ' + (g.match.whistleAt - g.time).toFixed(0) + ' s)');
+    tickN(10); const full = inStadium(); ok(full >= 8, 'the crowd is inside (' + full + ' cars)');
+    tickN(25); ok(inStadium() >= full - 1, 'and nobody leaves before the whistle (' + inStadium() + ' of ' + full + ')');
+    const ents = new Set(); let whistle = null;
+    for (let i = 0; i < 60 * 120; i++) { st.tick(1 / 60); if (!whistle) whistle = events.find(e => e.type === 'whistle'); for (const c of g.cars) if (c.state === 'back' && c.route[0] && c.route[0].kind === 'lot_out' && c.route[0].ent >= 8) ents.add(c.route[0].ent); }
+    ok(!!whistle && whistle.cars >= full - 1 && whistle.spots.length === 1, 'the final whistle (' + (whistle && whistle.cars) + ' cars released)');
+    ok(inStadium() === 0, 'the stadium empties out');
+    ok(ents.size === 2, 'the crowd leaves by both gates (' + [...ents] + ')');
+    ok(g.cars.every(c => c.state !== 'back' || g.buildings.includes(c.house)), 'every car heading home still has a home'); }
   // interval shrinks minute by minute
   const i0 = visitorInterval({ time: 0, outsideSince: 0 }), i1 = visitorInterval({ time: 600, outsideSince: 0 }), i2 = visitorInterval({ time: 6000, outsideSince: 0 });
   ok(i0 === tuning.outside.startIntervalSeconds && i1 < i0 && i2 === tuning.outside.minIntervalSeconds, `interval shrinks (${i0}s -> ${i1.toFixed(1)}s -> ${i2}s)`);
@@ -130,7 +143,7 @@ if (A3 && gate) {
   tickN(60); ok(true, 'game keeps running after a load');
   // visitors leave the map when the trip is over: no leak
   for (const c of g.cars) if (c.outside && c.state === 'dwell') c.dwell = 0.01;
-  g.nextOutsideAt = 1e9; tickN(200);
+  g.nextOutsideAt = 1e9; g.hordeAt = 1e9; g.hordeLeft = 0; g.match = { phase: 'none', whistleAt: 0 }; tickN(200);
   ok(!g.cars.some(c => c.outside), 'every visitor finishes and disappears');
   ok(stadiumOf(g).slots.every(c => !c || !c.outside), 'no visitor is left in the stadium');
 }

@@ -1,7 +1,7 @@
 // The outside world: side-road gates on the map edge send visitors of any colour to the stadium, faster and faster.
 // A visitor is a car with no house (`car.outside`): it drives gate -> stadium gate, stays a while, drives back to its gate and is gone.
 import { tuning } from './tuning.js';
-import { launchOutside } from './cars.js';
+import { launchOutside, sendHouseCarToStadium } from './cars.js';
 import { findPath } from './pathfind.js';
 import { roadAt } from './network.js';
 import { DIR, OPP } from './lanes.js';
@@ -25,6 +25,7 @@ export function visitorInterval(g) {
 }
 
 export function resetOutside(g) {
+  g.match = { phase: 'none', whistleAt: 0 };
   g.outsideSince = undefined; g.nextOutsideAt = undefined;
   g.hordeAt = undefined; g.hordeLeft = 0; g.hordeCount = 0; g.hordeNextCar = 0; g.hordeDeadline = 0;
 }
@@ -50,22 +51,39 @@ function stepHorde(g, gates, notify) {
   if (g.hordeLeft > 0) {
     if (g.time >= g.hordeDeadline) { g.hordeLeft = 0; }                                    // the stadium filled up or the roads would not take them: the rest turn back
     else if (g.time >= g.hordeNextCar) {
-      if (launchOne(g, gates)) { g.hordeLeft--; g.hordeNextCar = g.time + h.spacingSeconds * (0.7 + Math.random() * 0.6); }
+      // some of the crowd come from the player's own houses, the rest from outside
+      const car = (Math.random() < h.houseShare && sendHouseCarToStadium(g)) || launchOne(g, gates);
+      if (car) { g.hordeLeft--; g.hordeNextCar = g.time + h.spacingSeconds * (0.7 + Math.random() * 0.6); }
       else g.hordeNextCar = g.time + 0.5;
     }
-    if (g.hordeLeft <= 0) g.hordeAt = g.time + rand(h.everyMinutes[0], h.everyMinutes[1]) * 60;
+    if (g.hordeLeft <= 0) {
+      g.hordeAt = g.time + rand(h.everyMinutes[0], h.everyMinutes[1]) * 60;
+      g.match = { phase: 'play', whistleAt: g.time + tuning.stadium.matchSeconds };           // everyone is in (or on the way): the game is on
+    }
     return;
   }
   if (g.hordeAt === undefined || g.time < g.hordeAt) return;
   const size = Math.min(h.sizeMax, Math.round(h.sizeStart + h.sizeGrowth * g.hordeCount));
+  g.match = { phase: 'fill', whistleAt: 0 };                                               // from kickoff, arriving cars stay put until the final whistle
   g.hordeLeft = size; g.hordeCount++; g.hordeNextCar = g.time; g.hordeDeadline = g.time + size * h.spacingSeconds * 1.5 + h.giveUpSeconds;
   const arena = stadiumOf(g);
   notify({ type: 'horde', size, spots: arena ? [bounds(arena)] : [] });
 }
 
+// The final whistle: the crowd makes some noise (`whistle` event: the sound is the listener's business) and then everyone in the stadium
+// leaves, staggered over exitSpreadSeconds, each by a random gate.
+function stepMatch(g, arena, notify) {
+  if (!g.match || g.match.phase !== 'play' || g.time < g.match.whistleAt) return;
+  g.match = { phase: 'none', whistleAt: 0 };
+  let n = 0;
+  for (const c of g.cars) if (c.state === 'dwell' && c.dest === arena) { c.dwell = Math.random() * tuning.stadium.exitSpreadSeconds; n++; }
+  notify({ type: 'whistle', cars: n, spots: [bounds(arena)] });
+}
+
 // Called every tick while playing.
 export function stepOutside(g, dt, notify = () => {}) {
   const arena = stadiumOf(g), gates = gatesOf(g);
+  if (arena && g.match) stepMatch(g, arena, notify);
   if (!arena || !gates.length) return;
   if (g.hordeLeft > 0 || g.hordeAt !== undefined) stepHorde(g, gates, notify);
   if (g.nextOutsideAt !== undefined && g.time < g.nextOutsideAt) return;
