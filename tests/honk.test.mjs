@@ -28,5 +28,7 @@ ok(ev.length && ev.every(e => e.k > 0.9 && e.k <= 1), 'k is how mad the car is (
   for (let i = 0; i < 20; i++) { gg.time += 0.5; J.stepJams(gg, 0.5, note); } ok(jev.length === 1, 'and not again while it lasts');
   gg.cars = [car(40, 5, warn + 1)]; gg.time += 0.5; J.stepJams(gg, 0.5, note); ok(jev.length === 2, 'a jam somewhere else is a new one');
   gg.cars = []; for (let i = 0; i < 40; i++) { gg.time += 0.5; J.stepJams(gg, 0.5, note); } gg.cars = [car(10.5, 10.5, warn + 1)]; gg.time += 0.5; J.stepJams(gg, 0.5, note);
-  ok(jev.length === 3, 'once it has cleared the same place can be reported again'); }
+  ok(jev.length === 2, 'a jam that clears and flickers back within relogSeconds is not logged again (' + jev.length + ')');
+  gg.cars = []; for (let i = 0; i < 4 * tuning.jams.relogSeconds; i++) { gg.time += 0.5; J.stepJams(gg, 0.5, note); } gg.cars = [car(10.5, 10.5, warn + 1)]; gg.time += 0.5; J.stepJams(gg, 0.5, note);
+  ok(jev.length === 3, 'after the quiet time the same place can be reported again'); }
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);

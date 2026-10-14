@@ -60,7 +60,7 @@ export function newGame(seed, map = maps[0]) {
   game.inv = { ...START_INVENTORY };
   game.mode = 'play'; game.reward = null; game.over = null; game.unlocks = {}; game.oneway = false; game.build4 = false;
   game.buildings = []; game.buildingAt = new Map(); game.ports = new Map(); game.nextId = 1;
-  game.cars = []; game.trips = 0; game.money = 0; game.time = 0; game.accident = null; game.nextAccidentAt = undefined; resetOutside(game); game.watches = []; game.jams = []; game.log = []; game.nextLogId = 1; game.seenNet = undefined; game.netEditedAt = undefined; game.watchKey = ''; game.visitorsLaunched = 0;
+  game.cars = []; game.trips = 0; game.money = 0; game.time = 0; game.accident = null; game.nextAccidentAt = undefined; resetOutside(game); game.watches = []; game.jams = []; game.jamQuiet = []; game.log = []; game.nextLogId = 1; game.seenNet = undefined; game.netEditedAt = undefined; game.watchKey = ''; game.visitorsLaunched = 0;
   game.bestAtStart = bestFor(map.id); syncBest();                       // the best score when this run began (a record means beating that)
   clearPieceCache();
   spawnInitial(game, game.palette[0]);

@@ -72,6 +72,11 @@
       "giveUpSeconds": 40
     }
   },
+  "jams": {
+    "radiusTiles": 4,
+    "forgetSeconds": 15,
+    "relogSeconds": 60
+  },
   "trips": {
     "parkedSeconds": 1.6,
     "rewardPerTrip": 5,
