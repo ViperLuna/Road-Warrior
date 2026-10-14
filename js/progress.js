@@ -2,7 +2,7 @@
 import { prog, milestones, roadsAvailable } from './progression.js';
 import { roadConns } from './network.js';
 import { accepts, destWeight } from './buildings.js';
-import { spawnPair, spawnHouse, spawnHouseAcross, spawnPairAcross, findCrossings, spawnStadium, spawnPortal, EDGE_NAMES } from './spawn.js';
+import { spawnPair, spawnHouse, spawnHouseAcross, spawnPairAcross, findCrossings, spawnStadiumClearing, spawnPortal, EDGE_NAMES } from './spawn.js';
 import { stadiumOf, gatesOf, gateConnected } from './outside.js';
 import { findPath } from './pathfind.js';
 import { roadAt } from './network.js';
@@ -147,8 +147,8 @@ function spawnOutsideThings(g, notify) {
   const st = milestones.stadium, po = { ...prog.spawns.portals, ...milestones.portals };
   if (st && !stadiumOf(g)) {
     if (g.trips >= st.afterTrips && st.maps.includes(g.map.id) && g.colorsUsed >= g.palette.length && !(g.nextStadiumTry > g.trips)) {
-      const d = spawnStadium(g, { budget: roadsAvailable(g) });
-      if (d) notify({ type: 'stadium', x: d.x, y: d.y });
+      const made = spawnStadiumClearing(g, { budget: roadsAvailable(g) });         // (if the map is full of roads it is built anyway, over the fewest it can)
+      if (made) notify({ type: 'stadium', x: made.stadium.x, y: made.stadium.y, cleared: made.cleared });
       else g.nextStadiumTry = g.trips + 10;
     }
     return;

@@ -2,6 +2,7 @@
 import { DIR } from './lanes.js';
 import { addBuilding, lotTile, reindex, accepts, footprint, entOf, entsOf, entrancesOf, exitTile, SPECIAL_COLORS } from './buildings.js';
 import { tuning } from './tuning.js';
+import { clearRoadTile } from './network.js';
 import { createCar } from './cars.js';
 import { mulberry32 } from './rng.js';
 import { WATER, HILL, LAND } from './terrain.js';
@@ -232,29 +233,60 @@ export function spawnPairAcross(g, color, opts = {}) {
 // The tiles a new stadium has gates on: the first `tuning.stadium.gates` of `gateTiles` (lot tiles -1, 0, 1, 2 along the front), in lot order.
 export const stadiumGates = () => tuning.stadium.gateTiles.slice(0, Math.max(1, tuning.stadium.gates)).sort((a, b) => a - b);
 
-// A stadium (a 4x3 destination that takes every colour, with several gates in its front row) near the existing roads: close enough that the
-// player can afford to connect it. opts: budget (road pieces they can spend), roads [min, max] new pieces to reach a road. Returns the stadium or null.
-export function spawnStadium(g, opts = {}) {
+// Where a stadium could go. `clear` = it may stand on plain road (the road under it will be cleared): the spot with the fewest road
+// pieces to clear wins. Returns { fake, fp, exits, cost, roads } or null. opts: budget, roads [min, max].
+function findStadiumSpot(g, opts, clear) {
   const rng = opts.rng || Math.random, [minR, maxR] = opts.roads || [3, 14], budget = opts.budget ?? Infinity;
   const roadTiles = new Set(g.roads.keys());
   if (!roadTiles.size || !g.buildings.length) return null;
-  for (let attempt = 0; attempt < 600; attempt++) {
+  const ground = (x, y) => x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] === LAND && !g.buildingAt.has(y * g.cols + x);
+  const clearable = (x, y) => { const r = g.roads.get(y * g.cols + x); return !r || !(r.bridge || r.tunnel || r.overpass !== undefined); };
+  let best = null;
+  for (let attempt = 0; attempt < (clear ? 1500 : 600); attempt++) {
     const a = g.buildings[Math.floor(rng() * g.buildings.length)], r = 4 + Math.floor(rng() * 10), th = rng() * 6.283;
     const ax = Math.round(a.x + Math.cos(th) * r), ay = Math.round(a.y + Math.sin(th) * r);
     const rot = Math.floor(rng() * 4), fake = { kind: 'dest', x: ax, y: ay, rot, stadium: true, gates: stadiumGates() };
     const tiles = footprint(fake);
-    if (!tiles.every(([x, y]) => free(g, x, y))) continue;
+    if (!tiles.every(([x, y]) => (clear ? ground(x, y) && clearable(x, y) : free(g, x, y)))) continue;
+    const roads = tiles.filter(([x, y]) => g.roads.has(y * g.cols + x)).length;
+    if (best && roads >= best.roads) continue;
     const fp = new Set(tiles.map(([x, y]) => y * g.cols + x)), exits = entsOf(fake).map(e => exitTile(fake, e));
     if (!exits.every(([x, y]) => passable(g, x, y, fp))) continue;                     // every gate must have somewhere for a road to arrive
-    const cost = Math.min(...exits.map(e => buildCost(g, e, roadTiles, fp, Math.min(budget, maxR))));
-    if (!Number.isFinite(cost) || cost < minR) continue;
-    const d = addBuilding(g, 'dest', SPECIAL_COLORS.stadium, ax, ay, rot);
-    d.stadium = true; d.gates = fake.gates;
-    d.slots = new Array(tuning.stadium.capacity).fill(null);
-    reindex(g);
-    return d;
+    const left = new Set([...roadTiles].filter(k => !fp.has(k)));
+    const cost = Math.min(...exits.map(e => buildCost(g, e, left, fp, clear ? maxR + 6 : Math.min(budget, maxR))));
+    if (!Number.isFinite(cost) || (!clear && cost < minR)) continue;
+    best = { fake, fp, exits, cost, roads };
+    if (!clear || roads === 0) break;                                                  // (when clearing, keep looking for the spot that costs the fewest roads)
   }
-  return null;
+  return best;
+}
+
+function placeStadium(g, spot) {
+  const d = addBuilding(g, 'dest', SPECIAL_COLORS.stadium, spot.fake.x, spot.fake.y, spot.fake.rot);
+  d.stadium = true; d.gates = spot.fake.gates;
+  d.slots = new Array(tuning.stadium.capacity).fill(null);
+  reindex(g);
+  return d;
+}
+
+// A stadium (a 4x3 destination that takes every colour, with several gates in its front row) on free land near the existing roads: close
+// enough that the player can afford to connect it. opts: budget (road pieces they can spend), roads [min, max] new pieces to reach a road.
+// Returns the stadium or null.
+export function spawnStadium(g, opts = {}) {
+  const spot = findStadiumSpot(g, opts, false);
+  return spot ? placeStadium(g, spot) : null;
+}
+
+// The same, but when there is no free room anywhere (the map is covered in roads) it takes the spot with the fewest plain road pieces
+// (never a bridge, tunnel or overpass; never a building) and clears them first: they go back to the player's stock. Returns { stadium, cleared } or null.
+export function spawnStadiumClearing(g, opts = {}) {
+  const free1 = spawnStadium(g, opts);
+  if (free1) return { stadium: free1, cleared: 0 };
+  const spot = findStadiumSpot(g, opts, true);
+  if (!spot) return null;
+  let cleared = 0;
+  for (const k of spot.fp) if (g.roads.has(k) && clearRoadTile(g, k % g.cols, (k / g.cols) | 0)) cleared++;
+  return { stadium: placeStadium(g, spot), cleared };
 }
 
 // Map-edge sides: 0 north, 1 east, 2 south, 3 west (the same numbers as a building's rot). A gate faces inward.

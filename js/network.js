@@ -65,3 +65,19 @@ export function pieceValid(g, p) {
   const b = g.buildingAt.get(tidx(g, p.tx, p.ty));
   return !!b && b.rot === p.rot;
 }
+
+// Take a road tile off the map (game logic, not the player's tool): its seams on the neighbours are cleared and the piece goes back
+// into the player's stock as itself. Returns false if there was no plain road there.
+export function clearRoadTile(g, x, y) {
+  const k = tidx(g, x, y), r = g.roads.get(k);
+  if (!r || r.bridge || r.tunnel || r.overpass !== undefined) return false;
+  if (r.special) g.inv[r.special] = (g.inv[r.special] || 0) + 1;
+  g.roads.delete(k);
+  DIR.forEach(([dx, dy], d) => {
+    const n = inB(g, x + dx, y + dy) && g.roads.get(tidx(g, x + dx, y + dy));
+    if (n) { n.noExit = (n.noExit || 0) & ~(1 << ((d + 2) % 4)); n.cut = (n.cut || 0) & ~(1 << ((d + 2) % 4)); }
+  });
+  if ((r.lanes || 2) === 4) g.inv.highway = (g.inv.highway || 0) + 1; else g.inv.road = (g.inv.road || 0) + 1;
+  netChanged();
+  return true;
+}

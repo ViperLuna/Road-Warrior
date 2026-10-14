@@ -6,7 +6,7 @@ const { setTuning, tuning } = await import(R + 'js/tuning.js');
 const { setProgression, setMaps, setMilestones, milestones, maps, prog } = await import(R + 'js/progression.js');
 const { addBuilding, reindex, lotTile, exitTile, footprint, entsOf, entTile } = await import(R + 'js/buildings.js');
 const { createCar } = await import(R + 'js/cars.js');
-const { spawnStadium, spawnPortal } = await import(R + 'js/spawn.js');
+const { spawnStadium, spawnStadiumClearing, spawnPortal } = await import(R + 'js/spawn.js');
 const { stadiumOf, gatesOf, gateConnected, visitorInterval } = await import(R + 'js/outside.js');
 const { checkProgress } = await import(R + 'js/progress.js');
 const { serialize, restore } = await import(R + 'js/save.js');
@@ -137,5 +137,21 @@ if (A4 && gt) {
   const [sx, sy] = exitTile(A4); pave(gt.x + 1, gt.y, sx, sy);
   const cap = A4.slots.length; A4.slots.fill({}); ok(!gateConnected(g, gt) || true, 'full'); g.nextOutsideAt = undefined; tickN(30);
   ok(!g.cars.some(c => c.outside), 'no visitors launched while the stadium is full');
+}
+// ---- a map covered in roads: the stadium still appears, over the fewest road pieces ----
+S(); base();
+for (let y = 2; y < g.rows - 2; y++) for (let x = 2; x < g.cols - 2; x++) if (!g.buildingAt.has(y * g.cols + x) && (x % 3 === 0 || y % 3 === 0)) st.buildRoad(x, y);   // a grid of streets, blocks only 2x2
+ok(!spawnStadium(g, { budget: 500 }), 'no free room for a stadium on a map full of roads');
+const roads0 = g.roads.size, stock0 = g.inv.road; events.length = 0;
+g.trips = milestones.stadium.afterTrips; g.colorsUsed = palette.length; checkProgress(g, e => events.push(e));
+const big = stadiumOf(g), ev = events.find(e => e.type === 'stadium');
+ok(!!big && !!ev && ev.cleared > 0, 'the stadium is built anyway and says how many road pieces it cleared (' + (ev && ev.cleared) + ')');
+if (big) {
+  ok(footprint(big).every(([x, y]) => !g.roads.has(y * g.cols + x) && g.buildingAt.get(y * g.cols + x) === big), 'nothing is left of the roads under it');
+  ok(g.roads.size === roads0 - ev.cleared && g.inv.road === stock0 + ev.cleared, 'the cleared pieces went back to the stock (' + ev.cleared + ')');
+  ok(entsOf(big).every(e => { const [x, y] = exitTile(big, e); return !g.buildingAt.has(y * g.cols + x); }), 'every gate has a free tile outside it');
+  ok(ev.cleared <= 12, 'only a small area is cleared (' + ev.cleared + ')');
+  ok(new Set([...g.buildings.map(b => b.id)]).size === g.buildings.length && g.buildings.filter(b => b.kind !== 'portal').every(b => footprint(b).every(([x, y]) => g.buildingAt.get(y * g.cols + x) === b)), 'no building was overwritten');
+  tickN(30); ok(true, 'the game runs on');
 }
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);

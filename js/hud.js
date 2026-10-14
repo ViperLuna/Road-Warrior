@@ -203,7 +203,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   onChange(render);
   onEvent(e => {
     if (e.type === 'cash') toast(`Goal reached: +$${e.n}.`);
-    if (e.type === 'stadium') toast('A stadium opened! Any colour can go there. Connect its gates.');
+    if (e.type === 'stadium') toast(e.cleared ? `A stadium opened! It took ${e.cleared} road piece${e.cleared > 1 ? 's' : ''} to fit (they are back in your stock). Connect its gates.` : 'A stadium opened! Any colour can go there. Connect its gates.');
     if (e.type === 'portal') toast(e.first ? `A side road appears on the ${e.name} edge: connect it to the stadium. Visitors are coming.` : `Another side road on the ${e.name} edge.`);
     if (e.type === 'horde') toast(`Event at the stadium! A crowd of ${e.size} is on its way.`);
     if (e.type === 'accident') toast('Accident! Police are on the scene.');
