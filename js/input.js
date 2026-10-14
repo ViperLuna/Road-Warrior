@@ -84,6 +84,8 @@ const PLACE_MSG = {
   driveway: "The overpass can't come from a driveway. A building can only be at the end of the road that runs underneath it.",
 };
 
+// Letter hotkeys for the pills (clicking the pill, so it does exactly what tapping it does): V overpass, H highway, O roundabout.
+const SPECIAL_KEY = { v: 'overpass', h: 'highway', o: 'roundabout' };
 const NUMPAD_SPEED = { Numpad0: 0, Numpad1: 1, Numpad2: 1.5, Numpad3: 2 };     // numpad: speed
 const ROW_TOOL = {                                                                // number row: toolbar buttons, left to right
   Digit1: () => setTool('build'), Digit2: () => setTool('destroy'), Digit3: () => setTool('pan'),
@@ -205,7 +207,8 @@ export function initInput(canvas) {
     else if (e.key === 'b') press(() => setTool('build'));
     else if (e.key === 'd') press(() => setTool('destroy'));
     else if (e.key === 'm') press(() => setTool('pan'));
-    else if (e.key === 'o' && game.unlocks.oneway) press(() => setOneWay(!game.oneway));
+    else if (e.key === 'l' && (game.mode === 'play' || game.mode === 'pause')) press(() => document.getElementById('log-btn').click());
+    else if (SPECIAL_KEY[e.key] && game.mode === 'play') { const pill = document.querySelector(`#specials [data-special="${SPECIAL_KEY[e.key]}"]`); if (pill) press(() => pill.click()); }       // (only if that pill is showing: you own one / it is unlocked)
     else if (e.key === 'c') press(() => setTool('cut'));
     else if (e.key === 'r' && hover.show) { if (rotateBuildingAt(hover.x, hover.y)) play('rotate'); }
     else if (NUMPAD_SPEED[e.code] !== undefined && game.mode === 'play') press(() => setSpeed(NUMPAD_SPEED[e.code]));

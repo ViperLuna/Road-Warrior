@@ -16,3 +16,4 @@
   New map: Metro (100 x 66), unlocked with 150 trips on Highlands.
   Sound effects and music - 13 songs, random order, volume and mute for each in Settings. Number keys and the numpad work as the buttons.
   Your best score updates live now, so a run that never jams still counts.
+  New hotkeys: L = Log, V = Overpass, H = Highway, O = Roundabout (when that button is showing). One-way stays on the 5 key.

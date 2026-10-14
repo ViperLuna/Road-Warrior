@@ -210,6 +210,8 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
       if (!s.enabled || s.unlock || (n === 0 && s.id !== 'bridge' && game.placing !== s.id && !(s.id === 'overpass' && anyOverpass))) continue;
       const tappable = s.placeable || s.toggle;
       const d = document.createElement(tappable ? 'button' : 'div');
+      d.dataset.special = s.id;
+      const key = { overpass: 'V', highway: 'H', roundabout: 'O' }[s.id]; if (key) d.title = `${s.name} (${key})`;
       d.className = 'pill' + (tappable ? ' tap' : '') + ((game.placing === s.id) || (s.toggle === 'build4' && game.build4) ? ' on' : '');
       d.innerHTML = `${s.name} <b>${n}</b>`;
       if (s.toggle === 'build4') {
