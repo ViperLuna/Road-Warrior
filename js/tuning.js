@@ -8,6 +8,7 @@ export const tuning = {
   accidents: { durationSeconds: 20, firstDelaySeconds: 90, minGapSeconds: 150, maxGapSeconds: 300, rampTrips: 4000, rampShrink: 0.5, minSpeed: 0.5, closeTiles: 0.8 },
   stadium: { capacity: 40, gates: 2, gateTiles: [-1, 2, 0, 1], stayMinSeconds: 20, stayMaxSeconds: 45, houseChance: 0.08, gateQueuePenalty: 1.5 },
   outside: { startIntervalSeconds: 30, minIntervalSeconds: 3, decayPerMinute: 0.95, maxVisitors: 40, rewardPerTrip: 2, horde: { firstAfterMinutes: 4, everyMinutes: [5, 8], sizeStart: 12, sizeGrowth: 3, sizeMax: 32, spacingSeconds: 0.9, giveUpSeconds: 40 } },
+  deadlines: { house: { graceSeconds: 60, warnSeconds: 60 }, stadium: { graceSeconds: 60, warnSeconds: 60 }, gates: { graceSeconds: 60, warnSeconds: 60 }, requiredPercent: 0, settleSeconds: 3, quietSeconds: 0.4 },
   trips: { parkedSeconds: 1.6, rewardPerTrip: 5, homeCooldownMinSeconds: 1.5, homeCooldownMaxSeconds: 3.5 },
 };
 

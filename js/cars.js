@@ -102,6 +102,19 @@ export function razeBuilding(g, b) {
   reindexAll(g);
 }
 
+// Road tiles with a jammed car on them: a car stuck long enough to blink (tuning.gridlock.warnAfterSeconds). Such a tile cannot be demolished:
+// pulling the road out from under a jam sends every car onto a ghost track and "solves" it, which is too easy.
+export function jammedTiles(g) {
+  const out = new Set(), warn = tuning.gridlock.warnAfterSeconds;
+  for (const c of g.cars) {
+    if (c.stuck < warn || (c.state !== 'out' && c.state !== 'back')) continue;
+    const p = c.route[c.idx];
+    if (p && p.kind === 'road') out.add(p.ty * g.cols + p.tx);
+    out.add(Math.floor(c.y) * g.cols + Math.floor(c.x));
+  }
+  return out;
+}
+
 // A visitor from the outside: a car of any colour leaves `gate` (a side-road gate) for the stadium. Returns the car, or null if
 // the gate has no road to the stadium (or the stadium is full) right now.
 export function launchOutside(g, gate, color) {

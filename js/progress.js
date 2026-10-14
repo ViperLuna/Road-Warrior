@@ -4,14 +4,13 @@ import { roadConns } from './network.js';
 import { accepts, destWeight } from './buildings.js';
 import { spawnPair, spawnHouse, spawnHouseAcross, spawnPairAcross, findCrossings, spawnStadiumClearing, spawnPortal, EDGE_NAMES } from './spawn.js';
 import { stadiumOf, gatesOf, gateConnected } from './outside.js';
-import { findPath } from './pathfind.js';
-import { roadAt } from './network.js';
-import { DIR, OPP } from './lanes.js';
+import { bounds } from './buildings.js';
+import { addStadiumWatch, addGateWatch } from './deadlines.js';
 
 export function initProgress(g) {
   g.spawnCount = 0; g.nextSpawnAt = prog.spawns.firstAtTrips;
   g.goalCount = 0; g.nextGoalAt = prog.goals.firstAtTrips; g.prevGoalAt = 0;
-  g.colorsUsed = 1; g.reward = null; g.unlocks = {};
+  g.colorsUsed = 1; g.reward = null; g.unlocks = {}; g.portalWaves = 0; g.nextPortalAt = 0;
 }
 
 const houseCount = g => g.buildings.filter(b => b.kind === 'house').length;
@@ -125,55 +124,44 @@ function pickSpecial(g) {
   return list[0];
 }
 
-// Is the player's network really serving every colour? Each colour in play needs a house with a road to a destination that takes it
-// (the stadium does not count), and nearly all houses overall (a brand-new house still waiting for its road is fine).
-export function coloursConnected(g, share = 0.9) {
-  let total = 0, ok = 0;
-  const served = new Set();
-  for (const h of g.buildings) {
-    if (h.kind !== 'house') continue;
-    total++;
-    const rx = h.x + DIR[h.rot][0], ry = h.y + DIR[h.rot][1];
-    if (!roadAt(g, rx, ry)) continue;
-    const goals = [...g.ports.values()].filter(p => p.b.kind === 'dest' && !p.b.stadium && accepts(p.b, h.color.id));
-    if (goals.length && findPath(g, rx, ry, OPP[h.rot], goals)) { ok++; served.add(h.color.id); }
-  }
-  return g.palette.slice(0, g.colorsUsed).every(c => served.has(c.id)) && ok >= share * total;
-}
-
-// The stadium (3k trips, big maps, once every colour is in play), then the side-road gates (4k trips, one at a time, one per edge,
-// each only once the last one reaches the stadium and every house is connected). Returns nothing; reports through notify.
+// The stadium (milestones.stadium: big maps, once every colour is in play), then waves of side-road gates (milestones.portals.waves, e.g. two
+// gates at 4000 trips, optionally two more at 5000). Each asks for a popup and starts a patience clock (deadlines.js).
 function spawnOutsideThings(g, notify) {
-  const st = milestones.stadium, po = { ...prog.spawns.portals, ...milestones.portals };
+  const st = milestones.stadium;
   if (st && !stadiumOf(g)) {
     if (g.trips >= st.afterTrips && st.maps.includes(g.map.id) && g.colorsUsed >= g.palette.length && !(g.nextStadiumTry > g.trips)) {
       const made = spawnStadiumClearing(g, { budget: roadsAvailable(g) });         // (if the map is full of roads it is built anyway, over the fewest it can)
-      if (made) notify({ type: 'stadium', x: made.stadium.x, y: made.stadium.y, cleared: made.cleared, razed: made.razed });
+      if (made) { notify({ type: 'stadium', x: made.stadium.x, y: made.stadium.y, cleared: made.cleared, razed: made.razed, spots: [bounds(made.stadium)] }); addStadiumWatch(g, made.stadium); }
       else g.nextStadiumTry = g.trips + 10;
     }
     return;
   }
-  const arena = stadiumOf(g), gates = gatesOf(g);
-  if (!po || !arena || g.trips < po.afterTrips || gates.length >= Math.min(4, po.maxCount) || g.trips < (g.nextPortalAt ?? 0)) return;
-  g.nextPortalAt = g.trips + 5;                                                   // (checking costs a few path searches: not every trip)
-  if (!gates.every(p => gateConnected(g, p, arena)) || !coloursConnected(g)) return;
-  const used = new Set(gates.map(p => (p.rot + 2) % 4)), free = [0, 1, 2, 3].filter(e => !used.has(e));
+  const arena = stadiumOf(g), wave = ((milestones.portals || {}).waves || [])[g.portalWaves || 0];
+  if (!arena || !wave || g.trips < wave.afterTrips || g.trips < (g.nextPortalAt ?? 0)) return;
+  const used = new Set(gatesOf(g).map(p => (p.rot + 2) % 4)), free = [0, 1, 2, 3].filter(e => !used.has(e));
   for (let i = free.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [free[i], free[j]] = [free[j], free[i]]; }
+  const made = [];
   for (const edge of free) {
+    if (made.length >= wave.count) break;
     const p = spawnPortal(g, edge, arena, { budget: roadsAvailable(g) });
-    if (p) { g.nextPortalAt = g.trips + po.everyTrips; notify({ type: 'portal', edge, name: EDGE_NAMES[edge], first: gates.length === 0 }); return; }
+    if (p) made.push({ p, edge });
   }
+  if (!made.length) { g.nextPortalAt = g.trips + 10; return; }
+  g.portalWaves = (g.portalWaves || 0) + 1;
+  const names = made.map(m => EDGE_NAMES[m.edge]);
+  notify({ type: 'portal', edges: names, count: made.length, spots: made.map(m => bounds(m.p)) });
+  addGateWatch(g, made.map(m => m.p), names);
 }
 
 // Call after trips change. Spawns anything that's due; opens the reward menu if a goal was reached.
 export function checkProgress(g, notify) {
   const sp = prog.spawns;
   while (g.trips >= g.nextSpawnAt) {
-    const r = doSpawn(g);
+    const before = g.nextId, r = doSpawn(g);
     if (!r) { g.nextSpawnAt += 2; break; }                // no room right now; try again soon
     g.spawnCount++;
     g.nextSpawnAt = g.trips + Math.max(sp.minEveryTrips, Math.round(houseCount(g) * sp.tripsPerHouse));
-    notify({ type: 'spawn', ...r });
+    notify({ type: 'spawn', ...r, spots: g.buildings.filter(b => b.id >= before).map(bounds) });
   }
   spawnOutsideThings(g, notify);
   if (g.mode === 'play' && g.trips >= g.nextGoalAt) {

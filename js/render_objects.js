@@ -1,8 +1,10 @@
 // Draws buildings, ghost pieces and cars (tile units, same transform as render.js).
-import { entOf, entsOf, entTile } from './buildings.js';
+import { entOf, entsOf, entTile, footprint } from './buildings.js';
 import { DIR } from './lanes.js';
 import { pieceValid } from './network.js';
 import { tuning } from './tuning.js';
+import { highlightLevel, highlight } from './camera.js';
+import { cfgOf } from './deadlines.js';
 
 const ASPHALT = '#45494f', SHOULDER = '#2b2e33';
 const rotAngle = rot => rot * Math.PI / 2 - Math.PI / 2;   // local +x points along the exit direction
@@ -274,4 +276,33 @@ export function drawAccident(ctx, g) {
     ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(p.x, p.y, 0.45, 0, 6.2832); ctx.fill();
   });
   ctx.restore();
+}
+
+// Buildings that are out of patience (the warning stage): a pulsing red ring and the seconds left.
+export function drawPatience(ctx, g) {
+  for (const w of g.watches || []) {
+    if (w.stage !== 'warn' || !w.ack || w.ok) continue;
+    const left = Math.max(0, Math.ceil(cfgOf(w).warnSeconds - w.t)), pulse = 0.5 + 0.5 * Math.sin(g.time * 7);
+    for (const id of w.ids) {
+      const b = g.buildings.find(o => o.id === id); if (!b) continue;
+      const fp = footprint(b), x0 = Math.min(...fp.map(p => p[0])), y0 = Math.min(...fp.map(p => p[1])), x1 = Math.max(...fp.map(p => p[0])) + 1, y1 = Math.max(...fp.map(p => p[1])) + 1;
+      ctx.strokeStyle = `rgba(255,70,55,${0.45 + 0.5 * pulse})`; ctx.lineWidth = 0.09;
+      rrect(ctx, x0 - 0.08, y0 - 0.08, x1 - x0 + 0.16, y1 - y0 + 0.16, 0.18); ctx.stroke();
+      ctx.fillStyle = 'rgba(190,30,25,.9)'; ctx.beginPath(); ctx.arc((x0 + x1) / 2, y0 - 0.32, 0.27, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 0.3px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(left), (x0 + x1) / 2, y0 - 0.31);
+    }
+  }
+}
+
+// The "look here" highlight after flying to a message: a glowing frame round each box, fading in and out. Dashed and faint for a ghost
+// (something that is already gone, like a cleared accident).
+export function drawHighlight(ctx) {
+  const k = highlightLevel();
+  if (!k) return;
+  for (const b of highlight.boxes) {
+    const x = b.x0 - 0.25, y = b.y0 - 0.25, w = b.x1 - b.x0 + 1.5, h = b.y1 - b.y0 + 1.5;
+    if (highlight.ghost) { ctx.setLineDash([0.18, 0.14]); ctx.strokeStyle = `rgba(230,236,240,${0.8 * k})`; ctx.fillStyle = `rgba(230,236,240,${0.12 * k})`; }
+    else { ctx.setLineDash([]); ctx.strokeStyle = `rgba(255,214,64,${0.95 * k})`; ctx.fillStyle = `rgba(255,214,64,${0.22 * k})`; }
+    ctx.lineWidth = 0.12; rrect(ctx, x, y, w, h, 0.3); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+  }
 }

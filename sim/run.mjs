@@ -81,7 +81,7 @@ function playGame(G, seed, mapId, opts, junctions = 'heat') {
   const houses = g.buildings.filter(b => b.kind === 'house');
   const inters = [...g.roads.entries()].filter(([k]) => B.streetLegs(g, k % g.cols, (k / g.cols) | 0) >= 3).map(([, r]) => r);
   const rec = {
-    seed, map: mapId, junctions, end: g.mode === 'over' ? 'gridlock' : 'timeout', time: Math.round(g.time), trips: g.trips, money: g.money,
+    seed, map: mapId, junctions, end: g.mode === 'over' ? (g.over && g.over.reason ? 'impatience' : 'gridlock') : 'timeout', time: Math.round(g.time), trips: g.trips, money: g.money,
     houses: houses.length, dests: g.buildings.filter(b => b.kind === 'dest').length, colors: g.colorsUsed,
     unconnectedAtEnd: houses.filter(h => !h.connected).length, unconnectedHouseSec, roads: g.roads.size,
     goals: g.goalCount, goalTimes, tripsAtMin, warnings, worstStuckSurvived: +worstStuckSurvived.toFixed(1), peakCarsMoving: peakCars,
@@ -89,6 +89,7 @@ function playGame(G, seed, mapId, opts, junctions = 'heat') {
     outside: { stadium: g.buildings.some(b => b.stadium), gates: g.buildings.filter(b => b.kind === 'portal').length, visitors: g.visitorsLaunched || 0 },
     ...ev, bot: bot.stats, ms: Math.round(performance.now() - t0),
   };
+  if (rec.end === 'impatience') rec.cause = { why: g.over.reason.kind, label: g.over.reason.label };
   if (rec.end === 'gridlock') {
     const c = g.cars.reduce((a, b) => (b.stuck > a.stuck ? b : a));
     const r = c.route[c.idx];

@@ -27,6 +27,7 @@ onEvent(e => {
     playFirst([`speed:${e.prev}>${e.speed}`, kind]);
   }
   if (e.type === 'accident') play('crash');
+  if (e.type === 'impatient') play('unserved');
   if (e.type === 'honk') play('honk', { volume: 0.7 + 0.3 * e.k });          // angrier cars are a bit louder
 });          // sound effects hook into game events here
 

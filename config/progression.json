@@ -29,10 +29,6 @@
     },
     "small": {
       "chance": 0.25
-    },
-    "portals": {
-      "everyTrips": 400,
-      "maxCount": 4
     }
   },
   "specials": [

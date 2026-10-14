@@ -13,9 +13,10 @@ import { reindex, SPECIAL_COLORS } from './buildings.js';
 import { clearPieceCache, pieceFromKey } from './lanes.js';
 import { createCar } from './cars.js';
 import { resetOutside } from './outside.js';
+import { raiseNotice } from './deadlines.js';
 
 export const SAVE_VERSION = 1;
-const PLAYABLE = new Set(['play', 'reward', 'pause']);
+const PLAYABLE = new Set(['play', 'reward', 'pause', 'notice']);
 
 // ---- terrain grid <-> short string (run-length encoded) ----
 const encodeGrid = a => { let out = '', i = 0; while (i < a.length) { let j = i; while (j < a.length && a[j] === a[i]) j++; out += a[i] + ':' + (j - i) + ','; i = j; } return out; };
@@ -38,11 +39,13 @@ export function serialize(g = game) {
     seed: g.seed, map: g.map.id, mode: g.mode === 'reward' ? 'reward' : 'play',
     time: g.time, trips: g.trips, money: g.money, nextId: g.nextId, nextBridge: g.nextBridge, bestAtStart: g.bestAtStart,
     inv: { ...g.inv }, unlocks: { ...g.unlocks }, oneway: !!g.oneway, build4: !!g.build4,
-    progress: { spawnCount: g.spawnCount, nextSpawnAt: g.nextSpawnAt, goalCount: g.goalCount, nextGoalAt: g.nextGoalAt, prevGoalAt: g.prevGoalAt, colorsUsed: g.colorsUsed },
+    progress: { portalWaves: g.portalWaves, spawnCount: g.spawnCount, nextSpawnAt: g.nextSpawnAt, goalCount: g.goalCount, nextGoalAt: g.nextGoalAt, prevGoalAt: g.prevGoalAt, colorsUsed: g.colorsUsed },
     reward: g.reward ? { goal: g.reward.goal, options: g.reward.options.map(o => ({ ...o, special: o.special ? o.special.id : undefined })) } : null,
     terrain: { water: encodeGrid(g.terrain.water), start: g.terrain.start },
     roads: [...g.roads.entries()].map(([k, t]) => [k, t.sig ? { ...t, sig: { ...t.sig, dem: [...t.sig.dem] } } : { ...t }]),
     bridges: [...g.bridges.entries()],
+    watches: (g.watches || []).map(({ key, kind, ids, ack, stage, t, notice }) => ({ key, kind, ids, ack, stage, t, notice })),
+    log: g.log || [], nextLogId: g.nextLogId || 1,
     outside: { since: g.outsideSince, nextAt: g.nextOutsideAt, hordeAt: g.hordeAt, hordeLeft: g.hordeLeft, hordeCount: g.hordeCount, hordeNextCar: g.hordeNextCar, hordeDeadline: g.hordeDeadline },
     buildings: g.buildings.map(b => ({ ...b, color: b.color.id, color2: b.color2 ? b.color2.id : undefined, slots: b.slots ? b.slots.map(c => (c ? c.id : null)) : null })),
     cars: carData,
@@ -81,6 +84,8 @@ export function restore(data, g = game) {
   reindex(g);
 
   g.accident = null; g.nextAccidentAt = undefined; resetOutside(g); if (data.outside) { const o = data.outside; g.outsideSince = o.since; g.nextOutsideAt = o.nextAt; g.hordeAt = o.hordeAt; g.hordeLeft = o.hordeLeft || 0; g.hordeCount = o.hordeCount || 0; g.hordeNextCar = o.hordeNextCar || 0; g.hordeDeadline = o.hordeDeadline || 0; }                 // no accident carries over a save: the schedule starts fresh
+  g.log = data.log || []; g.nextLogId = data.nextLogId || (g.log.length ? g.log[g.log.length - 1].id + 1 : 1);
+  g.watches = (data.watches || []).map(w => ({ ...w, ok: false, fresh: false })); g.seenNet = undefined; g.netEditedAt = g.time; g.watchKey = '';
   g.cars = data.cars.map(sc => {
     const c = createCar(byId.get(sc.house));
     Object.assign(c, {
@@ -93,6 +98,7 @@ export function restore(data, g = game) {
   });
   const carById = new Map(g.cars.map(c => [c.id, c]));
   for (const b of g.buildings) if (b.slots) b.slots = slotsById.get(b.id).map(id => (id == null ? null : carById.get(id) || null));
+  raiseNotice(g);                                               // a popup that was waiting for [OK] waits again
   refresh();
   return true;
 }

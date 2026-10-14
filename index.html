@@ -28,6 +28,7 @@
       <div id="actions">
         <button id="speed-btn" class="chip" type="button" title="Speed (numpad 0 pause, 1, 2, 3)">1x</button>
         <button id="music-btn" class="chip" type="button" title="Music" hidden>♪</button>
+        <button id="log-btn" class="chip" type="button" title="Message history">Log</button>
         <button id="shop-btn" class="chip" type="button">Shop</button>
         <button id="menu-btn" class="chip" type="button">Menu</button>
       </div>
@@ -44,10 +45,15 @@
       <label class="vol"><span>Volume</span><input type="range" id="music-vol" min="0" max="100" step="1"></label>
       <label class="opt small"><input type="checkbox" id="music-mute"> Mute music</label>
     </div>
+    <div id="log" data-popup hidden>
+      <div id="log-head"><b>History</b><button id="log-close" type="button" aria-label="Close history">Close</button></div>
+      <div id="log-list"></div>
+    </div>
     <div id="shop" data-popup hidden>
       <div id="shop-head"><b>Shop</b><button id="shop-close" type="button" aria-label="Close shop">Close</button></div>
       <div id="shop-items"></div>
     </div>
+    <div id="chips"></div>
     <div id="toast"></div>
     <div id="toolbar">
       <button type="button" data-tool="build" title="Build (1)" class="active">Build</button>
@@ -67,6 +73,12 @@
       <h3>History</h3>
       <div id="history-text" tabindex="0"></div>
     </section>
+  </div>
+
+  <div class="overlay" id="notice" data-popup hidden>
+    <h2 id="notice-title"></h2>
+    <p id="notice-text"></p>
+    <div class="stack"><button class="big" id="notice-ok" type="button">OK</button></div>
   </div>
 
   <div class="overlay" id="reward" hidden>

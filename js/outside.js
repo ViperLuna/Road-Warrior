@@ -5,7 +5,7 @@ import { launchOutside } from './cars.js';
 import { findPath } from './pathfind.js';
 import { roadAt } from './network.js';
 import { DIR, OPP } from './lanes.js';
-import { exitTile } from './buildings.js';
+import { exitTile, bounds } from './buildings.js';
 
 export const stadiumOf = g => g.buildings.find(b => b.stadium) || null;
 export const gatesOf = g => g.buildings.filter(b => b.kind === 'portal');
@@ -59,7 +59,8 @@ function stepHorde(g, gates, notify) {
   if (g.hordeAt === undefined || g.time < g.hordeAt) return;
   const size = Math.min(h.sizeMax, Math.round(h.sizeStart + h.sizeGrowth * g.hordeCount));
   g.hordeLeft = size; g.hordeCount++; g.hordeNextCar = g.time; g.hordeDeadline = g.time + size * h.spacingSeconds * 1.5 + h.giveUpSeconds;
-  notify({ type: 'horde', size });
+  const arena = stadiumOf(g);
+  notify({ type: 'horde', size, spots: arena ? [bounds(arena)] : [] });
 }
 
 // Called every tick while playing.

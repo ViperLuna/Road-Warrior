@@ -9,9 +9,10 @@ import {
   setEntrance,
   setCut,
   isCut,
+  ackNotice,
 } from "../js/state.js";
 import { DIR, OPP } from "../js/lanes.js";
-import { findPath } from "../js/pathfind.js";
+import { findPath, reachablePorts } from "../js/pathfind.js";
 import { roadConns, netVersion } from "../js/network.js";
 import { lotTile, gateOf, entOf, entsOf, entrancesOf, exitTile } from "../js/buildings.js";
 import { stadiumOf, gatesOf, gateConnected } from "../js/outside.js";
@@ -289,14 +290,33 @@ function maybeFlip(g, h, bot) {
   }
 }
 
-// Side-road gates: lay road from each gate to the stadium (over the city's own roads where it can, like a player would).
-function connectGates(g, bot) {
+// Can a car leave building b (a house or a gate) for building d?
+const reaches = (g, b, d) => {
+  const reach = reachablePorts(g, b.x + DIR[b.rot][0], b.y + DIR[b.rot][1], OPP[b.rot]);
+  return [...g.ports].some(([k, p]) => p.b === d && reach.has(k));
+};
+const colorsIn = (g) => g.palette.slice(0, Math.max(1, g.colorsUsed));
+
+// The stadium must be reached by a house of every colour; each side-road gate by the stadium and a destination of every colour. Lay the road
+// from a house (or the gate) the way a player would: over the city's own roads where it can.
+function connectOutside(g, bot) {
   const arena = stadiumOf(g);
   if (!arena) return;
-  for (const gate of gatesOf(g)) {
-    if (gateConnected(g, gate, arena)) continue;
-    const plan = planRoad(g, gate, entsOf(arena).map((ent) => ({ exit: exitTile(arena, ent) })));
+  const pseudo = [arena].map(() => entsOf(arena).map((ent) => ({ exit: exitTile(arena, ent) }))).flat();
+  for (const c of colorsIn(g)) {
+    const mine = g.buildings.filter((b) => b.kind === "house" && b.color.id === c.id && b.connected);
+    if (!mine.length || mine.some((h) => reaches(g, h, arena))) continue;
+    const plan = planRoad(g, mine[0], pseudo);
     if (plan) build(g, plan, bot);
+  }
+  for (const gate of gatesOf(g)) {
+    if (!reaches(g, gate, arena)) { const plan = planRoad(g, gate, pseudo); if (plan) build(g, plan, bot); }
+    for (const c of colorsIn(g)) {
+      const all = destsOf(g, c);
+      if (!all.length || all.some((d) => reaches(g, gate, d))) continue;
+      const plan = planRoad(g, gate, all);
+      if (plan) build(g, plan, bot);
+    }
   }
 }
 
@@ -430,12 +450,13 @@ function answerReward(g, bot) {
 }
 
 export function botTick(g, bot) {
+  if (g.mode === "notice") ackNotice();
   if (g.mode === "reward") answerReward(g, bot);
   if (g.mode !== "play" || g.time < bot.next) return;
   bot.next = g.time + step;
   trackHeat(g, bot);
   connectHouses(g, bot);
-  connectGates(g, bot);
+  connectOutside(g, bot);
   placeSpecials(g, bot);
   if (g.time >= bot.nextTidy) {
     bot.nextTidy = g.time + 30;

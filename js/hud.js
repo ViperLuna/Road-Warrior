@@ -1,5 +1,7 @@
 // DOM overlay: inventory pills, goal bar, shop, toolbar, toasts, and the menu / reward / pause / game-over screens.
-import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, finishRun, buy, bestFor, isUnlocked, cycleSpeed } from './state.js';
+import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, finishRun, buy, bestFor, isUnlocked, cycleSpeed, addLog, ackNotice, refreshWatches } from './state.js';
+import { chipsOf, pendingNotice } from './deadlines.js';
+import { flyTo } from './camera.js';
 import { settings, setSetting, onSetting } from './settings.js';
 import { onMusic, getState as musicState, next as musicNext, prev as musicPrev, toggle as musicToggle } from './music.js';
 import { play } from './audio.js';
@@ -18,6 +20,9 @@ export function toast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
 }
+
+// A message that is worth keeping: shown as a toast AND written to the history, with the places it is about (tile boxes) so the log can fly there.
+export function note(msg, spots = [], extra = {}) { toast(msg); addLog(msg, spots, extra); }
 
 const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
@@ -125,6 +130,46 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     }
   }
 
+  // Countdown chips: the stadium / the side roads while they are not connected. Tap one to fly there.
+  function paintChips() {
+    const box = $('chips'), chips = game.mode === 'play' || game.mode === 'pause' ? chipsOf(game).filter(c => !c.waiting) : [];
+    const sig = chips.map(c => c.key + c.warn + (c.detail ? c.detail.have + '/' + c.detail.total + '/' + (c.detail.stadiumOk ?? '') : '') + Math.floor(c.left ?? 0)).join('|');
+    if (box.dataset.sig === sig) return;
+    box.dataset.sig = sig; box.innerHTML = '';
+    for (const c of chips) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chipbar' + (c.warn ? ' warn' : '');
+      const d = c.detail, parts = [];
+      if (d) { if (c.kind === 'gates') parts.push(`${d.stadiumOk}/${d.gates} reach the stadium`); parts.push(`${d.have}/${d.total} ${d.what}`); }
+      b.textContent = `${c.label}: ${parts.join(', ')} \u00b7 ${fmtTime(c.left ?? 0)}`;
+      b.addEventListener('click', () => flyTo(c.spots));
+      box.appendChild(b);
+    }
+  }
+  setInterval(() => { if (game.mode === 'play') paintChips(); }, 500);
+  $('notice-ok').addEventListener('click', ackNotice);
+
+  // Message history (the Log button): newest first; tap an entry to fly to the places it is about.
+  function paintLog() {
+    const list = $('log-list'); list.innerHTML = '';
+    const items = [...(game.log || [])].reverse();
+    if (!items.length) { list.innerHTML = '<div class="empty">Nothing yet. Messages about new buildings, accidents and patience show up here.</div>'; return; }
+    for (const e of items) {
+      const hasSpot = e.spots && e.spots.length, row = document.createElement(hasSpot ? 'button' : 'div');
+      row.className = 'entry' + (/not connected|left!|no longer/.test(e.text) ? ' bad' : ''); if (hasSpot) row.type = 'button';
+      row.innerHTML = `<time>${fmtTime(e.t)}</time><span></span>${hasSpot ? '<span class="pin" aria-hidden="true">\u25ce</span>' : ''}`;
+      row.children[1].textContent = e.text;
+      if (hasSpot) row.addEventListener('click', () => {
+        $('log').hidden = true;
+        const live = e.ref === 'accident' ? !!game.accident && Math.hypot(game.accident.x - e.x, game.accident.y - e.y) < 1.5 : true;     // an accident that is gone: show where it was, faded
+        flyTo(e.spots, { ghost: !live });
+      });
+      list.appendChild(row);
+    }
+  }
+  $('log-btn').addEventListener('click', () => { const l = $('log'); l.hidden = !l.hidden; if (!l.hidden) paintLog(); });
+  $('log-close').addEventListener('click', () => { $('log').hidden = true; });
+
   function render() {
     const mode = game.mode;
     $('hud').hidden = mode === 'menu';
@@ -133,12 +178,16 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     $('reward').hidden = mode !== 'reward';
     $('pause').hidden = mode !== 'pause';
     $('over').hidden = mode !== 'over';
+    $('notice').hidden = mode !== 'notice';
+    if (mode === 'notice') { const n = pendingNotice(game); if (n) { $('notice-title').textContent = n.notice.title; $('notice-text').textContent = n.notice.text; } }
+    if (mode === 'play' || mode === 'pause') refreshWatches();
+    paintChips();
     if (mode === 'menu') buildMenu();
     if (mode === 'reward') buildReward();
     if (mode === 'over' && game.over) {
       const o = game.over;
-      $('over-title').textContent = o.finished ? 'Game ended' : 'Gridlock!';
-      const why = o.finished ? 'You ended this game.' : 'Traffic ground to a halt.';
+      $('over-title').textContent = o.finished ? 'Game ended' : o.reason ? 'Out of patience!' : 'Gridlock!';
+      const why = o.finished ? 'You ended this game.' : o.reason ? `${o.reason.label} was not connected in time.` : 'Traffic ground to a halt.';
       $('over-sub').innerHTML = o.record ? `<span class="record">New best!</span> ${why}` : why;
       $('over-stats').innerHTML = `<div><b>${o.trips}</b><small>trips</small></div><div><b>${fmtTime(o.time)}</b><small>${o.finished ? 'played' : 'survived'}</small></div><div><b>$${o.money}</b><small>cash</small></div><div><b>${o.best}</b><small>best</small></div>`;
     }
@@ -184,6 +233,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     // shop
     const shop = $('shop'), box = $('shop-items');
     if (mode !== 'play') shop.hidden = true;
+    if (mode === 'menu' || mode === 'over') $('log').hidden = true; else if (!$('log').hidden) paintLog();
     if (!shop.hidden) {
       box.innerHTML = '';
       const items = prog.specials.filter(s => s.enabled && s.cost && !(s.unlock && game.unlocks[s.id]));
@@ -201,25 +251,35 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   }
 
   onChange(render);
+  const listOf = names => (names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names.at(-1) : names[0]);
+  const IMPATIENT = {
+    house: l => `${l} is not connected to a destination of its colour.`,
+    dest: l => `${l} is not reached by every colour it takes.`,
+    stadium: l => `${l} is still not connected to every colour.`,
+    gates: l => `${l} still do not reach the stadium and every colour.`,
+  };
   onEvent(e => {
-    if (e.type === 'cash') toast(`Goal reached: +$${e.n}.`);
+    if (e.type === 'cash') note(`Goal reached: +$${e.n}.`);
     if (e.type === 'stadium') {
       const bits = [e.razed && `${e.razed} building${e.razed > 1 ? 's' : ''}`, e.cleared && `${e.cleared} road piece${e.cleared > 1 ? 's' : ''}`].filter(Boolean);
-      if (e.razed) toast(`A generous billionaire donated a stadium to the city! (${bits.join(' and ')} made way. Connect its gates.)`);
-      else toast(e.cleared ? `A stadium has been donated to the city! It took ${bits.join(' and ')} to fit (the road pieces are back in your stock). Connect its gates.` : 'A stadium has been donated to the city! Any colour can go there. Connect its gates.');
+      if (e.razed) note(`A generous billionaire donated a stadium to the city! (${bits.join(' and ')} made way. Connect its gates.)`, e.spots);
+      else note(e.cleared ? `A stadium has been donated to the city! It took ${bits.join(' and ')} to fit (the road pieces are back in your stock). Connect its gates.` : 'A stadium has been donated to the city! Any colour can go there. Connect its gates.', e.spots);
     }
-    if (e.type === 'portal') toast(e.first ? `A side road appears on the ${e.name} edge: connect it to the stadium. Visitors are coming.` : `Another side road on the ${e.name} edge.`);
+    if (e.type === 'portal') note(e.count > 1 ? `Side roads to other cities on the ${listOf(e.edges)} edges: connect them to the stadium and every colour.` : `A side road to another city on the ${e.edges[0]} edge: connect it to the stadium and every colour.`, e.spots);
     if (e.type === 'gate-info') toast(e.demolish ? "That's the road to another city. It can't be demolished." : "This is an expansion to another city you can't see. Visitors come in through here.");
-    if (e.type === 'horde') toast(`Event at the stadium! A crowd of ${e.size} is on its way.`);
-    if (e.type === 'accident') toast('Accident! Police are on the scene.');
-    if (e.type === 'unlock') toast(`New map unlocked: ${e.map.name}!`);
+    if (e.type === 'jam-locked') toast("Can't demolish this: cars are jammed here. Clear the jam first.");
+    if (e.type === 'horde') note(`Event at the stadium! A crowd of ${e.size} is on its way.`, e.spots);
+    if (e.type === 'accident') { const x = Math.floor(e.x), y = Math.floor(e.y); note('Accident! Police are on the scene.', [{ x0: x, y0: y, x1: x, y1: y }], { ref: 'accident', x: e.x, y: e.y }); }
+    if (e.type === 'impatient') note(`${IMPATIENT[e.kind](e.label)} ${e.seconds} seconds left!`, e.spots);
+    if (e.type === 'disconnected') toast(`${e.label} is no longer connected.`);                       // (just a toast, not logged: roads are being edited. If it is still broken when its warning starts, THAT toast is logged)
+    if (e.type === 'unlock') note(`New map unlocked: ${e.map.name}!`);
     if (e.type === 'spawn') {
       const name = e.color.id;
-      if (e.across) toast(e.needsBridge ? `New ${name} house across the water. You'll need a bridge.` : `New ${name} house across the river (bridge already built).`);
-      else if (e.kind === 'newColor') toast(`New ${name} house and destination!`);
-      else if (e.kind === 'combo') toast(`New ${name} destination and house.`);
-      else if (e.kind === 'dual') toast(`New ${name} and ${e.color2.id} destination: both colours park here.`);
-      else toast(e.n > 1 ? `${e.n} new ${name} houses.` : `New ${name} house.`);
+      if (e.across) note(e.needsBridge ? `New ${name} house across the water. You'll need a bridge.` : `New ${name} house across the river (bridge already built).`, e.spots);
+      else if (e.kind === 'newColor') note(`New ${name} house and destination!`, e.spots);
+      else if (e.kind === 'combo') note(`New ${name} destination and house.`, e.spots);
+      else if (e.kind === 'dual') note(`New ${name} and ${e.color2.id} destination: both colours park here.`, e.spots);
+      else note(e.n > 1 ? `${e.n} new ${name} houses.` : `New ${name} house.`, e.spots);
     }
   });
   render();

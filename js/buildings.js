@@ -66,6 +66,12 @@ export function lotTile(b, i) {
   return [Math.floor(cx + X[0] * 0.5 + T[0] * (i - 0.5)), Math.floor(cy + X[1] * 0.5 + T[1] * (i - 0.5))];
 }
 
+// The tile box a building covers: { x0, y0, x1, y1 } (inclusive).
+export function bounds(b) {
+  const fp = footprint(b);
+  return { x0: Math.min(...fp.map(p => p[0])), y0: Math.min(...fp.map(p => p[1])), x1: Math.max(...fp.map(p => p[0])), y1: Math.max(...fp.map(p => p[1])) };
+}
+
 export function reindex(g) {
   g.buildingAt = new Map();
   g.ports = new Map();

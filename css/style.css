@@ -145,3 +145,26 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .vol input[type=range] { flex: 1; min-width: 0; accent-color: #E69F00; height: 28px; }
 .vol-group { display: flex; flex-direction: column; gap: 8px; padding: 12px 18px; background: rgba(255, 255, 255, .08); border-radius: 14px; }
 .opt.small { font-size: .95rem; padding: 8px 12px; background: rgba(255, 255, 255, .06); }
+
+/* ---- Patience: popups, countdown chips, glow ---- */
+#notice p { max-width: min(520px, 90vw); font-size: 1.05rem; line-height: 1.45; margin: 0; opacity: .92; }
+#notice h2 { font-size: clamp(1.4rem, 5.5vw, 2.2rem); }
+#chips { position: absolute; left: 10px; top: calc(100px + env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 6px; align-items: flex-start; pointer-events: none; max-width: calc(100vw - 20px); }
+#chips .chipbar { pointer-events: auto; font: inherit; font-size: .82rem; color: #fff; background: rgba(10, 16, 12, .8); border: 1px solid rgba(255, 255, 255, .25); border-radius: 999px; padding: 6px 14px; cursor: pointer; white-space: nowrap; }
+#chips .chipbar.warn { background: rgba(170, 40, 35, .92); border-color: #ffb3a8; animation: chip-pulse 1s infinite; }
+@keyframes chip-pulse { 50% { box-shadow: 0 0 14px rgba(255, 90, 70, .85); } }
+
+/* ---- Message history ---- */
+#log { position: absolute; right: 10px; top: calc(96px + env(safe-area-inset-top)); width: min(380px, calc(100vw - 20px)); max-height: calc(100vh - 210px); display: flex; flex-direction: column;
+  background: rgba(10, 16, 12, .94); border: 1px solid rgba(255, 255, 255, .18); border-radius: 14px; padding: 12px; z-index: 6; }
+#log-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+#log-close { font: inherit; font-weight: 600; color: #fff; background: rgba(255, 255, 255, .16); border: 0; border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+#log-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+#log-list .empty { opacity: .6; font-size: .85rem; padding: 8px 4px; }
+#log-list .entry { display: flex; gap: 10px; align-items: flex-start; text-align: left; font: inherit; font-size: .85rem; color: #fff; background: rgba(255, 255, 255, .08); border: 0; border-radius: 10px; padding: 9px 11px; width: 100%; }
+#log-list button.entry { cursor: pointer; }
+#log-list button.entry:hover, #log-list button.entry:focus-visible { background: rgba(230, 159, 0, .3); }
+#log-list .entry time { opacity: .6; font-size: .72rem; min-width: 38px; padding-top: 1px; font-variant-numeric: tabular-nums; }
+#log-list .entry .pin { margin-left: auto; opacity: .85; }
+#log-list .entry.bad { background: rgba(170, 40, 35, .3); }
+#log[hidden] { display: none; }

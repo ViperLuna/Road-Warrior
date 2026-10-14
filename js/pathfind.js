@@ -89,3 +89,30 @@ export function findPath(g, sx, sy, sEntry, goalPorts) {
   }
   return null;
 }
+
+// Everything reachable from road tile (sx,sy) entered from side sEntry: the set of port tiles (buildings' entrances) a car could drive to.
+// The same movement rules as findPath (one-way streets, overpass layers, cones), without costs: one flood fill instead of a search per target.
+export function reachablePorts(g, sx, sy, sEntry) {
+  const out = new Set();
+  if (!roadAt(g, sx, sy) || g.roads.get(tidx(g, sx, sy)).cone) return out;
+  const seen = new Set([tidx(g, sx, sy) * 4 + sEntry]), stack = [tidx(g, sx, sy) * 4 + sEntry];
+  while (stack.length) {
+    const id = stack.pop(), cell = id >> 2, inS = id & 3, x = cell % g.cols, y = (cell / g.cols) | 0;
+    const noExit = (g.roads.get(cell) || {}).noExit || 0;
+    const over = overpassAxis(g, x, y) >= 0;
+    for (const e of roadConns(g, x, y)) {
+      if (e === inS || (noExit >> e) & 1) continue;
+      if (over && e !== OPP[inS]) continue;
+      const nx = x + DIR[e][0], ny = y + DIR[e][1];
+      if (roadAt(g, nx, ny)) {
+        if (g.roads.get(tidx(g, nx, ny)).cone) continue;
+        const nid = tidx(g, nx, ny) * 4 + OPP[e];
+        if (!seen.has(nid)) { seen.add(nid); stack.push(nid); }
+      } else {
+        const p = portAt(g, nx, ny);
+        if (p && p.side === OPP[e]) out.add(tidx(g, nx, ny));
+      }
+    }
+  }
+  return out;
+}

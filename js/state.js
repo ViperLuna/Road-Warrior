@@ -3,9 +3,10 @@ import { generateTerrain, WATER, HILL, LAND } from './terrain.js';
 import { clearPieceCache } from './lanes.js';
 import { rotateBuilding, lotTile, reindex, footprint, entOf, entrancesOf, exitTile } from './buildings.js';
 import { spawnInitial, spawnPair } from './spawn.js';
-import { updateSim, reseatCarsOf } from './cars.js';
+import { updateSim, reseatCarsOf, jammedTiles } from './cars.js';
 import { stepAccidents } from './accident.js';
 import { stepOutside, resetOutside } from './outside.js';
+import { stepWatches, refreshWatches as refreshW, ackNotice as ackN } from './deadlines.js';
 import { initProgress, checkProgress, chooseReward as pickReward } from './progress.js';
 import { prog, maps, specialInfo, roadsAvailable } from './progression.js';
 import { roadConns, tileLanes, layerLanes, netChanged } from './network.js';
@@ -58,7 +59,7 @@ export function newGame(seed, map = maps[0]) {
   game.inv = { ...START_INVENTORY };
   game.mode = 'play'; game.reward = null; game.over = null; game.unlocks = {}; game.oneway = false; game.build4 = false;
   game.buildings = []; game.buildingAt = new Map(); game.ports = new Map(); game.nextId = 1;
-  game.cars = []; game.trips = 0; game.money = 0; game.time = 0; game.accident = null; game.nextAccidentAt = undefined; resetOutside(game); game.visitorsLaunched = 0;
+  game.cars = []; game.trips = 0; game.money = 0; game.time = 0; game.accident = null; game.nextAccidentAt = undefined; resetOutside(game); game.watches = []; game.log = []; game.nextLogId = 1; game.seenNet = undefined; game.netEditedAt = undefined; game.watchKey = ''; game.visitorsLaunched = 0;
   game.bestAtStart = bestFor(map.id); syncBest();                       // the best score when this run began (a record means beating that)
   clearPieceCache();
   spawnInitial(game, game.palette[0]);
@@ -135,6 +136,26 @@ function clearEdgesTowards(x, y) {
   });
 }
 
+// The message log (the History button): every toast that is about something, newest last. `spots` are tile boxes to fly to; `extra` is kept
+// on the entry (e.g. ref: 'accident' so the log knows whether the spot is still live).
+export const LOG_MAX = 200;
+export function addLog(text, spots = [], extra = {}) {
+  const e = { id: game.nextLogId++, t: game.time, text, spots, ...extra };
+  game.log.push(e);
+  if (game.log.length > LOG_MAX) game.log.splice(0, game.log.length - LOG_MAX);
+  fire();
+  return e;
+}
+
+// Re-check what is connected (after the player built something). Cheap when nothing changed.
+let rwTimer = 0;
+export function refreshWatches() {                              // (debounced: the check runs once the player stops building)
+  clearTimeout(rwTimer);
+  rwTimer = setTimeout(() => { if (game.mode !== 'menu') { refreshW(game); fire(); } }, 450);
+}
+// [OK] on a popup: its clock starts, and the game carries on.
+export function ackNotice() { ackN(game); emit(); }
+
 export function setMode(mode) { game.mode = mode; emit(); }
 export const SPEEDS = [0, 1, 1.5, 2];
 export function setSpeed(v) {
@@ -153,6 +174,8 @@ export function tick(dt) {
   }
   stepAccidents(game, dt, notify);
   stepOutside(game, dt, notify);
+  const lost = stepWatches(game, dt, notify);
+  if (lost) { endGame(false, lost); return; }
   const worst = game.cars.reduce((m, c) => Math.max(m, c.stuck), 0);
   honkAtStuckCars(dt);
   trackBest();
@@ -175,12 +198,12 @@ export function honkAtStuckCars(dt) {
 }
 
 // The run is over: gridlock took it, or the player finished it on purpose (finished = true).
-function endGame(finished = false) {
+function endGame(finished = false, reason = null) {
   const prev = game.bestAtStart ?? 0, record = game.trips > prev;
   trackBest(); flushBest();
-  game.over = { trips: game.trips, money: game.money, time: game.time, record, best: Math.max(prev, bestCache, game.trips), finished };
+  game.over = { trips: game.trips, money: game.money, time: game.time, record, best: Math.max(prev, bestCache, game.trips), finished, reason };
   game.mode = 'over';
-  notify({ type: 'over', record, finished });
+  notify({ type: 'over', record, finished, reason });
   emit();
 }
 // Finish the current run on purpose: the score counts (and can unlock maps) without having to lose.
@@ -418,6 +441,8 @@ export function demolish(x, y) {
   if (gate && gate.kind === 'portal') { notify({ type: 'gate-info', demolish: true }); return false; }        // the road to another city is not ours to demolish
   if (!hasRoad(x, y)) return false;
   const r = game.roads.get(tileIndex(x, y));
+  const jam = jammedTiles(game), span = r.bridge || r.tunnel ? game.bridges.get(r.bridge || r.tunnel) || [] : [tileIndex(x, y)];
+  if (span.some(k => jam.has(k))) { notify({ type: 'jam-locked' }); return false; }      // cars are jammed here: it has to be cleared the hard way
   if (r.bridge || r.tunnel) {                       // removing any span tile removes the whole bridge / tunnel
     const id = r.bridge || r.tunnel;
     for (const k of game.bridges.get(id) || []) game.roads.delete(k);

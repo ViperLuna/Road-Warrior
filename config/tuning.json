@@ -80,5 +80,23 @@
   },
   "junctions": {
     "stopSeconds": 1.0
+  },
+  "deadlines": {
+    "_note": "Patience clocks. A building / the stadium / the side-road gates that are not connected get graceSeconds of silence, then warnSeconds of warning, then the game is over. Houses and ordinary destinations share the 'house' numbers. settleSeconds: after the player changes the roads, a broken connection is only reported once they have been left alone this long. quietSeconds: connection checks wait until the roads have been left alone this long (so a long drag of road is not a check per tile). requiredPercent: 0 = connected to at least ONE of each colour; any other number = that percentage of each colour must be connected.",
+    "house": {
+      "graceSeconds": 60,
+      "warnSeconds": 60
+    },
+    "stadium": {
+      "graceSeconds": 60,
+      "warnSeconds": 60
+    },
+    "gates": {
+      "graceSeconds": 60,
+      "warnSeconds": 60
+    },
+    "requiredPercent": 0,
+    "settleSeconds": 3,
+    "quietSeconds": 0.4
   }
 }

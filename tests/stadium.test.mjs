@@ -21,6 +21,7 @@ const hl = maps.find(m => m.id === 'highlands');
 const S = () => {
   st.newGame(5, hl); g.terrain.water.fill(0); g.nextSpawnAt = 1e9; g.nextGoalAt = 1e9; g.buildings = []; g.cars = []; g.roads = new Map(); g.nextId = 1; reindex(g); g.inv.road = 9999; g.mode = 'play';
   g.colorsUsed = palette.length; events.length = 0;
+  for (const k of ['house', 'stadium', 'gates']) { tuning.deadlines[k].graceSeconds = 1e9; tuning.deadlines[k].warnSeconds = 1e9; }      // (patience clocks have their own test)
 };
 const road = (x0, y0, x1, y1) => { for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) st.buildRoad(x, y0); for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) st.buildRoad(x1, y); };
 // lay road along a shortest land path (around buildings) from (x0,y0) to (x1,y1)
@@ -79,11 +80,11 @@ S(); base(); g.trips = 4000; g.colorsUsed = palette.length;
 const A2 = spawnStadium(g, { budget: 500 }); ok(!!A2, 'stadium for the portal rule');
 g.colorsUsed = 1;                                   // (only blue is in play in this little world)
 checkProgress(g, e => events.push(e));
-ok(gatesOf(g).length === 0 || events.some(e => e.type === 'portal'), 'portal only through the event');
-// connect stadium so every house is served? (the base house has a road to its destination)
-ok(gatesOf(g).length === 1 && events.some(e => e.type === 'portal'), 'first gate appears at 4000 trips (' + gatesOf(g).length + ')');
-checkProgress(g, e => events.push(e));
-ok(gatesOf(g).length === 1, 'not a second one until the first reaches the stadium');
+ok(gatesOf(g).length === 2 && events.some(e => e.type === 'portal' && e.count === 2), 'a wave of two gates appears at 4000 trips (' + gatesOf(g).length + ')');
+ok(new Set(gatesOf(g).map(edgeOf)).size === 2, 'on two different edges');
+ok(g.mode === 'notice' && g.watches.some(w => w.kind === 'gates' && !w.ack), 'a popup waits for [OK] before the clock starts');
+g.mode = 'play'; checkProgress(g, e => events.push(e));
+ok(gatesOf(g).length === 2, 'no third gate: only the waves in milestones.json');
 
 // ---- visitors ----
 S(); base(); const A3 = spawnStadium(g, { budget: 500 }); const gate = spawnPortal(g, 0, A3, { budget: 500 });
