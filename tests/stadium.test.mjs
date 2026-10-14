@@ -150,7 +150,8 @@ if (big) {
   ok(footprint(big).every(([x, y]) => !g.roads.has(y * g.cols + x) && g.buildingAt.get(y * g.cols + x) === big), 'nothing is left of the roads under it');
   ok(g.roads.size === roads0 - ev.cleared && g.inv.road === stock0 + ev.cleared, 'the cleared pieces went back to the stock (' + ev.cleared + ')');
   ok(entsOf(big).every(e => { const [x, y] = exitTile(big, e); return !g.buildingAt.has(y * g.cols + x); }), 'every gate has a free tile outside it');
-  ok(ev.cleared <= 12, 'only a small area is cleared (' + ev.cleared + ')');
+  ok(ev.cleared <= 20, 'only a small area is cleared, at most a 5x4 block (' + ev.cleared + ')');
+  const fpk = new Set(footprint(big).map(([x, y]) => y * g.cols + x)); ok(entsOf(big).every(e => { const [x, y] = exitTile(big, e); return !g.roads.has(y * g.cols + x); }), 'the tiles in front of the gates were cleared too, ready for new roads');
   ok(new Set([...g.buildings.map(b => b.id)]).size === g.buildings.length && g.buildings.filter(b => b.kind !== 'portal').every(b => footprint(b).every(([x, y]) => g.buildingAt.get(y * g.cols + x) === b)), 'no building was overwritten');
   tickN(30); ok(true, 'the game runs on');
 }
