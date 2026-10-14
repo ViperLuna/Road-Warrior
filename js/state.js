@@ -257,7 +257,8 @@ function fitsTurned(b, rot) {
 
 export function rotateBuildingAt(x, y) {
   const b = buildingAt(x, y);
-  if (!b || b.kind === 'portal') return false;                  // (a side-road gate stays where it is)
+  if (b && b.kind === 'portal') { notify({ type: 'gate-info' }); return false; }        // (a side-road gate stays where it is; tapping it explains what it is)
+  if (!b) return false;
   if (b.small || b.stadium) {                                   // turn to the next direction where it still fits
     const turn = [1, 2, 3].find(n => fitsTurned(b, (b.rot + n) % 4));
     if (turn === undefined) return false;
@@ -413,9 +414,10 @@ export function buildRoad(x, y) {
 
 // Demolishing always refunds the piece immediately.
 export function demolish(x, y) {
+  const gate = buildingAt(x, y);
+  if (gate && gate.kind === 'portal') { notify({ type: 'gate-info', demolish: true }); return false; }        // the road to another city is not ours to demolish
   if (!hasRoad(x, y)) return false;
   const r = game.roads.get(tileIndex(x, y));
-  if (r.locked) return false;                       // the first piece of a side road stays
   if (r.bridge || r.tunnel) {                       // removing any span tile removes the whole bridge / tunnel
     const id = r.bridge || r.tunnel;
     for (const k of game.bridges.get(id) || []) game.roads.delete(k);

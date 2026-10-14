@@ -2,7 +2,7 @@
 import { DIR } from './lanes.js';
 import { addBuilding, lotTile, reindex, accepts, footprint, entOf, entsOf, entrancesOf, exitTile, SPECIAL_COLORS } from './buildings.js';
 import { tuning } from './tuning.js';
-import { clearRoadTile, netChanged } from './network.js';
+import { clearRoadTile } from './network.js';
 import { createCar, razeBuilding } from './cars.js';
 import { mulberry32 } from './rng.js';
 import { WATER, HILL, LAND } from './terrain.js';
@@ -258,7 +258,7 @@ function findStadiumSpot(g, opts, clear, raze = false) {
     }
     return [...set];
   };
-  const clearable = (x, y) => { const r = g.roads.get(y * g.cols + x); return !r || !(r.bridge || r.tunnel || r.overpass !== undefined || r.locked); };
+  const clearable = (x, y) => { const r = g.roads.get(y * g.cols + x); return !r || !(r.bridge || r.tunnel || r.overpass !== undefined); };
   let best = null;
   for (let attempt = 0; attempt < (clear ? 1500 : 600); attempt++) {
     const a = g.buildings[Math.floor(rng() * g.buildings.length)], r = 4 + Math.floor(rng() * 10), th = rng() * 6.283;
@@ -334,11 +334,7 @@ export function spawnPortal(g, edge, stadium, opts = {}) {
     const ex = x + DIR[rot][0], ey = y + DIR[rot][1], blocked = new Set([y * g.cols + x]);
     if (!passable(g, ex, ey, blocked)) continue;
     if (!Number.isFinite(buildCost(g, [ex, ey], target, blocked, budget))) continue;
-    const gate = addBuilding(g, 'portal', SPECIAL_COLORS.outside, x, y, rot);
-    const ek = ey * g.cols + ex, road = g.roads.get(ek);                      // the first piece of the side road: given free, and it can never be demolished
-    if (road) road.locked = true; else g.roads.set(ek, { lanes: 2, locked: true });
-    netChanged();
-    return gate;
+    return addBuilding(g, 'portal', SPECIAL_COLORS.outside, x, y, rot);
   }
   return null;
 }

@@ -209,6 +209,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
       else toast(e.cleared ? `A stadium has been donated to the city! It took ${bits.join(' and ')} to fit (the road pieces are back in your stock). Connect its gates.` : 'A stadium has been donated to the city! Any colour can go there. Connect its gates.');
     }
     if (e.type === 'portal') toast(e.first ? `A side road appears on the ${e.name} edge: connect it to the stadium. Visitors are coming.` : `Another side road on the ${e.name} edge.`);
+    if (e.type === 'gate-info') toast(e.demolish ? "That's the road to another city. It can't be demolished." : "This is an expansion to another city you can't see. Visitors come in through here.");
     if (e.type === 'horde') toast(`Event at the stadium! A crowd of ${e.size} is on its way.`);
     if (e.type === 'accident') toast('Accident! Police are on the scene.');
     if (e.type === 'unlock') toast(`New map unlocked: ${e.map.name}!`);
