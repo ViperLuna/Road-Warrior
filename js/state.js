@@ -159,13 +159,16 @@ export function ackNotice() { ackN(game); emit(); }
 
 export function setMode(mode) { game.mode = mode; emit(); }
 export const SPEEDS = [0, 1, 1.5, 2];
+let lastRunSpeed = 1;
 export function setSpeed(v) {
   const prev = game.speed;
   game.speed = SPEEDS.includes(v) ? v : 1;
+  if (game.speed > 0) lastRunSpeed = game.speed;
   if (game.speed !== prev) notify({ type: 'speed', speed: game.speed, prev });
   emit();
 }
 export function cycleSpeed() { setSpeed(SPEEDS[(SPEEDS.indexOf(game.speed) + 1) % SPEEDS.length]); }
+export function toggleSpeed() { setSpeed(game.speed === 0 ? lastRunSpeed : 0); }
 
 export function tick(dt) {
   if (game.mode !== 'play') return;

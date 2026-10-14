@@ -1,6 +1,6 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
-import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt, setSpeed } from './state.js';
+import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt, setSpeed, toggleSpeed } from './state.js';
 import { WATER, HILL } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
@@ -12,6 +12,7 @@ const pointers = new Map();   // pointerId -> {x, y}
 let stroke = null;            // active one-pointer action
 let pinch = null;             // active two-finger gesture
 let spaceDown = false;
+let spacePanned = false;
 
 const tileAt = (sx, sy) => { const w = screenToWorld(sx, sy); return { x: Math.floor(w.x), y: Math.floor(w.y) }; };
 
@@ -131,7 +132,7 @@ export function initInput(canvas) {
     if (e.pointerType === 'mouse') {
       if (e.button === 1) mode = 'pan';
       else if (e.button === 2) mode = 'destroy';
-      else if (e.button === 0 && spaceDown) mode = 'pan';
+      else if (e.button === 0 && spaceDown) { mode = 'pan'; spacePanned = true; }
       else if (e.button !== 0) return;
     }
     e.preventDefault();
@@ -203,7 +204,7 @@ export function initInput(canvas) {
     // A hotkey that does what a toolbar/HUD button does also makes that button's click sound (not while a key is held down).
     const press = fn => { if (!e.repeat) play('click'); fn(); };
     if (e.code === 'Escape') { if (game.mode === 'play') press(() => setMode('pause')); else if (game.mode === 'pause') press(() => setMode('play')); }
-    else if (e.code === 'Space') { spaceDown = true; e.preventDefault(); }
+    else if (e.code === 'Space') { if (!e.repeat) { spaceDown = true; spacePanned = false; } e.preventDefault(); }
     else if (e.key === 'b') press(() => setTool('build'));
     else if (e.key === 'd') press(() => setTool('destroy'));
     else if (e.key === 'm') press(() => setTool('pan'));
@@ -215,5 +216,10 @@ export function initInput(canvas) {
     else if (ROW_TOOL[e.code] && (e.code !== 'Digit5' || game.unlocks.oneway)) press(ROW_TOOL[e.code]);
     else if (e.key === 'p') { if (devSpawn()) play('spawn'); }      // dev: spawn an extra pair
   });
-  addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; });
+  addEventListener('keyup', e => {
+    if (e.code !== 'Space') return;
+    e.preventDefault();
+    if (spaceDown && !spacePanned && game.mode === 'play') { play('click'); toggleSpeed(); }
+    spaceDown = false;
+  });
 }
