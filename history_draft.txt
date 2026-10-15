@@ -17,3 +17,4 @@
   Sound effects and music - 13 songs, random order, volume and mute for each in Settings. Number keys and the numpad work as the buttons.
   Your best score updates live now, so a run that never jams still counts.
   New hotkeys: L = Log, V = Overpass, H = Highway, O = Roundabout (when that button is showing). One-way stays on the 5 key.
+  Single units and the stadium can now be flipped half way round in place when there is no room to turn them a quarter. Tap them again.

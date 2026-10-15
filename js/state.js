@@ -521,6 +521,22 @@ function flipStadiumInPlace(b) {
   return null;
 }
 
+// A single-unit destination can always turn half way round IN PLACE: its building and its lot swap places on the same two tiles, so it faces
+// the other way without needing any room (it only needs free land for a road outside the new lot, on its front). Returns the new
+// { x, y, half, ent } for rotation rot + 2, or null.
+function flipSmallInPlace(b) {
+  const here = new Set(footprint(b).map(([x, y]) => tileIndex(x, y)));
+  for (let dx = -3; dx <= 3; dx++)
+    for (let dy = -3; dy <= 3; dy++)
+      for (const half of [0, 1]) {
+        const cand = { ...b, x: b.x + dx, y: b.y + dy, half, ent: half, rot: (b.rot + 2) % 4 }, fp = footprint(cand);
+        if (fp.length !== here.size || !fp.every(([fx, fy]) => inBounds(fx, fy) && here.has(tileIndex(fx, fy)))) continue;
+        const [ex, ey] = exitTile(cand, half), k = tileIndex(ex, ey);
+        if (inBounds(ex, ey) && game.terrain.water[k] === LAND && !game.buildingAt.has(k)) return { x: cand.x, y: cand.y, half, ent: half };
+      }
+  return null;
+}
+
 export function rotateBuildingAt(x, y) {
   const b = buildingAt(x, y);
   if (b && b.kind === "portal") {
@@ -546,10 +562,21 @@ export function rotateBuildingAt(x, y) {
     return false;
   }
   if (b.small) {
-    // turn to the next direction where it still fits
-    const turn = [1, 2, 3].find((n) => fitsTurned(b, (b.rot + n) % 4));
-    if (turn === undefined) return false;
-    b.rot = (b.rot + turn - 1) % 4; // (rotateBuilding adds the last quarter turn)
+    // turn to the next direction where it still fits; half a turn is also possible in place (building and lot swap places), so a unit with no
+    // room round it can still face the other way
+    for (const n of [1, 2, 3]) {
+      const rot = (b.rot + n) % 4;
+      const flip = n === 2 ? flipSmallInPlace(b) : null;
+      if (flip) { b.x = flip.x; b.y = flip.y; b.half = flip.half; b.ent = flip.ent; }
+      else if (!fitsTurned(b, rot)) continue;
+      else if (n !== 2) { b.rot = (b.rot + n - 1) % 4; rotateBuilding(game, b); reseatCarsOf(game, b); emit(); return true; }       // (rotateBuilding adds the last quarter turn)
+      b.rot = rot;
+      reindex(game);
+      reseatCarsOf(game, b);
+      emit();
+      return true;
+    }
+    return false;
   }
   rotateBuilding(game, b);
   if (b.kind === "dest") reseatCarsOf(game, b);

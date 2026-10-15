@@ -93,4 +93,25 @@ for (const [rot, half] of [[2, 0], [2, 1]]) {
   }
   ok(made >= 8, `small destinations spawn (${made}/12)`);
 }
+// ---- a single unit with no room round it can still be turned half way, in place ----
+{
+  const { exitTile } = await import(R + 'js/buildings.js'); let n = 0, flips = 0;
+  for (let rot = 0; rot < 4; rot++) for (const half of [0, 1]) {
+    st.newGame(5, maps[0]); g.terrain.water.fill(0); g.nextSpawnAt = 1e9; g.nextGoalAt = 1e9; g.buildings = []; g.cars = []; g.roads = new Map(); g.nextId = 1; reindex(g);
+    const d = addBuilding(g, 'dest', blue, 14, 10, rot); d.small = true; d.half = half; d.ent = half; reindex(g);
+    const fp = footprint(d), here = new Set(fp.map(([x, y]) => y * g.cols + x));
+    // fill the rest of its 2x2 box and the ring round it with other buildings' tiles / roads so no quarter turn can fit
+    for (let y = 8; y < 15; y++) for (let x = 12; x < 19; x++) { const k = y * g.cols + x; if (!here.has(k) && !g.buildingAt.has(k)) g.roads.set(k, { lanes: 2 }); }
+    const [ex0, ey0] = exitTile(d, half); g.roads.delete(ey0 * g.cols + ex0);
+    const [tx, ty] = fp[0], rot0 = d.rot; n++;
+    // the 2 x 2 box: the exit has to be somewhere free after the flip: clear the tile outside where the new lot will be
+    const flipped = { ...d, rot: (rot0 + 2) % 4 };
+    const car = createCar(addBuilding(g, 'house', blue, 3, 3, 2)); g.cars.push(car);
+    const turned = st.rotateBuildingAt(tx, ty);
+    const after = new Set(footprint(d).map(([x, y]) => y * g.cols + x));
+    if (turned && d.rot === (rot0 + 2) % 4 && after.size === here.size && [...here].every(k => after.has(k))) flips++;
+    else if (turned) console.log('turned but not an in-place flip: rot', rot0, '->', d.rot, 'half', half);
+  }
+  ok(flips === n && n === 8, 'boxed in by roads, every rotation of a single unit turns half way round on the same two tiles (' + flips + ' of ' + n + ')');
+}
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);
