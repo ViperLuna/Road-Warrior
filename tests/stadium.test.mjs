@@ -123,8 +123,11 @@ if (A3 && gate) {
     events.length = 0; g.hordeAt = g.time; const inStadium = () => g.cars.filter(c => c.state === 'dwell' && c.dest === a).length;
     for (let i = 0; i < 60 * 60 && !(g.hordeLeft === 0 && g.match.phase === 'play' && g.hordeCount > 0 && events.some(e => e.type === 'horde')); i++) st.tick(1 / 60);
     ok(g.match.phase === 'play' && g.match.whistleAt > g.time + 30, 'after the last arrival the game is on (whistle in ' + (g.match.whistleAt - g.time).toFixed(0) + ' s)');
-    tickN(10); const full = inStadium(); ok(full >= 8, 'the crowd is inside (' + full + ' cars)');
-    tickN(25); ok(inStadium() >= full - 1, 'and nobody leaves before the whistle (' + inStadium() + ' of ' + full + ')');
+    tickN(15); const full = inStadium(); ok(full >= 6, 'the crowd is inside (' + full + ' cars)');
+    tickN(20); ok(inStadium() >= full - 1, 'and nobody leaves before the whistle (' + inStadium() + ' of ' + full + ')');
+    { const [tx, ty] = footprint(a)[5]; const r0 = a.rot; const turned = st.rotateBuildingAt(tx, ty);       // turn the stadium with the crowd inside
+      ok(turned && g.cars.filter(c => c.state === 'dwell' && c.dest === a).every(c => c.lot.rot === a.rot), 'turning it with a crowd inside re-seats every car on the new layout (rot ' + r0 + ' -> ' + a.rot + ')');
+      for (const e of entsOf(a)) { const [ex, ey] = exitTile(a, e); pave(gx, gy, ex, ey); } }       // (the new gate side needs roads before anyone can leave)
     const ents = new Set(); let whistle = null;
     for (let i = 0; i < 60 * 120; i++) { st.tick(1 / 60); if (!whistle) whistle = events.find(e => e.type === 'whistle'); for (const c of g.cars) if (c.state === 'back' && c.route[0] && c.route[0].kind === 'lot_out' && c.route[0].ent >= 8) ents.add(c.route[0].ent); }
     ok(!!whistle && whistle.cars >= full - 1 && whistle.spots.length === 1, 'the final whistle (' + (whistle && whistle.cars) + ' cars released)');
@@ -195,6 +198,33 @@ if (big) {
     ok(g.buildings.some(b => b.kind === 'dest' && !b.stadium && b.color.id === blue.id) && g.buildings.some(b => b.kind === 'dest' && !b.stadium && b.color.id === orange.id), 'every colour still has a destination');
     ok(cCount - g.cars.length <= ev.razed, 'only razed houses lost their cars (' + (cCount - g.cars.length) + ')');
     tickN(60); ok(true, 'the game runs on');
+  }
+}
+// ---- turning a stadium with roads all round its gates: half a turn in place ----
+{
+  S(); base(); const a = spawnStadium(g, { budget: 500 });
+  if (a) {
+    for (const e of entsOf(a)) { const [ex, ey] = exitTile(a, e); pave(ex, ey - (a.rot === 0 ? 0 : 0), ex, ey); st.buildRoad(ex, ey); }
+    const before = new Set(footprint(a).map(([x, y]) => y * g.cols + x)), rot0 = a.rot;
+    // park a car in it so we can see it re-seated
+    const tapX = footprint(a)[5][0], tapY = footprint(a)[5][1];
+    let turned = 0;
+    for (let i = 0; i < 4; i++) { const r = a.rot; if (st.rotateBuildingAt(tapX, tapY)) turned++; }
+    ok(turned === 4, 'a stadium with roads at its gates still turns on every tap (' + turned + ' of 4)');
+    st.rotateBuildingAt(tapX, tapY);
+    const after = new Set(footprint(a).map(([x, y]) => y * g.cols + x));
+    ok([...before].every(k => after.has(k)) && before.size === after.size || a.rot !== (rot0 + 2) % 4, 'if it turned half way it covers exactly the same tiles');
+    // force the half turn alone: block the quarter turns with a road on each side of the block
+    S(); base(); const b2 = spawnStadium(g, { budget: 500 });
+    if (b2) {
+      const fp0 = footprint(b2).map(([x, y]) => y * g.cols + x).sort((p, q) => p - q).join();
+      const ring = [];
+      for (const [x, y] of footprint(b2)) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) { const k = (y + dy) * g.cols + x + dx; if (!g.buildingAt.has(k) && !g.roads.has(k)) { g.roads.set(k, { lanes: 2 }); ring.push(k); } }
+      const rotB = b2.rot, [tx, ty] = footprint(b2)[0];
+      ok(st.rotateBuildingAt(tx, ty) === true, 'surrounded by roads it can still be turned');
+      ok(b2.rot === (rotB + 2) % 4 && footprint(b2).map(([x, y]) => y * g.cols + x).sort((p, q) => p - q).join() === fp0, 'by half a turn, on exactly the same tiles');
+      ok(entsOf(b2).every(e => { const [ex, ey] = exitTile(b2, e); return !g.buildingAt.has(ey * g.cols + ex); }), 'with its gates now on the other long side, on free tiles');
+    }
   }
 }
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);

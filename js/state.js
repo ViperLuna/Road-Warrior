@@ -8,6 +8,7 @@ import {
   footprint,
   entOf,
   entrancesOf,
+  entsOf,
   exitTile,
 } from "./buildings.js";
 import { spawnInitial, spawnPair } from "./spawn.js";
@@ -503,6 +504,23 @@ function fitsTurned(b, rot) {
   );
 }
 
+// A stadium can always turn half way round IN PLACE: the 4x3 block covers the same tiles, only its gates move to the opposite long side.
+// Returns the new anchor { x, y } for rotation rot + 2 (or null if there is no room for a road at the new gates).
+function flipStadiumInPlace(b) {
+  const here = new Set(footprint(b).map(([x, y]) => tileIndex(x, y)));
+  for (let dx = -4; dx <= 4; dx++)
+    for (let dy = -4; dy <= 4; dy++) {
+      const cand = { ...b, x: b.x + dx, y: b.y + dy, rot: (b.rot + 2) % 4 }, fp = footprint(cand);
+      if (fp.length !== here.size || !fp.every(([fx, fy]) => inBounds(fx, fy) && here.has(tileIndex(fx, fy)))) continue;
+      const roomForRoads = entsOf(cand).every((e) => {
+        const [ex, ey] = exitTile(cand, e), k = tileIndex(ex, ey);
+        return inBounds(ex, ey) && game.terrain.water[k] === LAND && (!game.buildingAt.has(k) || here.has(k));
+      });
+      return roomForRoads ? { x: cand.x, y: cand.y } : null;
+    }
+  return null;
+}
+
 export function rotateBuildingAt(x, y) {
   const b = buildingAt(x, y);
   if (b && b.kind === "portal") {
@@ -510,7 +528,24 @@ export function rotateBuildingAt(x, y) {
     return false;
   } // (a side-road gate stays where it is; tapping it explains what it is)
   if (!b) return false;
-  if (b.small || b.stadium) {
+  if (b.stadium) {
+    // quarter turns only where the new block fits; half a turn is always possible in place (so a stadium with roads all round it can still turn)
+    for (const n of [1, 2, 3]) {
+      const rot = (b.rot + n) % 4;
+      if (n === 2) {
+        const a = flipStadiumInPlace(b);
+        if (!a) continue;
+        b.x = a.x; b.y = a.y;
+      } else if (!fitsTurned(b, rot)) continue;
+      b.rot = rot;
+      reindex(game);
+      reseatCarsOf(game, b);
+      emit();
+      return true;
+    }
+    return false;
+  }
+  if (b.small) {
     // turn to the next direction where it still fits
     const turn = [1, 2, 3].find((n) => fitsTurned(b, (b.rot + n) % 4));
     if (turn === undefined) return false;
