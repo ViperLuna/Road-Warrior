@@ -89,8 +89,9 @@ function drawStadium(ctx, b) {
   ctx.fillStyle = '#8fa0a8'; rrect(ctx, -1.72, -1.72, 2.44, 3.44, 0.7); ctx.fill();
   ctx.fillStyle = '#3f8f4f'; rrect(ctx, -1.47, -1.47, 1.94, 2.94, 0.5); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 0.03;
-  ctx.beginPath(); ctx.moveTo(-0.5, -1.47); ctx.lineTo(-0.5, 1.47); ctx.stroke();                     // halfway line
+  ctx.beginPath(); ctx.moveTo(-1.47, 0); ctx.lineTo(0.47, 0); ctx.stroke();                          // halfway line: across the pitch, square to its long axis (y)
   ctx.beginPath(); ctx.arc(-0.5, 0, 0.4, 0, 6.2832); ctx.stroke();
+  for (const e of [-1, 1]) { ctx.beginPath(); ctx.rect(-1.0, e < 0 ? -1.47 : 0.97, 1.0, 0.5); ctx.stroke(); }     // a penalty box at each end
   ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 0.025; rrect(ctx, -1.97, -1.97, 2.94, 3.94, 0.85); ctx.stroke();
   for (const ent of entsOf(b)) {                                                                       // a gate: the road stub, a dark opening and a yellow line
     const yc = entTile(ent) - 0.5;
