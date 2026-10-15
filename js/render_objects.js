@@ -91,7 +91,18 @@ function drawStadium(ctx, b) {
   ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 0.03;
   ctx.beginPath(); ctx.moveTo(-1.47, 0); ctx.lineTo(0.47, 0); ctx.stroke();                          // halfway line: across the pitch, square to its long axis (y)
   ctx.beginPath(); ctx.arc(-0.5, 0, 0.4, 0, 6.2832); ctx.stroke();
-  for (const e of [-1, 1]) { ctx.beginPath(); ctx.rect(-1.0, e < 0 ? -1.47 : 0.97, 1.0, 0.5); ctx.stroke(); }     // a penalty box at each end
+  for (const e of [-1, 1]) {                                                                          // at each end: penalty box, goal area and a goal with a net
+    const edge = e * 1.47, inward = -e;
+    ctx.beginPath(); ctx.rect(-1.0, e < 0 ? -1.47 : 0.97, 1.0, 0.5); ctx.stroke();
+    ctx.beginPath(); ctx.rect(-0.8, e < 0 ? -1.47 : 1.25, 0.6, 0.22); ctx.stroke();
+    const y0 = e < 0 ? edge - 0.15 : edge, gx = -0.78, gw = 0.56;                                      // the goal sits just behind the end line, on the stand side
+    ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(gx, y0, gw, 0.15);
+    ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 0.012;
+    for (let n = 1; n < 5; n++) { ctx.beginPath(); ctx.moveTo(gx + (gw * n) / 5, y0); ctx.lineTo(gx + (gw * n) / 5, y0 + 0.15); ctx.stroke(); }     // net
+    ctx.beginPath(); ctx.moveTo(gx, y0 + 0.075); ctx.lineTo(gx + gw, y0 + 0.075); ctx.stroke();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.03; ctx.strokeRect(gx, y0, gw, 0.15);               // posts and crossbar
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 0.03;
+  }
   ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 0.025; rrect(ctx, -1.97, -1.97, 2.94, 3.94, 0.85); ctx.stroke();
   for (const ent of entsOf(b)) {                                                                       // a gate: the road stub, a dark opening and a yellow line
     const yc = entTile(ent) - 0.5;
