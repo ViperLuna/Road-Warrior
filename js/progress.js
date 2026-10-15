@@ -26,7 +26,7 @@ function anchorNear(g) {
 // How likely a spawn is to land across the water. Only when the player could connect it: a bridge in hand or
 // already built over a gap, plus enough roads to cover the land on both sides. More spare bridges = more separation.
 export function crossChance(g) {
-  const items = (g.inv.bridge || 0) + (g.inv.tunnel || 0), roads = roadsAvailable(g);
+  const items = (g.inv.bridge || 0) + ((g.inv.tunnel || 0) >= 3 ? 1 : 0), roads = roadsAvailable(g);       // (a tunnel needs a piece per block: three or more is worth counting)
   if (roads < 30) return 0;
   if (items > 0) return Math.min(0.6, 0.3 + 0.15 * items);
   return findCrossings(g).some(c => c.covered) ? 0.35 : 0;
@@ -187,7 +187,7 @@ export function chooseReward(g, optionId) {
   g.money += opt.cash;
   if (opt.special) {
     if (opt.special.unlock) g.unlocks[opt.special.id] = true;                 // permanent unlock (e.g. one-way streets)
-    else g.inv[opt.special.id] = (g.inv[opt.special.id] || 0) + (opt.special.grant || 1);
+    else g.inv[opt.special.id] = (g.inv[opt.special.id] || 0) + (opt.special.rewardGrant ?? opt.special.grant ?? 1);     // (a reward can hand out a few; buying in the Shop gives `grant`, one by default)
   }
   g.reward = null;
   g.mode = 'play';

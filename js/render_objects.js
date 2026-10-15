@@ -1,7 +1,7 @@
 // Draws buildings, ghost pieces and cars (tile units, same transform as render.js).
 import { entOf, entsOf, entTile, footprint } from './buildings.js';
 import { DIR } from './lanes.js';
-import { pieceValid } from './network.js';
+import { pieceValid, tunnelMouths } from './network.js';
 import { tuning } from './tuning.js';
 import { highlightLevel, highlight } from './camera.js';
 import { cfgOf } from './deadlines.js';
@@ -247,7 +247,7 @@ export function drawCars(ctx, g, layer = 'top') {
     if (car.state === 'home' || (car.state === 'dwell' && car.dest && car.dest.stadium)) continue;       // (cars inside the stadium are out of sight)
     if ((layer === 'under') !== isUnder(car)) continue;
     const under = g.roads.get(Math.floor(car.y) * g.cols + Math.floor(car.x));
-    if (under && under.tunnel && under.portal === undefined) continue;        // inside the hill: out of sight
+    if (under && under.tunnel && !tunnelMouths(g, Math.floor(car.x), Math.floor(car.y)).length) continue;        // deep inside the hill: out of sight
     ctx.save();
     ctx.translate(car.x, car.y); ctx.rotate(car.a);
     ctx.fillStyle = 'rgba(0,0,0,.3)'; rrect(ctx, -0.17, -0.08, 0.34, 0.2, 0.05); ctx.fill();

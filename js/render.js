@@ -1,7 +1,7 @@
 // Draws everything in tile units (1 tile = 1 unit); the camera transform does the scaling.
 import { WATER, HILL } from './terrain.js';
 import { hasRoad, tileIndex, inBounds, buildingAt, overpassFit } from './state.js';
-import { roadConns, edgeLanes } from './network.js';
+import { roadConns, edgeLanes, tunnelMouths } from './network.js';
 import { settings } from './settings.js';
 import { lightGroups, lightColor, signalState } from './signals.js';
 import { RING_R } from './lanes.js';
@@ -113,7 +113,7 @@ export function render(ctx, W, H, dpr, game, cam, hover) {
     let ok = true;
     if (bld) ok = game.tool !== 'pan';                       // click rotates
     else if (game.tool === 'destroy') ok = road;
-    else if (game.tool === 'build') ok = !w && !isHillAt(hover.x, hover.y) && !road && game.inv.road > 0;
+    else if (game.tool === 'build') ok = isHillAt(hover.x, hover.y) ? !road && (game.inv.tunnel || 0) > 0 && [[0, -1], [1, 0], [0, 1], [-1, 0]].some(([dx, dy]) => hasRoad(hover.x + dx, hover.y + dy)) : !w && !road && game.inv.road > 0;
     else if (game.tool === 'place') {
       const r = game.roads.get(tileIndex(hover.x, hover.y));
       ok = !!r && !r.bridge && !r.tunnel && (game.placing === 'overpass' ? (r.overpass !== undefined || (!r.special && typeof overpassFit(hover.x, hover.y) === 'object')) : !r.special && roadConns(game, hover.x, hover.y).length >= 3);
@@ -152,7 +152,7 @@ function drawRoad(ctx, game, tx, ty) {
   };
 
   const road = game.roads.get(tileIndex(tx, ty));
-  if (road.tunnel) { drawTunnel(ctx, road, cx, cy, conns, mid); return; }
+  if (road.tunnel) { drawTunnel(ctx, road, cx, cy, conns, mid, tunnelMouths(game, tx, ty)); return; }
   if (road.overpass !== undefined) { drawUnderStreet(ctx, game, tx, ty, road); return; }
   if ((road.lanes || 2) === 4 && road.special !== 'roundabout') { drawWide(ctx, game, tx, ty, conns, road); return; }
   const bridge = !!road.bridge;
@@ -210,8 +210,8 @@ function drawLights(ctx, road, tx, ty, conns) {
 }
 
 
-// A tunnel tile: the road runs under the hill (faint dashed outline), with a stone-rimmed mouth at each end.
-function drawTunnel(ctx, road, cx, cy, conns, mid) {
+// A tunnel tile: the road runs under the hill (faint dashed outline), with a stone-rimmed mouth wherever it opens out of the hill.
+function drawTunnel(ctx, road, cx, cy, conns, mid, mouths) {
   ctx.lineCap = 'butt';
   ctx.strokeStyle = 'rgba(30,26,20,.35)'; ctx.lineWidth = (road.lanes || 2) === 4 ? 0.88 : ROAD_W;
   ctx.beginPath();
@@ -221,8 +221,8 @@ function drawTunnel(ctx, road, cx, cy, conns, mid) {
   ctx.beginPath();
   for (const d of conns) { const m = mid(d); ctx.moveTo(cx, cy); ctx.lineTo(m[0], m[1]); }
   ctx.stroke(); ctx.setLineDash([]);
-  if (road.portal !== undefined) {
-    const d = DIRS[road.portal], px = cx + d[0] * 0.3, py = cy + d[1] * 0.3;
+  for (const side of mouths) {                                       // a stone-rimmed mouth on every side that opens out of the hill
+    const d = DIRS[side], px = cx + d[0] * 0.3, py = cy + d[1] * 0.3;
     ctx.save();
     ctx.translate(px, py); ctx.rotate(Math.atan2(d[1], d[0]));          // local +x points out of the hill
     ctx.fillStyle = '#b9b49f'; ctx.beginPath(); ctx.roundRect(-0.12, -0.31, 0.24, 0.62, 0.1); ctx.fill();      // stone rim

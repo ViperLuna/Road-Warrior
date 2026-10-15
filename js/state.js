@@ -72,6 +72,7 @@ let quiet = false;
 export const setQuiet = (on) => {
   quiet = !!on;
 };
+export const announce = (e) => notify(e); // (for modules that change the game from outside, like loading a save)
 const notify = (e) => {
   if (!quiet) evListeners.forEach((fn) => fn(e));
 };
@@ -201,12 +202,12 @@ export function setCut(ax, ay, bx, by, cut) {
     B = game.roads.get(tileIndex(bx, by)),
     e = (d + 2) % 4;
   if (A.overpass !== undefined || B.overpass !== undefined) return false;
-  // A bridge or tunnel can be cut from a road that meets it from the side, never along its own length.
+  // A bridge can be cut from a road that meets it from the side, never along its own length. Tunnel tiles are like road tiles: cut any seam.
   for (const [r, x, y] of [
     [A, ax, ay],
     [B, bx, by],
   ])
-    if ((r.bridge || r.tunnel) && spanAxis(tileIndex(x, y), r) !== (d + 1) % 2)
+    if (r.bridge && spanAxis(tileIndex(x, y), r) !== (d + 1) % 2)          // (a tunnel is dug, so it can be cut from any side)
       return false;
   if (!!(((A.cut || 0) >> d) & 1) === !!cut) return true;
   if (cut) {
@@ -486,8 +487,43 @@ function buildSpan(kind, from, tiles, end) {
 }
 export const buildBridge = (from, tiles, end) =>
   buildSpan("bridge", from, tiles, end);
-export const buildTunnel = (from, tiles, end) =>
-  buildSpan("tunnel", from, tiles, end);
+// ---- tunnels: dug one block at a time ----
+// A tunnel block goes on a HILL tile next to a road or another tunnel block, and uses one tunnel piece. Tunnel blocks are road tiles
+// (`tunnel: true`): they connect to every neighbouring road, can bend and branch, and can be cut. A half-dug tunnel is just a road that goes
+// nowhere yet. Returns 'ok' | 'exists' | 'notunnel' | 'noroad' | 'nothill' | 'blocked' | 'oob'.
+export function buildTunnelTile(x, y) {
+  if (!inBounds(x, y)) return "oob";
+  const idx = tileIndex(x, y);
+  if (game.roads.has(idx)) return "exists";
+  if (game.terrain.water[idx] !== HILL) return "nothill";
+  if (game.buildingAt.has(idx)) return "blocked";
+  if (!SIDES.some(([dx, dy]) => hasRoad(x + dx, y + dy))) return "noroad";
+  if ((game.inv.tunnel || 0) <= 0) return "notunnel";
+  const four = game.build4 && (game.inv.highway || 0) > 0;
+  if (four) {
+    game.inv.highway--;
+    if (game.inv.highway <= 0) game.build4 = false;
+  }
+  game.inv.tunnel--;
+  game.roads.set(idx, { lanes: four ? 4 : 2, tunnel: true });
+  clearEdgesTowards(x, y);
+  emit();
+  return "ok";
+}
+// (the old whole-span call: digs each tile in turn; used by the sim bot)
+export function buildTunnel(from, tiles, end) {
+  if (
+    !inBounds(end.x, end.y) ||
+    game.terrain.water[tileIndex(end.x, end.y)] !== LAND ||
+    game.buildingAt.has(tileIndex(end.x, end.y))
+  )
+    return "badend";
+  for (const t of tiles) {
+    const r = buildTunnelTile(t.x, t.y);
+    if (r !== "ok" && r !== "exists") return r === "notunnel" ? "notunnel" : r;
+  }
+  return "ok";
+}
 
 export const buildingAt = (x, y) =>
   inBounds(x, y) ? game.buildingAt.get(tileIndex(x, y)) || null : null;
@@ -808,19 +844,28 @@ export function demolish(x, y) {
   const r = game.roads.get(tileIndex(x, y));
   const jam = jammedTiles(game),
     span =
-      r.bridge || r.tunnel
-        ? game.bridges.get(r.bridge || r.tunnel) || []
+      r.bridge
+        ? game.bridges.get(r.bridge) || []
         : [tileIndex(x, y)];
   if (span.some((k) => jam.has(k))) {
     notify({ type: "jam-locked" });
     return false;
   } // cars are jammed here: it has to be cleared the hard way
-  if (r.bridge || r.tunnel) {
-    // removing any span tile removes the whole bridge / tunnel
-    const id = r.bridge || r.tunnel;
+  if (r.tunnel) {
+    // a tunnel comes out one block at a time, the piece going back to the player's stock
+    game.roads.delete(tileIndex(x, y));
+    clearEdgesTowards(x, y);
+    game.inv.tunnel = (game.inv.tunnel || 0) + 1;
+    if ((r.lanes || 2) === 4) game.inv.highway = (game.inv.highway || 0) + 1;
+    emit();
+    return true;
+  }
+  if (r.bridge) {
+    // removing any bridge tile removes the whole bridge
+    const id = r.bridge;
     for (const k of game.bridges.get(id) || []) game.roads.delete(k);
     game.bridges.delete(id);
-    const item = r.bridge ? "bridge" : "tunnel";
+    const item = "bridge";
     game.inv[item] = (game.inv[item] || 0) + 1;
     emit();
     return true;

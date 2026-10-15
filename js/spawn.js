@@ -179,7 +179,7 @@ export function spawnHouseAcross(g, color, opts = {}) {
   const rng = opts.rng || Math.random, budget = opts.budget ?? 0, items = opts.items || { bridge: opts.bridgeItems ?? 0, tunnel: 0 };
   const dests = g.buildings.filter(b => b.kind === 'dest' && accepts(b, color.id));
   if (!dests.length || budget < 8) return null;
-  const spans = shuffled(findCrossings(g).filter(c => c.covered || (items[c.item] || 0) > 0), rng);
+  const spans = shuffled(findCrossings(g).filter(c => c.covered || (c.item === 'tunnel' ? (items.tunnel || 0) >= c.k : (items[c.item] || 0) > 0)), rng);       // (a tunnel is one piece per block)
 
   for (const d of shuffled(dests, rng)) {
     const exits = new Set([exitTile(d)].map(([x, y]) => y * g.cols + x));

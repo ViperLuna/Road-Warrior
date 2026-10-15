@@ -8,7 +8,8 @@
     "cashWithSpecial": 20
   },
   "economy": {
-    "roadCost": 2
+    "roadCost": 2,
+    "tunnelConversionBonus": 4
   },
   "spawns": {
     "firstAtTrips": 4,
@@ -84,8 +85,9 @@
       "enabled": true,
       "weight": 1,
       "cost": 60,
-      "description": "Drag a road straight through a hill. One tunnel covers any length.",
-      "requires": "hill"
+      "description": "Dig into a hill one block at a time: each block uses one piece. Tunnels can bend.",
+      "requires": "hill",
+      "rewardGrant": 4
     },
     {
       "id": "overpass",

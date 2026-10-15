@@ -81,3 +81,11 @@ export function clearRoadTile(g, x, y) {
   netChanged();
   return true;
 }
+
+// Sides of tunnel tile (x,y) where it opens out of the hill: a connected neighbour that is not tunnel (a road on open ground, or a building's gate).
+// A tunnel tile whose connections are all other tunnel tiles is deep inside the hill (cars on it are out of sight).
+export function tunnelMouths(g, x, y) {
+  const r = g.roads.get(tidx(g, x, y));
+  if (!r || !r.tunnel) return [];
+  return roadConns(g, x, y).filter(d => { const n = g.roads.get(tidx(g, x + DIR[d][0], y + DIR[d][1])); return !n || !n.tunnel; });
+}

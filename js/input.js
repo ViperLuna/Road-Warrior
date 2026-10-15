@@ -1,6 +1,6 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
-import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnel, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt, setSpeed, setDevSpeed, toggleSpeed } from './state.js';
+import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnelTile as buildTunnel1, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt, setSpeed, setDevSpeed, toggleSpeed } from './state.js';
 import { WATER, HILL } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
 import { toast } from './hud.js';
@@ -18,22 +18,33 @@ const tileAt = (sx, sy) => { const w = screenToWorld(sx, sy); return { x: Math.f
 
 const kindAt = (x, y) => (inBounds(x, y) ? game.terrain.water[tileIndex(x, y)] : -1);
 
-// Building by dragging. Water or hill tiles are collected into a straight "span"; when the drag lands on the far
-// side, one bridge (water) or tunnel (hill) item is spent and the whole span is built.
+// Building by dragging. Water tiles are collected into a straight "span"; when the drag lands on the far side, one bridge item is spent and the
+// whole span is built. A hill tile is different: tunnels are dug ONE BLOCK AT A TIME, each block next to a road (or the tunnel you are already
+// digging) and each using one tunnel piece, so a tunnel can bend and a half-dug one just goes nowhere yet.
+const TUNNEL_MSG = {
+  notunnel: 'You need a tunnel piece to dig into the hill. Each block uses one (Shop, or a reward).',
+  noroad: 'Dig a tunnel from a road at the edge of the hill (or from the tunnel you already have).',
+};
 function stepBuild(st, x, y) {
   const prev = st.prevTile;
   st.prevTile = { x, y };
   const kind = kindAt(x, y);
-  if (kind === WATER || kind === HILL) {
-    const item = kind === WATER ? 'bridge' : 'tunnel';
+  if (kind === HILL) {
+    if (st.span) { st.span = null; toast('Bridges must be a straight line over water.'); return; }
+    const r = buildTunnel1(x, y);
+    if (r === 'ok') play('tunnel');                                // a tunnel gets the drill
+    else if (TUNNEL_MSG[r]) toast(TUNNEL_MSG[r]);
+    return;
+  }
+  if (kind === WATER) {
     if (!st.span) {
-      if (!prev || kindAt(prev.x, prev.y) !== 0 || !hasRoad(prev.x, prev.y)) { toast(`Start a ${item} from a road at the edge.`); return; }
-      if ((game.inv[item] || 0) <= 0) { toast(kind === WATER ? 'You need a bridge to cross water.' : 'You need a tunnel to go through a hill.'); return; }
-      st.span = { kind, item, dx: x - prev.x, dy: y - prev.y, from: prev, tiles: [{ x, y }] };
+      if (!prev || kindAt(prev.x, prev.y) !== 0 || !hasRoad(prev.x, prev.y)) { toast('Start a bridge from a road at the edge.'); return; }
+      if ((game.inv.bridge || 0) <= 0) { toast('You need a bridge to cross water.'); return; }
+      st.span = { kind, item: 'bridge', dx: x - prev.x, dy: y - prev.y, from: prev, tiles: [{ x, y }] };
     } else {
       const last = st.span.tiles[st.span.tiles.length - 1];
-      if (kind === st.span.kind && x - last.x === st.span.dx && y - last.y === st.span.dy) st.span.tiles.push({ x, y });
-      else { st.span = null; toast('Bridges and tunnels must be a straight line over one kind of ground.'); }
+      if (x - last.x === st.span.dx && y - last.y === st.span.dy) st.span.tiles.push({ x, y });
+      else { st.span = null; toast('Bridges must be a straight line over water.'); }
     }
     return;
   }
@@ -41,11 +52,11 @@ function stepBuild(st, x, y) {
     const sp = st.span, last = sp.tiles[sp.tiles.length - 1];
     st.span = null;
     if (x - last.x === sp.dx && y - last.y === sp.dy) {
-      const r = (sp.kind === WATER ? buildBridge : buildTunnel)(sp.from, sp.tiles, { x, y });
+      const r = buildBridge(sp.from, sp.tiles, { x, y });
       if (r === 'badend') { toast("The far side isn't clear."); return; }
       if (r !== 'ok') return;
-      play(sp.kind === WATER ? 'build' : 'tunnel');          // a tunnel gets the drill; a bridge is just another placement
-    } else { toast('Bridges and tunnels must be a straight line.'); return; }
+      play('build');
+    } else { toast('Bridges must be a straight line.'); return; }
   }
   const r = buildRoad(x, y);
   if (r === 'empty') toast('Out of road pieces and cash!');
@@ -69,7 +80,7 @@ function stepCut(st, x, y) {
     return;
   }
   if (st.cutMode === undefined) st.cutMode = isCut(prev.x, prev.y, x, y) ? 'join' : 'cut';
-  if (!setCut(prev.x, prev.y, x, y, st.cutMode === 'cut')) { toast("Can't cut there. Drag across the gap between two roads (bridges and tunnels can only be cut from the side; overpasses not at all)."); return; }
+  if (!setCut(prev.x, prev.y, x, y, st.cutMode === 'cut')) { toast("Can't cut there. Drag across the gap between two roads (bridges can only be cut from the side; overpasses not at all)."); return; }
   const ux = my !== 0 ? 1 : 0, uy = mx !== 0 ? 1 : 0;                       // the direction along the roads, if they are parallel
   if ((hasRoad(prev.x + ux, prev.y + uy) && hasRoad(x + ux, y + uy)) || (hasRoad(prev.x - ux, prev.y - uy) && hasRoad(x - ux, y - uy))) st.sweep = { vx: mx, vy: my };
 }

@@ -228,7 +228,7 @@ export function planRoad(g, h, dests = destsOf(g, h.color), opts = {}) {
       if (kind !== WATER && kind !== HILL) continue;
       const item = kind === WATER ? "bridge" : "tunnel";
       if (
-        !items[item] ||
+        (item === "bridge" && !items[item]) ||
         (g.roads.has(k) && (g.roads.get(k).bridge || g.roads.get(k).tunnel))
       )
         continue;
@@ -251,6 +251,10 @@ export function planRoad(g, h, dests = destsOf(g, h.color), opts = {}) {
         (!targets.has(ek) && closesBlock(ex, ey, -1))
       )
         continue;
+      if (item === "tunnel") {                                     // a tunnel is one piece per block: can we afford n of them?
+        const info = specialInfo("tunnel"), short = Math.max(0, n - (g.inv.tunnel || 0));
+        if (!info || !info.enabled || short * (info.cost || Infinity) > g.money) continue;
+      }
       const nc = c + n + 6 + stepCost(ex, ey, ek);
       if (nc < dist[ek]) {
         dist[ek] = nc;
@@ -283,7 +287,7 @@ export function build(g, plan, bot) {
   ).length;
   const spans = plan.filter((p) => p.span).map((p) => p.span);
   const need = { bridge: 0, tunnel: 0 };
-  spans.forEach((s) => need[s.item]++);
+  spans.forEach((s) => { need[s.item] += s.item === "tunnel" ? s.tiles.length : 1; });       // (a tunnel is one piece per block)
   let cash = 0;
   for (const item of ["bridge", "tunnel"]) {
     const short = Math.max(0, need[item] - (g.inv[item] || 0));

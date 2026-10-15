@@ -5,8 +5,8 @@
 //
 //   backend = { id, load(slot) -> data|null, save(slot, data) -> bool, remove(slot) -> bool, list() -> [{ slot, savedAt }] }
 //   (every method may be async; the manager awaits them)
-import { game, refresh, syncBest, bestFor } from './state.js';
-import { maps, specialInfo } from './progression.js';
+import { game, refresh, syncBest, bestFor, announce } from './state.js';
+import { maps, specialInfo, prog } from './progression.js';
 import { tuning } from './tuning.js';
 import { terrainFromWater } from './terrain.js';
 import { reindex, SPECIAL_COLORS } from './buildings.js';
@@ -66,6 +66,13 @@ export function restore(data, g = game) {
   g.bridges = new Map(data.bridges.map(([id, tiles]) => [id, [...tiles]]));
   g.nextBridge = data.nextBridge; g.nextId = data.nextId;
   g.inv = { ...data.inv }; g.unlocks = { ...data.unlocks }; g.oneway = !!data.oneway && !!g.unlocks.oneway; g.build4 = !!data.build4 && (g.inv.highway || 0) > 0;
+  // Tunnels used to be whole numbered spans (one item, portals at the ends); now they are one-block road tiles. Convert any old ones, and thank
+  // the player for being there during testing with a few tunnel pieces for each tunnel they had built.
+  const oldTunnels = new Set();
+  for (const t of g.roads.values()) if (typeof t.tunnel === 'number') { oldTunnels.add(t.tunnel); t.tunnel = true; delete t.axis; delete t.portal; }
+  g.bridges = new Map([...g.bridges].filter(([id]) => [...g.roads.values()].some(r => r.bridge === id)));
+  const tunnelBonus = oldTunnels.size * prog.economy.tunnelConversionBonus;
+  if (tunnelBonus) g.inv.tunnel = (g.inv.tunnel || 0) + tunnelBonus;
   g.trips = data.trips; g.money = data.money; g.time = data.time;
   g.bestAtStart = data.bestAtStart ?? bestFor(map.id); syncBest();       // (older saves: the best so far counts as the best at the start)
   Object.assign(g, data.progress);
@@ -101,6 +108,7 @@ export function restore(data, g = game) {
   for (const b of g.buildings) if (b.slots) b.slots = slotsById.get(b.id).map(id => (id == null ? null : carById.get(id) || null));
   raiseNotice(g);                                               // a popup that was waiting for [OK] waits again
   refresh();
+  if (tunnelBonus) announce({ type: 'tunnel-bonus', tunnels: oldTunnels.size, pieces: tunnelBonus });
   return true;
 }
 
