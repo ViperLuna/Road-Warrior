@@ -150,7 +150,7 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 #notice p { max-width: min(520px, 90vw); font-size: 1.05rem; line-height: 1.45; margin: 0; opacity: .92; }
 #notice h2 { font-size: clamp(1.4rem, 5.5vw, 2.2rem); }
 #chips { position: absolute; left: 10px; top: calc(100px + env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 6px; align-items: flex-start; pointer-events: none; max-width: calc(100vw - 20px); }
-#chips .chipbar { pointer-events: auto; font: inherit; font-size: .82rem; color: #fff; background: rgba(10, 16, 12, .8); border: 1px solid rgba(255, 255, 255, .25); border-radius: 999px; padding: 6px 14px; cursor: pointer; white-space: nowrap; }
+#chips .chipbar { pointer-events: auto; font: inherit; font-size: .82rem; color: #fff; background: rgba(10, 16, 12, .8); border: 1px solid rgba(255, 255, 255, .25); border-radius: 999px; padding: 6px 14px; cursor: pointer; white-space: normal; text-align: left; max-width: calc(100vw - 20px); }
 #chips .chipbar.warn { background: rgba(170, 40, 35, .92); border-color: #ffb3a8; animation: chip-pulse 1s infinite; }
 @keyframes chip-pulse { 50% { box-shadow: 0 0 14px rgba(255, 90, 70, .85); } }
 
@@ -168,3 +168,6 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 #log-list .entry .pin { margin-left: auto; opacity: .85; }
 #log-list .entry.bad { background: rgba(170, 40, 35, .3); }
 #log[hidden] { display: none; }
+#log { box-sizing: border-box; }
+#log, #chips { max-width: calc(100vw - 20px); }
+#log { background: #0b110e; z-index: 7; }

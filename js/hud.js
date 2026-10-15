@@ -130,8 +130,18 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     }
   }
 
+  // The top bar wraps onto several rows on a phone: the chips and the log panel sit just below however tall it is, never over its buttons.
+  function placeBelowTop() {
+    const bottom = Math.ceil($('hud-top').getBoundingClientRect().bottom) + 6;
+    $('chips').style.top = bottom + 'px';
+    $('log').style.top = bottom + 'px';
+    $('log').style.maxHeight = `calc(100vh - ${bottom + 100}px)`;
+  }
+  addEventListener('resize', placeBelowTop);
+
   // Countdown chips: the stadium / the side roads while they are not connected. Tap one to fly there.
   function paintChips() {
+    placeBelowTop();
     const box = $('chips'), chips = game.mode === 'play' || game.mode === 'pause' ? chipsOf(game).filter(c => !c.waiting) : [];
     const sig = chips.map(c => c.key + c.warn + (c.detail ? c.detail.have + '/' + c.detail.total + '/' + (c.detail.stadiumOk ?? '') : '') + Math.floor(c.left ?? 0)).join('|');
     if (box.dataset.sig === sig) return;
@@ -167,7 +177,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
       list.appendChild(row);
     }
   }
-  $('log-btn').addEventListener('click', () => { const l = $('log'); l.hidden = !l.hidden; if (!l.hidden) paintLog(); });
+  $('log-btn').addEventListener('click', () => { const l = $('log'); l.hidden = !l.hidden; if (!l.hidden) { placeBelowTop(); paintLog(); } });
   $('log-close').addEventListener('click', () => { $('log').hidden = true; });
 
   function render() {
