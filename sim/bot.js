@@ -14,7 +14,14 @@ import {
 import { DIR, OPP } from "../js/lanes.js";
 import { findPath, reachablePorts } from "../js/pathfind.js";
 import { roadConns, netVersion } from "../js/network.js";
-import { lotTile, gateOf, entOf, entsOf, entrancesOf, exitTile } from "../js/buildings.js";
+import {
+  lotTile,
+  gateOf,
+  entOf,
+  entsOf,
+  entrancesOf,
+  exitTile,
+} from "../js/buildings.js";
 import { stadiumOf, gatesOf, gateConnected } from "../js/outside.js";
 import { prog, specialInfo } from "../js/progression.js";
 import { WATER, HILL, LAND } from "../js/terrain.js";
@@ -70,11 +77,19 @@ class Heap {
 //   cut:  now and then, cut the seam between two neighbouring junctions if every connected house still has a route
 export const FEATURES = ["flip", "cut"];
 
-export const JUNCTION_POLICIES = ["heat", "none", "light", "roundabout", "hot-light", "hot-roundabout"];
+export const JUNCTION_POLICIES = [
+  "heat",
+  "none",
+  "light",
+  "roundabout",
+  "hot-light",
+  "hot-roundabout",
+];
 
 export function createBot(opts = {}) {
   const junctions = opts.junctions || "heat";
-  if (!JUNCTION_POLICIES.includes(junctions)) throw new Error("unknown junction policy " + junctions);
+  if (!JUNCTION_POLICIES.includes(junctions))
+    throw new Error("unknown junction policy " + junctions);
   return {
     reward: opts.reward || "smart",
     junctions,
@@ -102,8 +117,12 @@ export function createBot(opts = {}) {
 const gateTile = (d) => lotTile(d, gateOf(d));
 const exitOf = (h) => [h.x + DIR[h.rot][0], h.y + DIR[h.rot][1]];
 const gateExit = (d) => d.exit || exitTile(d);
-const destsOf = (g, color) =>
-  g.buildings.filter((b) => b.kind === "dest" && (b.color.id === color.id || (b.color2 && b.color2.id === color.id)));
+export const destsOf = (g, color) =>
+  g.buildings.filter(
+    (b) =>
+      b.kind === "dest" &&
+      (b.color.id === color.id || (b.color2 && b.color2.id === color.id)),
+  );
 
 export function unreached(g, h) {
   const [ex, ey] = exitOf(h);
@@ -120,7 +139,9 @@ const canGet = (g, item) =>
   (g.inv[item] || 0) > 0 ||
   (specialInfo(item)?.enabled && g.money >= specialInfo(item).cost);
 
-function planRoad(g, h, dests = destsOf(g, h.color)) {
+export function planRoad(g, h, dests = destsOf(g, h.color), opts = {}) {
+  const adjW = opts.adj ?? 0.3,
+    extra = opts.extra || (() => 0);
   const { cols, rows } = g,
     W = g.terrain.water,
     N = cols * rows;
@@ -134,7 +155,29 @@ function planRoad(g, h, dests = destsOf(g, h.color)) {
       0,
     );
   const stepCost = (x, y, k) =>
-    g.roads.has(k) ? 0.1 : 1 + 0.3 * adjRoads(x, y);
+    (g.roads.has(k) ? 0.1 : 1 + adjW * adjRoads(x, y)) + extra(k);
+  const closesBlock = (x, y, from) => {
+    if (!opts.noBlocks) return false;
+    const mine = new Set([from, prev[from]]);
+    const isRoad = (qx, qy) =>
+      inB(qx, qy) && (g.roads.has(qy * cols + qx) || mine.has(qy * cols + qx));
+    return [
+      [-1, -1],
+      [0, -1],
+      [-1, 0],
+      [0, 0],
+    ].some(([ox, oy]) =>
+      [
+        [0, 0],
+        [1, 0],
+        [0, 1],
+        [1, 1],
+      ].every(
+        ([dx, dy]) =>
+          (ox + dx === 0 && oy + dy === 0) || isRoad(x + ox + dx, y + oy + dy),
+      ),
+    );
+  };
 
   const targets = new Set(
     dests
@@ -168,7 +211,10 @@ function planRoad(g, h, dests = destsOf(g, h.color)) {
         ny = y + dy,
         nk = ny * cols + nx;
       if (!inB(nx, ny)) continue;
-      if (g.roads.has(nk) || land(nk)) {
+      if (
+        g.roads.has(nk) ||
+        (land(nk) && (targets.has(nk) || !closesBlock(nx, ny, k)))
+      ) {
         const nc = c + stepCost(nx, ny, nk);
         if (nc < dist[nk]) {
           dist[nk] = nc;
@@ -197,7 +243,14 @@ function planRoad(g, h, dests = destsOf(g, h.color)) {
       const ex = x + dx * (n + 1),
         ey = y + dy * (n + 1),
         ek = ey * cols + ex;
-      if (n < 1 || n > 10 || !inB(ex, ey) || !land(ek)) continue;
+      if (
+        n < 1 ||
+        n > 10 ||
+        !inB(ex, ey) ||
+        !land(ek) ||
+        (!targets.has(ek) && closesBlock(ex, ey, -1))
+      )
+        continue;
       const nc = c + n + 6 + stepCost(ex, ey, ek);
       if (nc < dist[ek]) {
         dist[ek] = nc;
@@ -224,7 +277,7 @@ function planRoad(g, h, dests = destsOf(g, h.color)) {
   return out.reverse();
 }
 
-function build(g, plan, bot) {
+export function build(g, plan, bot) {
   const newTiles = plan.filter(
     (p) => !p.span && !g.roads.has(p.y * g.cols + p.x),
   ).length;
@@ -262,25 +315,37 @@ function build(g, plan, bot) {
   return true;
 }
 
-const planCost = (g, plan) =>
+export const planCost = (g, plan) =>
   plan
-    ? plan.reduce((n, p) => n + (p.span ? 8 : g.roads.has(p.y * g.cols + p.x) ? 0 : 1), 0)
+    ? plan.reduce(
+        (n, p) => n + (p.span ? 8 : g.roads.has(p.y * g.cols + p.x) ? 0 : 1),
+        0,
+      )
     : Infinity;
 
 // Move a destination's entrance to the place round its lot that makes the first hookup of its colour cheapest. Only while nothing of
 // that colour is connected yet (a move would cut off houses already wired to the old entrance).
 function maybeFlip(g, h, bot) {
   if (!bot.features.has("flip")) return;
-  if (g.buildings.some((o) => o.kind === "house" && o.connected && o.color.id === h.color.id)) return;
+  if (
+    g.buildings.some(
+      (o) => o.kind === "house" && o.connected && o.color.id === h.color.id,
+    )
+  )
+    return;
   const base = planCost(g, planRoad(g, h));
   for (const d of destsOf(g, h.color)) {
     const orig = entOf(d);
-    let bestEnt = orig, bestCost = base;
+    let bestEnt = orig,
+      bestCost = base;
     for (const ent of entrancesOf(d)) {
       if (ent === orig) continue;
       setEntrance(d, ent);
       const alt = planCost(g, planRoad(g, h));
-      if (alt < bestCost - 1) { bestCost = alt; bestEnt = ent; }
+      if (alt < bestCost - 1) {
+        bestCost = alt;
+        bestEnt = ent;
+      }
     }
     setEntrance(d, bestEnt);
     if (bestEnt !== orig) {
@@ -291,26 +356,38 @@ function maybeFlip(g, h, bot) {
 }
 
 // Can a car leave building b (a house or a gate) for building d?
-const reaches = (g, b, d) => {
-  const reach = reachablePorts(g, b.x + DIR[b.rot][0], b.y + DIR[b.rot][1], OPP[b.rot]);
+export const reaches = (g, b, d) => {
+  const reach = reachablePorts(
+    g,
+    b.x + DIR[b.rot][0],
+    b.y + DIR[b.rot][1],
+    OPP[b.rot],
+  );
   return [...g.ports].some(([k, p]) => p.b === d && reach.has(k));
 };
-const colorsIn = (g) => g.palette.slice(0, Math.max(1, g.colorsUsed));
+export const colorsIn = (g) => g.palette.slice(0, Math.max(1, g.colorsUsed));
 
 // The stadium must be reached by a house of every colour; each side-road gate by the stadium and a destination of every colour. Lay the road
 // from a house (or the gate) the way a player would: over the city's own roads where it can.
 function connectOutside(g, bot) {
   const arena = stadiumOf(g);
   if (!arena) return;
-  const pseudo = [arena].map(() => entsOf(arena).map((ent) => ({ exit: exitTile(arena, ent) }))).flat();
+  const pseudo = [arena]
+    .map(() => entsOf(arena).map((ent) => ({ exit: exitTile(arena, ent) })))
+    .flat();
   for (const c of colorsIn(g)) {
-    const mine = g.buildings.filter((b) => b.kind === "house" && b.color.id === c.id && b.connected);
+    const mine = g.buildings.filter(
+      (b) => b.kind === "house" && b.color.id === c.id && b.connected,
+    );
     if (!mine.length || mine.some((h) => reaches(g, h, arena))) continue;
     const plan = planRoad(g, mine[0], pseudo);
     if (plan) build(g, plan, bot);
   }
   for (const gate of gatesOf(g)) {
-    if (!reaches(g, gate, arena)) { const plan = planRoad(g, gate, pseudo); if (plan) build(g, plan, bot); }
+    if (!reaches(g, gate, arena)) {
+      const plan = planRoad(g, gate, pseudo);
+      if (plan) build(g, plan, bot);
+    }
     for (const c of colorsIn(g)) {
       const all = destsOf(g, c);
       if (!all.length || all.some((d) => reaches(g, gate, d))) continue;
@@ -324,12 +401,14 @@ function connectHouses(g, bot) {
   const dests = new Map();
   for (const d of g.buildings) {
     if (d.kind !== "dest") continue;
-    for (const c of [d.color, d.color2]) if (c) dests.set(c.id, (dests.get(c.id) || 0) + 1);       // a two-colour destination counts for both
+    for (const c of [d.color, d.color2])
+      if (c) dests.set(c.id, (dests.get(c.id) || 0) + 1); // a two-colour destination counts for both
   }
   for (const [c, n] of dests) {
     if (bot.dests.get(c) === n) continue;
     bot.dests.set(c, n);
-    for (const h of g.buildings) if (h.kind === "house" && h.color.id === c) h.connected = false;
+    for (const h of g.buildings)
+      if (h.kind === "house" && h.color.id === c) h.connected = false;
   }
   for (const h of g.buildings) {
     if (h.kind !== "house" || h.connected) continue;
@@ -363,12 +442,16 @@ function tidyCuts(g, bot) {
   const homes = g.buildings.filter((b) => b.kind === "house" && b.connected);
   const seams = [];
   for (const [k] of g.roads) {
-    const x = k % g.cols, y = (k / g.cols) | 0;
+    const x = k % g.cols,
+      y = (k / g.cols) | 0;
     if (roadConns(g, x, y).length < 3) continue;
-    for (const d of [1, 2]) {                      // east and south only: each seam once
-      const nx = x + DIR[d][0], ny = y + DIR[d][1];
+    for (const d of [1, 2]) {
+      // east and south only: each seam once
+      const nx = x + DIR[d][0],
+        ny = y + DIR[d][1];
       if (!g.roads.has(ny * g.cols + nx) || isCut(x, y, nx, ny)) continue;
-      if (roadConns(g, nx, ny).length >= 3 && roadConns(g, x, y).includes(d)) seams.push([x, y, nx, ny]);
+      if (roadConns(g, nx, ny).length >= 3 && roadConns(g, x, y).includes(d))
+        seams.push([x, y, nx, ny]);
     }
   }
   for (const [x, y, nx, ny] of seams.slice(0, 3)) {
@@ -381,7 +464,7 @@ function tidyCuts(g, bot) {
   }
 }
 
-function trackHeat(g, bot) {
+export function trackHeat(g, bot) {
   for (const [k, v] of bot.heat) {
     const nv = v * 0.98;
     if (nv < 0.05) bot.heat.delete(k);
@@ -395,27 +478,38 @@ function trackHeat(g, bot) {
 }
 
 export function streetLegs(g, x, y) {
-  return roadConns(g, x, y).filter((d) => g.roads.has((y + DIR[d][1]) * g.cols + x + DIR[d][0])).length;
+  return roadConns(g, x, y).filter((d) =>
+    g.roads.has((y + DIR[d][1]) * g.cols + x + DIR[d][0]),
+  ).length;
 }
 
 function placeEverywhere(g, bot, id) {
-  if (bot.scanned === netVersion() && bot.scannedRoads === g.roads && bot.scannedPorts === g.ports) return;
+  if (
+    bot.scanned === netVersion() &&
+    bot.scannedRoads === g.roads &&
+    bot.scannedPorts === g.ports
+  )
+    return;
   for (const [k, r] of g.roads) {
     if (r.special || r.overpass !== undefined || r.bridge || r.tunnel) continue;
     const x = k % g.cols,
       y = (k / g.cols) | 0;
     if (streetLegs(g, x, y) < 3) continue;
     g.inv[id] = (g.inv[id] || 0) + 1;
-    if (placeSpecial(id, x, y) === "ok") bot.stats.placed[id] = (bot.stats.placed[id] || 0) + 1;
+    if (placeSpecial(id, x, y) === "ok")
+      bot.stats.placed[id] = (bot.stats.placed[id] || 0) + 1;
     else g.inv[id]--;
   }
-  bot.scanned = netVersion(); bot.scannedRoads = g.roads; bot.scannedPorts = g.ports;
+  bot.scanned = netVersion();
+  bot.scannedRoads = g.roads;
+  bot.scannedPorts = g.ports;
 }
 
 function placeSpecials(g, bot) {
   if (bot.junctions === "none") return;
   const hot = bot.junctions.startsWith("hot-") ? bot.junctions.slice(4) : null;
-  if (bot.junctions !== "heat" && !hot) return placeEverywhere(g, bot, bot.junctions);
+  if (bot.junctions !== "heat" && !hot)
+    return placeEverywhere(g, bot, bot.junctions);
   for (const id of hot ? [hot] : placeable) {
     if (hot) g.inv[id] = Math.max(1, g.inv[id] || 0);
     if ((g.inv[id] || 0) <= 0) continue;

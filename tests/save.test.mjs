@@ -76,6 +76,9 @@ ok(await http.save('a', { x: 1 }) && (await http.load('a')).x === 1 && (await ht
 // switching the backend moves where saves go
 S.setBackend(http); S.configure({ backend: 'http', slot: 'main' });
 st.newGame(3, maps[0]); ok(await S.saveNow(), 'saveNow goes to the chosen backend'); ok(db.has('main') && (await S.describeSave()).map === maps[0].name, 'describeSave reads it back from the same backend');
+// lot pieces of a small destination whose 2x2 box hangs off the map edge (corner at -1) come back from their keys
+const L = await import(R + 'js/lanes.js');
+for (const key of ['li:41,-1:1:1>2', 'lo:-1,5:2:3>-1', 'lo:4,-1:0:-1>0']) { let p = null; try { p = L.pieceFromKey(key); } catch {} ok(p && p.key === key, `piece key ${key} round-trips`); }
 // bad data is refused, not half-loaded
 let threw = false; try { S.restore({ version: 99 }); } catch { threw = true; } ok(threw, 'unknown save version is rejected');
 console.log(pass, 'passed', fail, 'failed');

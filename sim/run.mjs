@@ -5,6 +5,7 @@
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { readFileSync, mkdirSync, writeFileSync, appendFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
+import { loadGame as loadCore } from './load.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,25 +22,7 @@ function parseArgs(argv) {
   return a;
 }
 
-async function loadGame(overrides) {
-  const { mulberry32 } = await import('../js/rng.js');
-  const state = await import('../js/state.js');
-  const { setTuning, tuning } = await import('../js/tuning.js');
-  const { setProgression, setMaps, setMilestones, milestones, maps, prog } = await import('../js/progression.js');
-  const bot = await import('./bot.js');
-  const json = f => JSON.parse(readFileSync(join(root, 'config', f), 'utf8'));
-  state.setPalette(json('colors.json').colors);
-  setTuning(json('tuning.json')); setProgression(json('progression.json')); setMilestones(json('milestones.json')); setMaps(json('maps.json'));
-  for (const s of overrides) {
-    const [path, raw] = s.split('='), keys = path.split('.');
-    let o = keys[0] === 'tuning' ? tuning : keys[0] === 'progression' ? prog : keys[0] === 'milestones' ? milestones : null;
-    if (!o) throw new Error('--set must start with tuning., progression. or milestones.');
-    for (const k of keys.slice(1, -1)) o = o[k];
-    o[keys.at(-1)] = JSON.parse(raw);
-  }
-  const save = await import('../js/save.js');
-  return { mulberry32, state, tuning, maps, bot, save };
-}
+const loadGame = async overrides => ({ ...(await loadCore(overrides)), bot: await import('./bot.js') });
 
 function describeJunction(J) {
   if (!J) return 'none';
