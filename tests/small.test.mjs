@@ -136,4 +136,13 @@ for (const [rot, half] of [[2, 0], [2, 1]]) {
   const free = [B[0] - 1, B[1]];
   ok(st.rotateBuildingAt(...B) && lTile(d)[0] === free[0] && lTile(d)[1] === free[1], 'with only the west side free, one tap puts the lot there (skipping the blocked sides)');
 }
+// ---- nowhere to turn at all: it says so ----
+{
+  const evs = []; st.onEvent(e => evs.push(e));
+  st.newGame(5, maps[0]); g.terrain.water.fill(1); g.nextSpawnAt = 1e9; g.nextGoalAt = 1e9; g.buildings = []; g.cars = []; g.roads = new Map(); g.nextId = 1; reindex(g);
+  const d = addBuilding(g, 'dest', blue, 14, 10, 2); d.small = true; d.half = 0; d.ent = 0; reindex(g);
+  for (const [x, y] of footprint(d)) g.terrain.water[y * g.cols + x] = 0;                               // an island of exactly its two tiles
+  const [tx, ty] = footprint(d)[0]; evs.length = 0;
+  ok(st.rotateBuildingAt(tx, ty) === false && evs.some(e => e.type === 'rotate-blocked'), 'with no free land anywhere, a tap does nothing but says why');
+}
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);

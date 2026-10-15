@@ -280,6 +280,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     }
     if (e.type === 'portal') note(e.count > 1 ? `Side roads to other cities on the ${listOf(e.edges)} edges: connect them to the stadium and every colour.` : `A side road to another city on the ${e.edges[0]} edge: connect it to the stadium and every colour.`, e.spots);
     if (e.type === 'gate-info') toast(e.demolish ? "That's the road to another city. It can't be demolished." : "This is an expansion to another city you can't see. Visitors come in through here.");
+    if (e.type === 'rotate-blocked') toast("No room to turn this: it needs a free tile of land beside it (or outside its lot).");
     if (e.type === 'jam-locked') toast("Can't demolish this: cars are jammed here. Clear the jam first.");
     if (e.type === 'horde') note(`A game is being hosted at the stadium! A crowd of ${e.size} is on its way.`, e.spots);
     if (e.type === 'whistle') note('The game is over! The crowd is heading home.', e.spots);

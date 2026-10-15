@@ -575,6 +575,7 @@ export function rotateBuildingAt(x, y) {
       emit();
       return true;
     }
+    notify({ type: 'rotate-blocked' });
     return false;
   }
   if (b.small) {
@@ -583,7 +584,7 @@ export function rotateBuildingAt(x, y) {
     let r = null;
     for (const n of [1, 2, 3]) if ((r = pivotSmall(b, n))) break;
     if (!r) { const f = flipSmallInPlace(b); if (f) r = { ...f, rot: (b.rot + 2) % 4 }; }
-    if (!r) return false;
+    if (!r) { notify({ type: 'rotate-blocked' }); return false; }
     b.x = r.x; b.y = r.y; b.half = r.half; b.ent = r.ent; b.rot = r.rot;
     reindex(game);
     reseatCarsOf(game, b);
