@@ -1,12 +1,13 @@
 // Game state + the rules for placing/removing things. No drawing or input in here.
 import { generateTerrain, WATER, HILL, LAND } from "./terrain.js";
-import { clearPieceCache } from "./lanes.js";
+import { clearPieceCache, DIR } from "./lanes.js";
 import {
   rotateBuilding,
   lotTile,
   reindex,
   footprint,
   entOf,
+  gateOf,
   entrancesOf,
   entsOf,
   exitTile,
@@ -521,6 +522,21 @@ function flipStadiumInPlace(b) {
   return null;
 }
 
+// A single unit turns by swinging its LOT round the building (the building tile stays put): the lot goes to the side n quarter turns clockwise
+// from where it is, which only needs that one tile to be free land. Returns the new { x, y, half, ent, rot } or null.
+function pivotSmall(b, n) {
+  const X = DIR[b.rot], [lx, ly] = lotTile(b, gateOf(b)), B = [lx - X[0], ly - X[1]];
+  const rot = (b.rot + n) % 4, X2 = DIR[rot], L = [B[0] + X2[0], B[1] + X2[1]], k = inBounds(L[0], L[1]) ? tileIndex(L[0], L[1]) : -1;
+  if (k < 0 || game.terrain.water[k] !== LAND || game.roads.has(k) || (game.buildingAt.has(k) && game.buildingAt.get(k) !== b)) return null;
+  for (let dx = -3; dx <= 3; dx++)
+    for (let dy = -3; dy <= 3; dy++)
+      for (const half of [0, 1]) {
+        const cand = { ...b, x: b.x + dx, y: b.y + dy, half, ent: half, rot }, [cx, cy] = lotTile(cand, half);
+        if (cx === L[0] && cy === L[1]) return { x: cand.x, y: cand.y, half, ent: half, rot };       // (back to the front entrance: a side one may now face the wrong way)
+      }
+  return null;
+}
+
 // A single-unit destination can always turn half way round IN PLACE: its building and its lot swap places on the same two tiles, so it faces
 // the other way without needing any room (it only needs free land for a road outside the new lot, on its front). Returns the new
 // { x, y, half, ent } for rotation rot + 2, or null.
@@ -562,21 +578,17 @@ export function rotateBuildingAt(x, y) {
     return false;
   }
   if (b.small) {
-    // turn to the next direction where it still fits; half a turn is also possible in place (building and lot swap places), so a unit with no
-    // room round it can still face the other way
-    for (const n of [1, 2, 3]) {
-      const rot = (b.rot + n) % 4;
-      const flip = n === 2 ? flipSmallInPlace(b) : null;
-      if (flip) { b.x = flip.x; b.y = flip.y; b.half = flip.half; b.ent = flip.ent; }
-      else if (!fitsTurned(b, rot)) continue;
-      else if (n !== 2) { b.rot = (b.rot + n - 1) % 4; rotateBuilding(game, b); reseatCarsOf(game, b); emit(); return true; }       // (rotateBuilding adds the last quarter turn)
-      b.rot = rot;
-      reindex(game);
-      reseatCarsOf(game, b);
-      emit();
-      return true;
-    }
-    return false;
+    // The lot swings clockwise round the building to the next free side. With no free side at all it flips in place (building and lot swap
+    // places on the same two tiles), so a unit with no room round it can still face the other way.
+    let r = null;
+    for (const n of [1, 2, 3]) if ((r = pivotSmall(b, n))) break;
+    if (!r) { const f = flipSmallInPlace(b); if (f) r = { ...f, rot: (b.rot + 2) % 4 }; }
+    if (!r) return false;
+    b.x = r.x; b.y = r.y; b.half = r.half; b.ent = r.ent; b.rot = r.rot;
+    reindex(game);
+    reseatCarsOf(game, b);
+    emit();
+    return true;
   }
   rotateBuilding(game, b);
   if (b.kind === "dest") reseatCarsOf(game, b);

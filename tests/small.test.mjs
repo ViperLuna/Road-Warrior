@@ -114,4 +114,26 @@ for (const [rot, half] of [[2, 0], [2, 1]]) {
   }
   ok(flips === n && n === 8, 'boxed in by roads, every rotation of a single unit turns half way round on the same two tiles (' + flips + ' of ' + n + ')');
 }
+// ---- the lot swings round the building (the building tile stays put) ----
+{
+  const mk = (rot, half) => {
+    st.newGame(5, maps[0]); g.terrain.water.fill(0); g.nextSpawnAt = 1e9; g.nextGoalAt = 1e9; g.buildings = []; g.cars = []; g.roads = new Map(); g.nextId = 1; reindex(g);
+    const d = addBuilding(g, 'dest', blue, 14, 10, rot); d.small = true; d.half = half; d.ent = half; reindex(g); return d;
+  };
+  const bTile = d => { const [lx, ly] = lotTile(d, gateOf(d)), X = DIRS[d.rot]; return [lx - X[0], ly - X[1]]; };
+  const lTile = d => lotTile(d, gateOf(d));
+  let cycles = 0, total = 0;
+  for (let rot = 0; rot < 4; rot++) for (const half of [0, 1]) {
+    const d = mk(rot, half), B = bTile(d); total++;
+    const seen = [];
+    for (let i = 0; i < 4; i++) { const r0 = d.rot; ok(st.rotateBuildingAt(...B), 'a free unit turns'); const nb = bTile(d), [lx, ly] = lTile(d), X = DIRS[d.rot]; ok(nb[0] === B[0] && nb[1] === B[1], 'the building tile stays put'); ok(d.rot === (r0 + 1) % 4 && lx === B[0] + X[0] && ly === B[1] + X[1], 'the lot is on the next side clockwise'); seen.push(d.rot); }
+    if (new Set(seen).size === 4 && d.rot === rot) cycles++;
+  }
+  ok(cycles === total, 'four taps take the lot all the way round the building (' + cycles + ' of ' + total + ')');
+  // only one side is free: the lot goes there, skipping the blocked sides
+  const d = mk(0, 0), B = bTile(d); [[0, -1], [1, 0], [0, 1], [-1, 0]].forEach(([dx, dy], i) => { if (i !== 3) g.roads.set((B[1] + dy) * g.cols + B[0] + dx, { lanes: 2 }); });
+  g.roads.delete(lTile(d)[1] * g.cols + lTile(d)[0]);
+  const free = [B[0] - 1, B[1]];
+  ok(st.rotateBuildingAt(...B) && lTile(d)[0] === free[0] && lTile(d)[1] === free[1], 'with only the west side free, one tap puts the lot there (skipping the blocked sides)');
+}
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);
