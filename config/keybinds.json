@@ -1,0 +1,24 @@
+{
+  "_note": "Default keys. Each action has up to two keys. A letter is written as the lower-case letter ('b'); everything else is the key's code ('Digit1' = number row 1, 'Numpad0' = numpad 0, 'Slash'...). Players can rebind in Settings > Keyboard (saved in their browser; Reset puts these back). Space (hold to pan, tap to pause/resume) and Escape (menu) are fixed and cannot be rebound.",
+  "actions": [
+    { "id": "build", "label": "Build", "keys": ["Digit1", "b"] },
+    { "id": "destroy", "label": "Demolish", "keys": ["Digit2", "d"] },
+    { "id": "pan", "label": "Move", "keys": ["Digit3", "m"] },
+    { "id": "cut", "label": "Cut", "keys": ["Digit4", "c"] },
+    { "id": "oneway", "label": "One-way", "keys": ["Digit5"] },
+    { "id": "bridge", "label": "Bridge", "keys": ["g"] },
+    { "id": "tunnel", "label": "Tunnel", "keys": ["t"] },
+    { "id": "highway", "label": "Highway", "keys": ["h"] },
+    { "id": "overpass", "label": "Overpass", "keys": ["v"] },
+    { "id": "roundabout", "label": "Roundabout", "keys": ["o"] },
+    { "id": "light", "label": "Traffic light", "keys": ["i"] },
+    { "id": "rotate", "label": "Rotate building", "keys": ["r"] },
+    { "id": "shop", "label": "Shop", "keys": ["s"] },
+    { "id": "log", "label": "History log", "keys": ["l"] },
+    { "id": "music", "label": "Music", "keys": ["n"] },
+    { "id": "speed0", "label": "Speed: pause", "keys": ["Numpad0"] },
+    { "id": "speed1", "label": "Speed: 1x", "keys": ["Numpad1"] },
+    { "id": "speed15", "label": "Speed: 1.5x", "keys": ["Numpad2"] },
+    { "id": "speed2", "label": "Speed: 2x", "keys": ["Numpad3"] }
+  ]
+}

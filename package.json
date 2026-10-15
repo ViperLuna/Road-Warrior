@@ -17,6 +17,7 @@
     "test:stadium": "node tests/stadium.test.mjs",
     "test:deadlines": "node tests/deadlines.test.mjs",
     "test:tunnel": "node tests/tunnel.test.mjs",
+    "test:keys": "node tests/keys.test.mjs",
     "test:best": "node tests/best.test.mjs",
     "test:entrances": "node tests/entrances.test.mjs",
     "test:overpass-driveway": "node tests/overpass_driveway.test.mjs"

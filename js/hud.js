@@ -2,6 +2,7 @@
 import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, finishRun, buy, bestFor, isUnlocked, cycleSpeed, addLog, ackNotice, refreshWatches } from './state.js';
 import { chipsOf, pendingNotice } from './deadlines.js';
 import { flyTo } from './camera.js';
+import { actionList, keyText, titleFor, onKeys, bind as bindKeys, mergeKeys, keysOf, conflicts, labelOfAction, labelOf, resetKeys, startCapture, stopCapture } from './keys.js';
 import { settings, setSetting, onSetting } from './settings.js';
 import { onMusic, getState as musicState, next as musicNext, prev as musicPrev, toggle as musicToggle } from './music.js';
 import { play } from './audio.js';
@@ -180,6 +181,48 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   $('log-btn').addEventListener('click', () => { const l = $('log'); l.hidden = !l.hidden; if (!l.hidden) { placeBelowTop(); paintLog(); } });
   $('log-close').addEventListener('click', () => { $('log').hidden = true; });
 
+  // ---- Settings > Keyboard: click a key box, press a key (or two together). ----
+  const keysList = $('keys-list'), keysMsg = $('keys-msg');
+  let pending = null;                                                       // a rebind waiting for "swap?" (the key is already used)
+  const say = (html, buttons = []) => {
+    keysMsg.hidden = !html; keysMsg.textContent = html || '';
+    for (const [label, fn] of buttons) { const b = document.createElement('button'); b.type = 'button'; b.className = 'big alt'; b.textContent = label; b.addEventListener('click', fn); keysMsg.appendChild(b); }
+  };
+  function paintKeys() {
+    keysList.innerHTML = '';
+    for (const a of actionList()) {
+      const lab = document.createElement('span'); lab.textContent = a.label;
+      const b = document.createElement('button'); b.type = 'button'; b.dataset.action = a.id;
+      const txt = keyText(a.id); b.textContent = txt; if (txt === 'unbound') b.className = 'unbound';
+      b.addEventListener('click', () => {
+        stopCapture(); pending = null; say(''); paintKeys();
+        const me = keysList.querySelector(`[data-action="${a.id}"]`); me.classList.add('listening'); me.textContent = 'press a key...';
+        startCapture(pressed => {
+          const next = pressed.length ? mergeKeys(keysOf(a.id), pressed) : [];
+          const cs = conflicts(a.id, next);
+          if (!cs.length) { bindKeys(a.id, next); paintKeys(); return; }
+          const c = cs[0];
+          pending = { id: a.id, next };
+          paintKeys();
+          say(`${labelOf(c.token)} is already ${labelOfAction(c.other)}'s key. Swap?`, [['Swap', () => { bindKeys(a.id, next, true); pending = null; say(''); paintKeys(); }], ['Cancel', () => { pending = null; say(''); paintKeys(); }]]);
+        }, () => paintKeys());
+      });
+      keysList.append(lab, b);
+    }
+  }
+  $('keys-open').addEventListener('click', () => { paintKeys(); say(''); $('keys').hidden = false; });
+  const closeKeys = () => { stopCapture(); pending = null; $('keys').hidden = true; };
+  $('keys-close').addEventListener('click', closeKeys);
+  $('keys-reset').addEventListener('click', () => { stopCapture(); resetKeys(); say('Keys are back to their defaults.'); paintKeys(); });
+
+  // Tooltips show the current keys, wherever they came from.
+  function keyTitles() {
+    for (const [id, action, name] of [['oneway-btn', 'oneway', 'One-way'], ['log-btn', 'log', 'Message history'], ['shop-btn', 'shop', 'Shop'], ['music-btn', 'music', 'Music'], ['speed-btn', 'speed1', 'Speed']]) { const el = $(id); if (el) el.title = titleFor(action, name); }
+    document.querySelectorAll('#toolbar button[data-tool]').forEach(b => { b.title = titleFor(b.dataset.tool, b.textContent.trim()); });
+    document.querySelectorAll('#specials [data-special]').forEach(p => { p.title = titleFor(p.dataset.special, p.dataset.name || p.textContent.replace(/\d+/g, '').trim()); });
+  }
+  onKeys(keyTitles);
+
   function render() {
     const mode = game.mode;
     $('hud').hidden = mode === 'menu';
@@ -222,7 +265,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
       const tappable = s.placeable || s.toggle;
       const d = document.createElement(tappable ? 'button' : 'div');
       d.dataset.special = s.id;
-      const key = { overpass: 'V', highway: 'H', roundabout: 'O' }[s.id]; if (key) d.title = `${s.name} (${key})`;
+      d.dataset.name = s.name;
       d.className = 'pill' + (tappable ? ' tap' : '') + ((game.placing === s.id) || (s.toggle === 'build4' && game.build4) ? ' on' : '');
       d.innerHTML = `${s.name} <b>${n}</b>`;
       if (s.toggle === 'build4') {
@@ -237,6 +280,8 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
       }
       sp.appendChild(d);
     }
+
+    keyTitles();
 
     // goal progress
     const span = Math.max(1, game.nextGoalAt - game.prevGoalAt);

@@ -112,7 +112,19 @@
         <label class="vol"><span>Volume</span><input type="range" id="opt-music-vol" min="0" max="100" step="1"></label>
         <label class="opt small"><input type="checkbox" id="opt-music-mute"> Mute music</label>
       </div>
+      <button class="big alt" id="keys-open" type="button">Keyboard</button>
       <button class="big" id="settings-close" type="button">Back</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="keys" data-popup hidden>
+    <h2>Keyboard</h2>
+    <p class="tag">Click a key box, then press a key (or two keys together). Backspace clears it, Esc cancels. Changes are saved as you make them. Esc closes this window. Space and Esc themselves are fixed.</p>
+    <div id="keys-list"></div>
+    <p id="keys-msg" class="tag" hidden></p>
+    <div class="stack">
+      <button class="big alt" id="keys-reset" type="button">Reset to defaults</button>
+      <button class="big" id="keys-close" type="button">Back</button>
     </div>
   </div>
 

@@ -1,5 +1,6 @@
 // Pointer input. Mouse: left = current tool, right = demolish, middle/Space+left = pan, wheel = zoom.
 // Touch: one finger = current tool (Build / Demolish / Move), two fingers = pan + pinch zoom.
+import { actionOf } from './keys.js';
 import { game, buildRoad, demolish, setTool, setMode, buildingAt, rotateBuildingAt, devSpawn, buildBridge, buildTunnelTile as buildTunnel1, hasRoad, inBounds, tileIndex, placeSpecial, setEdge, setOneWay, setCut, isCut, flipLotAt, setSpeed, setDevSpeed, toggleSpeed } from './state.js';
 import { WATER, HILL } from './terrain.js';
 import { cam, screenToWorld, panBy, zoomAround, pinchTo } from './camera.js';
@@ -96,15 +97,8 @@ const PLACE_MSG = {
   driveway: "The overpass can't come from a driveway. A building can only be at the end of the road that runs underneath it.",
 };
 
-// Letter hotkeys for the pills (clicking the pill, so it does exactly what tapping it does): V overpass, H highway, O roundabout.
-const SPECIAL_KEY = { v: 'overpass', h: 'highway', o: 'roundabout' };
-const NUMPAD_SPEED = { Numpad0: 0, Numpad1: 1, Numpad2: 1.5, Numpad3: 2 };     // numpad: speed
 const DEV = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(location.hostname) || /[#&]dev\b/.test(location.hash);
 const DEV_SPEED = { Numpad3: 3, Numpad4: 4, Numpad5: 5, Numpad6: 6, Numpad7: 7, Numpad8: 8, Numpad9: 9, Numpad0: 10 };
-const ROW_TOOL = {                                                                // number row: toolbar buttons, left to right
-  Digit1: () => setTool('build'), Digit2: () => setTool('destroy'), Digit3: () => setTool('pan'),
-  Digit4: () => setTool('cut'), Digit5: () => { if (game.unlocks.oneway) setOneWay(!game.oneway); },
-};
 
 function apply(mode, x, y, st) {
   if (mode === 'build') stepBuild(st, x, y);
@@ -213,23 +207,46 @@ export function initInput(canvas) {
     zoomAround(e.clientX, e.clientY, Math.exp(-dy * 0.0015));
   }, { passive: false });
 
+  // What each bindable action does (the keys themselves live in js/keys.js and config/keybinds.json). A hotkey that does what a toolbar/HUD button
+  // does also makes that button's click sound (not while a key is held down). The pills (overpass, highway, ...) are clicked, so a key does exactly
+  // what tapping the pill does, and only while that pill is showing.
+  const clickPill = (id, press) => { const pill = document.querySelector(`#specials [data-special="${id}"]`); if (pill) press(() => pill.click()); };
+  const clickBtn = (id, press) => { const b = document.getElementById(id); if (b && !b.hidden) press(() => b.click()); };
+  const running = () => game.mode === 'play';
+  const ACTION = {
+    build: press => press(() => setTool('build')),
+    destroy: press => press(() => setTool('destroy')),
+    pan: press => press(() => setTool('pan')),
+    cut: press => press(() => setTool('cut')),
+    oneway: press => { if (game.unlocks.oneway) press(() => setOneWay(!game.oneway)); },
+    bridge: press => press(() => { setTool('build'); toast((game.inv.bridge || 0) > 0 ? `Bridge ready (${game.inv.bridge}): drag from a road across the water to the far side.` : 'No bridges left. Get one from the Shop or a reward.'); }),
+    tunnel: press => press(() => { setTool('build'); toast((game.inv.tunnel || 0) > 0 ? `Tunnel pieces: ${game.inv.tunnel}. Drag from a road into a hill: each block uses one.` : 'No tunnel pieces left. Get some from the Shop or a reward.'); }),
+    highway: press => { if (running()) clickPill('highway', press); },
+    overpass: press => { if (running()) clickPill('overpass', press); },
+    roundabout: press => { if (running()) clickPill('roundabout', press); },
+    light: press => { if (running()) clickPill('light', press); },
+    rotate: () => { if (hover.show && rotateBuildingAt(hover.x, hover.y)) play('rotate'); },
+    shop: press => { if (running()) clickBtn('shop-btn', press); },
+    log: press => { if (running() || game.mode === 'pause') clickBtn('log-btn', press); },
+    music: press => clickBtn('music-btn', press),
+    speed0: press => { if (running()) press(() => setSpeed(0)); },
+    speed1: press => { if (running()) press(() => setSpeed(1)); },
+    speed15: press => { if (running()) press(() => setSpeed(1.5)); },
+    speed2: press => { if (running()) press(() => setSpeed(2)); },
+  };
   addEventListener('keydown', e => {
-    // A hotkey that does what a toolbar/HUD button does also makes that button's click sound (not while a key is held down).
     const press = fn => { if (!e.repeat) play('click'); fn(); };
-    if (e.code === 'Escape') { if (game.mode === 'play') press(() => setMode('pause')); else if (game.mode === 'pause') press(() => setMode('play')); }
+    if (e.code === 'Escape') {
+      // Esc closes the topmost window first (the keyboard list, then settings); only with none open does it pause / resume.
+      const open = id => { const el = document.getElementById(id); return el && !el.hidden; };
+      if (open('keys')) press(() => document.getElementById('keys-close').click());
+      else if (open('settings')) press(() => document.getElementById('settings-close').click());
+      else if (game.mode === 'play') press(() => setMode('pause')); else if (game.mode === 'pause') press(() => setMode('play'));
+    }
     else if (e.code === 'Space') { if (!e.repeat) { spaceDown = true; spacePanned = false; } e.preventDefault(); }
-    else if (e.key === 'b') press(() => setTool('build'));
-    else if (e.key === 'd') press(() => setTool('destroy'));
-    else if (e.key === 'm') press(() => setTool('pan'));
-    else if (e.key === 'l' && (game.mode === 'play' || game.mode === 'pause')) press(() => document.getElementById('log-btn').click());
-    else if (e.key === 's' && game.mode === 'play') press(() => document.getElementById('shop-btn').click());       // S: the Shop (a toggle, like the button)
-    else if (SPECIAL_KEY[e.key] && game.mode === 'play') { const pill = document.querySelector(`#specials [data-special="${SPECIAL_KEY[e.key]}"]`); if (pill) press(() => pill.click()); }       // (only if that pill is showing: you own one / it is unlocked)
-    else if (e.key === 'c') press(() => setTool('cut'));
-    else if (e.key === 'r' && hover.show) { if (rotateBuildingAt(hover.x, hover.y)) play('rotate'); }
+    else if (e.ctrlKey || e.metaKey || e.altKey) return;                       // (Ctrl+S and friends belong to the browser)
     else if (DEV && e.shiftKey && DEV_SPEED[e.code] && game.mode === 'play') press(() => setDevSpeed(DEV_SPEED[e.code]));
-    else if (NUMPAD_SPEED[e.code] !== undefined && game.mode === 'play') press(() => setSpeed(NUMPAD_SPEED[e.code]));
-    else if (ROW_TOOL[e.code] && (e.code !== 'Digit5' || game.unlocks.oneway)) press(ROW_TOOL[e.code]);
-    else if (e.key === 'p') { if (devSpawn()) play('spawn'); }      // dev: spawn an extra pair
+    else { const id = actionOf(e); if (id && ACTION[id]) ACTION[id](press); else if (e.key === 'p') { if (devSpawn()) play('spawn'); } }      // (P: dev, spawn an extra pair)
   });
   addEventListener('keyup', e => {
     if (e.code !== 'Space') return;

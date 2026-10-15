@@ -171,3 +171,16 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 #log { box-sizing: border-box; }
 #log, #chips { max-width: calc(100vw - 20px); }
 #log { background: #0b110e; z-index: 7; }
+
+/* ---- Keyboard settings ---- */
+#keys { z-index: 10; background: #0c140f; justify-content: flex-start; padding-top: 28px; }
+#keys[hidden] { display: none; }
+#keys .tag { max-width: min(520px, 92vw); font-size: .9rem; }
+#keys-list { display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; width: min(420px, 92vw); text-align: left; align-items: center; }
+#keys-list span { font-size: 1rem; }
+#keys-list button { font: inherit; font-size: .95rem; font-weight: 600; color: #fff; background: rgba(255, 255, 255, .14); border: 2px solid transparent; border-radius: 10px; padding: 7px 14px; min-width: 120px; cursor: pointer; }
+#keys-list button:hover, #keys-list button:focus-visible { border-color: #E69F00; }
+#keys-list button.listening { background: #E69F00; color: #1b2a1f; animation: chip-pulse 1s infinite; }
+#keys-list button.unbound { opacity: .55; font-weight: 400; }
+#keys-msg { color: #ffd479; }
+#keys-msg button { margin-left: 8px; }

@@ -12,6 +12,7 @@ import {
   addLog,
 } from "./state.js";
 import { setTuning } from "./tuning.js";
+import { setKeybinds } from "./keys.js";
 import { setProgression, setMaps, setMilestones, maps } from "./progression.js";
 import { resizeView, fitView, cam, clampCam } from "./camera.js";
 import {
@@ -168,6 +169,7 @@ for (const [url, apply] of [
   ["config/tuning.json", setTuning],
   ["config/progression.json", setProgression],
   ["config/milestones.json", setMilestones],
+  ["config/keybinds.json", setKeybinds],
   ["config/maps.json", setMaps],
   ["config/save.json", configure],
 ]) {

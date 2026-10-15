@@ -1,7 +1,7 @@
 // Player preferences, kept in this browser (not in save games). Read them straight off `settings`; change them with setSetting;
 // react to changes with onSetting(fn) (fn gets the setting's name).
 const KEY = 'roadwarrior.settings';
-const defaults = { showCuts: true, sfxVolume: 1, sfxMuted: false, musicVolume: 0.75, musicMuted: false, musicOn: true };
+const defaults = { showCuts: true, sfxVolume: 1, sfxMuted: false, musicVolume: 0.75, musicMuted: false, musicOn: true, keys: {} };
 export const settings = { ...defaults };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(KEY)) || {}); } catch { /* storage unavailable */ }
 const listeners = new Set();
