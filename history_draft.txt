@@ -6,7 +6,7 @@
   Accidents (after 1,000 trips) - Now and then two cars bump and block their lane for 20 seconds while the police show up. Cars behind them still get angry.
   Multicolor destinations now start after 2,000 trips (was 3,000).
   Stadium (after 3,000 trips, Highlands and Metro) - A 4x3 stadium is donated to the city. Cars of any colour can go there, and it has two gates. It must be connected to houses of every colour (at least one of each to start). If there is no room for it, it clears a 5x4 area, roads first and buildings only if it has to.
-  Side Roads (after 4,000 trips) - Two roads to other cities appear on two edges of the map. They can't be demolished. Each must connect to the stadium and to destinations of every colour. Once connected, cars of any colour arrive from outside to visit the stadium, more and more often as the minutes go by. Every 5 to 10 minutes a game is hosted at the stadium and a horde of them shows up at once, a little bigger each time.
+  Side Roads (after 4,000 trips) - Two roads to other cities appear on two edges of the map. At 5,000 trips the other two edges get theirs. They can't be demolished. Each must connect to the stadium and to destinations of every colour. Once connected, cars of any colour arrive from outside to visit the stadium, more and more often as the minutes go by. Every 5 to 10 minutes a game is hosted at the stadium and a horde of them shows up at once, a little bigger each time.
   A popup explains the stadium and the side roads and the clock only starts when you tap OK.
 
   A road with a blinking, jammed car on it can't be demolished until the jam clears.

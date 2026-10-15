@@ -1,5 +1,5 @@
 {
-  "_note": "The trip ladder: how many trips a run needs before each feature switches on. Change a number here to move a milestone; add a new feature by giving it a line and reading prog.milestones.<name> in code. 'maps' (where given) lists the maps the feature is allowed on. 'portals.waves' is a list: each entry spawns 'count' side-road gates (on different edges) once the trips are reached and the stadium exists. To add two more at the next thousand, append {\"afterTrips\": 5000, \"count\": 2}.",
+  "_note": "The trip ladder: how many trips a run needs before each feature switches on. Change a number here to move a milestone; add a new feature by giving it a line and reading prog.milestones.<name> in code. 'maps' (where given) lists the maps the feature is allowed on. 'portals.waves' is a list: each entry spawns 'count' side-road gates (on different edges) once the trips are reached and the stadium exists. Two waves of two by default (4000 and 5000); delete the second entry to have only two gates, or add more entries for more waves.",
   "accidents": {
     "afterTrips": 1000
   },
@@ -17,6 +17,10 @@
     "waves": [
       {
         "afterTrips": 4000,
+        "count": 2
+      },
+      {
+        "afterTrips": 5000,
         "count": 2
       }
     ]
