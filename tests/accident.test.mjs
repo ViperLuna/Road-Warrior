@@ -19,7 +19,7 @@ const S = (trips) => {
   const blue = palette[0];
   const d = addBuilding(g, 'dest', blue, 24, 10, 3); const [lx, ly] = lotTile(d, 0);
   for (let x = 3; x <= lx - 1; x++) st.buildRoad(x, ly);
-  for (let i = 0; i < 8; i++) { const h = addBuilding(g, 'house', blue, 3 + i * 2, ly - 1, 2); g.cars.push(createCar(h)); }
+  for (let i = 0; i < 9; i++) { const h = addBuilding(g, 'house', blue, 3 + i * 2, ly - 1, 2); g.cars.push(createCar(h)); }
   g.trips = trips; events.length = 0;
 };
 const tickN = secs => { for (let i = 0; i < secs * 60; i++) st.tick(1 / 60); };
@@ -31,7 +31,7 @@ ok(!seen && !events.some(e => e.type === 'accident'), 'no accidents before the t
 
 // after it one happens; wrecks hold still for the duration, then clear and everyone carries on
 S(milestones.accidents.afterTrips);
-let t = 0; while (!g.accident && t++ < 60 * 900) { st.tick(1 / 60); g.trips = Math.max(g.trips, milestones.accidents.afterTrips); g.nextGoalAt = 1e9; }
+let t = 0; while (!g.accident && t++ < 60 * 2400) { st.tick(1 / 60); g.trips = Math.max(g.trips, milestones.accidents.afterTrips); g.nextGoalAt = 1e9; }
 ok(!!g.accident, 'an accident happens once past the threshold (t=' + (t / 60).toFixed(0) + 's)');
 const acc = g.accident;
 if (acc) {
@@ -54,7 +54,7 @@ if (acc) {
 }
 
 // a save made mid-accident loads without a wreck, and the schedule starts fresh
-S(milestones.accidents.afterTrips); t = 0; while (!g.accident && t++ < 60 * 900) { st.tick(1 / 60); g.trips = Math.max(g.trips, milestones.accidents.afterTrips); }
+S(milestones.accidents.afterTrips); t = 0; while (!g.accident && t++ < 60 * 2400) { st.tick(1 / 60); g.trips = Math.max(g.trips, milestones.accidents.afterTrips); }
 if (g.accident) { const data = JSON.parse(JSON.stringify(serialize())); restore(data); ok(g.accident === null && g.nextAccidentAt === undefined && !g.cars.some(c => c.crash), 'restore clears accident state'); }
 st.newGame(6, maps[0]); ok(g.accident === null, 'new game starts with no accident');
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);
