@@ -64,7 +64,7 @@ function playGame(G, seed, mapId, opts, junctions = 'heat') {
   const houses = g.buildings.filter(b => b.kind === 'house');
   const inters = [...g.roads.entries()].filter(([k]) => B.streetLegs(g, k % g.cols, (k / g.cols) | 0) >= 3).map(([, r]) => r);
   const rec = {
-    seed, map: mapId, junctions, end: g.mode === 'over' ? (g.over && g.over.reason ? 'impatience' : 'gridlock') : 'timeout', time: Math.round(g.time), trips: g.trips, money: g.money,
+    seed, map: mapId, junctions, end: g.mode === 'over' ? (g.over && g.over.reason && g.over.reason.kind === 'jam' ? 'jam' : g.over && g.over.reason ? 'impatience' : 'gridlock') : 'timeout', worstJamAge: Math.round(g.worstJamAge || 0), time: Math.round(g.time), trips: g.trips, money: g.money,
     houses: houses.length, dests: g.buildings.filter(b => b.kind === 'dest').length, colors: g.colorsUsed,
     unconnectedAtEnd: houses.filter(h => !h.connected).length, unconnectedHouseSec, roads: g.roads.size,
     goals: g.goalCount, goalTimes, tripsAtMin, warnings, worstStuckSurvived: +worstStuckSurvived.toFixed(1), peakCarsMoving: peakCars,

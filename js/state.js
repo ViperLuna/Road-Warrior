@@ -322,7 +322,8 @@ export function tick(dt) {
   }
   const worst = game.cars.reduce((m, c) => Math.max(m, c.stuck), 0);
   honkAtStuckCars(dt);
-  stepJams(game, dt, notify);
+  const jamLost = stepJams(game, dt, notify);
+  if (jamLost) { endGame(false, jamLost); return; }
   trackBest();
   if (worst >= tuning.gridlock.gameOverAfterSeconds) endGame();
 }

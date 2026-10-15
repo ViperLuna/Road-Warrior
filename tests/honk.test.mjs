@@ -21,14 +21,26 @@ ok(mad > calm * 2, 'honking speeds up as the car gets madder');
 const ev = run(over - 0.1, 5);
 ok(ev.length && ev.every(e => e.k > 0.9 && e.k <= 1), 'k is how mad the car is (0..1)');
 // jams reach the history once each
-{ const J = await import(R + 'js/jams.js'); const jev = []; const gg = { cars: [], time: 0, jams: [] }; const note = e => jev.push(e);
+{ const J = await import(R + 'js/jams.js'); const jev = []; const gg = { cars: [], time: 0, jams: [] }; const note = e => { if (e.type === 'jam') jev.push(e); };
   const car = (x, y, stuck) => ({ state: 'out', stuck, x, y });
   gg.cars = [car(10.5, 10.5, warn + 1), car(11.5, 10.5, warn + 2), car(30, 30, 1)]; for (let i = 0; i < 4; i++) { gg.time += 0.5; J.stepJams(gg, 0.5, note); }
   ok(jev.length === 1 && jev[0].type === 'jam' && jev[0].spots.length === 1, 'two blinking cars side by side are ONE jam, reported once (' + jev.length + ')');
   for (let i = 0; i < 20; i++) { gg.time += 0.5; J.stepJams(gg, 0.5, note); } ok(jev.length === 1, 'and not again while it lasts');
   gg.cars = [car(40, 5, warn + 1)]; gg.time += 0.5; J.stepJams(gg, 0.5, note); ok(jev.length === 2, 'a jam somewhere else is a new one');
-  gg.cars = []; for (let i = 0; i < 40; i++) { gg.time += 0.5; J.stepJams(gg, 0.5, note); } gg.cars = [car(10.5, 10.5, warn + 1)]; gg.time += 0.5; J.stepJams(gg, 0.5, note);
+  gg.cars = []; for (let i = 0; i < 2 * (tuning.jams.forgetSeconds + 2); i++) { gg.time += 0.5; J.stepJams(gg, 0.5, note); } gg.cars = [car(10.5, 10.5, warn + 1)]; gg.time += 0.5; J.stepJams(gg, 0.5, note);
   ok(jev.length === 2, 'a jam that clears and flickers back within relogSeconds is not logged again (' + jev.length + ')');
   gg.cars = []; for (let i = 0; i < 4 * tuning.jams.relogSeconds; i++) { gg.time += 0.5; J.stepJams(gg, 0.5, note); } gg.cars = [car(10.5, 10.5, warn + 1)]; gg.time += 0.5; J.stepJams(gg, 0.5, note);
   ok(jev.length === 3, 'after the quiet time the same place can be reported again'); }
+// the jam clock: the AREA loses the game even if the pack keeps shuffling
+{ const J = await import(R + 'js/jams.js'); const evs = []; const note = e => evs.push(e); const T = tuning.jams;
+  const gg = { cars: [], time: 0, jams: [] }; let lost = null;
+  // a creeping pack: every ~13 s the front cars move (their stuck resets) but others are always blinking within the area
+  const step = () => { gg.time += 0.5; const r = J.stepJams(gg, 0.5, note); if (r && !lost) lost = r; };
+  for (let i = 0; i < 2 * (T.endSeconds + 5) && !lost; i++) { const phase = (i / 2) % 13; gg.cars = [{ state: 'out', stuck: phase < 6 ? warn + 1 : 0, x: 20.5, y: 20.5 }, { state: 'out', stuck: phase >= 6 ? warn + 1 : 0, x: 21.5, y: 20.5 }]; step(); }
+  ok(!!lost && lost.kind === 'jam' && lost.spots.length === 1, 'a jam that keeps blinking (cars reset in turn) for ' + T.endSeconds + ' s loses the game');
+  ok(evs.some(e => e.type === 'jam-warn' && e.seconds === T.warnSeconds), 'with a warning half way');
+  const g2 = { cars: [], time: 0, jams: [] }; let lost2 = null;
+  const step2 = () => { g2.time += 0.5; const r = J.stepJams(g2, 0.5, () => {}); if (r) lost2 = r; };
+  for (let k = 0; k < 6; k++) { g2.cars = [{ state: 'out', stuck: warn + 1, x: 5, y: 5 }]; for (let i = 0; i < 2 * 35; i++) step2(); g2.cars = []; for (let i = 0; i < 2 * (T.forgetSeconds + 2); i++) step2(); }
+  ok(!lost2, 'a jam that really clears (quiet for forgetSeconds) starts its clock again'); }
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);

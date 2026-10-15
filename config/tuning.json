@@ -77,8 +77,10 @@
   },
   "jams": {
     "radiusTiles": 4,
-    "forgetSeconds": 15,
-    "relogSeconds": 60
+    "forgetSeconds": 25,
+    "relogSeconds": 60,
+    "endSeconds": 90,
+    "warnSeconds": 30
   },
   "trips": {
     "parkedSeconds": 1.6,

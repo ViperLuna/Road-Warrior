@@ -186,8 +186,9 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     if (mode === 'reward') buildReward();
     if (mode === 'over' && game.over) {
       const o = game.over;
-      $('over-title').textContent = o.finished ? 'Game ended' : o.reason ? 'Out of patience!' : 'Gridlock!';
-      const why = o.finished ? 'You ended this game.' : o.reason ? `${o.reason.label} was not connected in time.` : 'Traffic ground to a halt.';
+      const patience = o.reason && o.reason.kind !== 'jam';                    // (a jam that never cleared is gridlock, not impatience)
+      $('over-title').textContent = o.finished ? 'Game ended' : patience ? 'Out of patience!' : 'Gridlock!';
+      const why = o.finished ? 'You ended this game.' : patience ? `${o.reason.label} was not connected in time.` : o.reason ? 'A traffic jam never cleared.' : 'Traffic ground to a halt.';
       $('over-sub').innerHTML = o.record ? `<span class="record">New best!</span> ${why}` : why;
       $('over-stats').innerHTML = `<div><b>${o.trips}</b><small>trips</small></div><div><b>${fmtTime(o.time)}</b><small>${o.finished ? 'played' : 'survived'}</small></div><div><b>$${o.money}</b><small>cash</small></div><div><b>${o.best}</b><small>best</small></div>`;
     }
@@ -273,6 +274,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     if (e.type === 'horde') note(`A game is being hosted at the stadium! A crowd of ${e.size} is on its way.`, e.spots);
     if (e.type === 'whistle') note('The game is over! The crowd is heading home.', e.spots);
     if (e.type === 'accident') { const x = Math.floor(e.x), y = Math.floor(e.y); note('Accident! Police are on the scene.', [{ x0: x, y0: y, x1: x, y1: y }], { ref: 'accident', x: e.x, y: e.y }); }
+    if (e.type === 'jam-warn') note(`This jam is getting out of hand! ${e.seconds} seconds left!`, e.spots, { ref: 'jam' });
     if (e.type === 'jam') note('Traffic is jammed up here. The cars are getting angry!', e.spots, { ref: 'jam' });
     if (e.type === 'impatient') note(`${IMPATIENT[e.kind](e.label)} ${e.seconds} seconds left!`, e.spots);
     if (e.type === 'disconnected') toast(`${e.label} is no longer connected.`);                       // (just a toast, not logged: roads are being edited. If it is still broken when its warning starts, THAT toast is logged)
