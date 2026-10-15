@@ -222,6 +222,7 @@ export function initInput(canvas) {
     else if (e.key === 'd') press(() => setTool('destroy'));
     else if (e.key === 'm') press(() => setTool('pan'));
     else if (e.key === 'l' && (game.mode === 'play' || game.mode === 'pause')) press(() => document.getElementById('log-btn').click());
+    else if (e.key === 's' && game.mode === 'play') press(() => document.getElementById('shop-btn').click());       // S: the Shop (a toggle, like the button)
     else if (SPECIAL_KEY[e.key] && game.mode === 'play') { const pill = document.querySelector(`#specials [data-special="${SPECIAL_KEY[e.key]}"]`); if (pill) press(() => pill.click()); }       // (only if that pill is showing: you own one / it is unlocked)
     else if (e.key === 'c') press(() => setTool('cut'));
     else if (e.key === 'r' && hover.show) { if (rotateBuildingAt(hover.x, hover.y)) play('rotate'); }
