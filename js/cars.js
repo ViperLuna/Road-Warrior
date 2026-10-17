@@ -85,7 +85,8 @@ function planOut(g, car) {
   if (!roadAt(g, rx, ry)) return false;
   const hasRoom = d => baysOf(d).some(k => d.slots[k] === null);
   let dests;
-  if (car.outside || car.forceStadium) dests = g.buildings.filter(d => d.stadium && hasRoom(d));                 // visitors from outside only ever come for the stadium
+  if (car.forceStadium) dests = g.buildings.filter(d => d.stadium && hasRoom(d));                 // a crowd for a match: the stadium only
+  else if (car.outside) dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && hasRoom(d) && (d.stadium || accepts(d, car.color.id))));      // a visitor from outside goes to any destination it can reach, the stadium included (it takes every colour)
   else {
     dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && !d.stadium && accepts(d, b.color.id) && hasRoom(d)));
     const arena = g.buildings.find(d => d.stadium && hasRoom(d));                            // the stadium takes any colour: now and then a house car goes there
@@ -169,11 +170,11 @@ export function sceneTiles(g) {
   return out;
 }
 
-// A visitor from the outside: a car of any colour leaves `gate` (a side-road gate) for the stadium. Returns the car, or null if
-// the gate has no road to the stadium (or the stadium is full) right now.
-export function launchOutside(g, gate, color) {
+// A visitor from the outside: a car of any colour leaves `gate` (a side-road gate) for any destination that takes its colour (or the
+// stadium); `stadiumOnly` (a crowd for a match) sends it to the stadium. Returns the car, or null if nothing it could go to can be reached right now.
+export function launchOutside(g, gate, color, stadiumOnly = false) {
   const car = createCar(gate);
-  car.id = g.nextId++; car.outside = true; car.color = color;
+  car.id = g.nextId++; car.outside = true; car.color = color; car.forceStadium = stadiumOnly;
   if (!planOut(g, car)) return null;
   start(car, 'out');
   g.cars.push(car);

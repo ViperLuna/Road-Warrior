@@ -152,12 +152,27 @@ if (A3 && gate) {
   ok(!g.cars.some(c => c.outside), 'every visitor finishes and disappears');
   ok(stadiumOf(g).slots.every(c => !c || !c.outside), 'no visitor is left in the stadium');
 }
+// ---- visitors go to any destination they can reach, the stadium included; a match crowd goes to the stadium only
+S(); { const { d: dd, ly: ly5 } = base(); const A5 = spawnStadium(g, { budget: 500 }); const gt5 = spawnPortal(g, 0, A5, { budget: 500 });
+  if (A5 && gt5) {
+    const [sx, sy] = exitTile(A5), [gx, gy] = [gt5.x + (gt5.rot === 1) - (gt5.rot === 3), gt5.y + (gt5.rot === 2) - (gt5.rot === 0)], [dx, dy] = exitTile(dd);
+    pave(gx, gy, sx, sy); for (const e of entsOf(A5)) { const [ex, ey] = exitTile(A5, e); pave(gx, gy, ex, ey); } pave(gx, gy, dx, dy);
+    g.colorsUsed = 1; g.nextOutsideAt = undefined; g.hordeAt = undefined; g.hordeLeft = 0;
+    const where = { stadium: 0, other: 0 }; const seen = new Set();
+    for (let i = 0; i < 60 * 900; i++) { st.tick(1 / 60); g.hordeAt = undefined; for (const c of g.cars) if (c.outside && c.dest && !seen.has(c)) { seen.add(c); where[c.dest.stadium ? 'stadium' : 'other']++; } }
+    ok(where.stadium > 0 && where.other > 0, 'visitors go to the stadium and to an ordinary destination (' + where.stadium + ' / ' + where.other + ')');
+    ok(g.cars.every(c => !c.outside || c.dest === null || c.dest.kind === 'dest'), 'and only to destinations');
+    const before = g.visitorsLaunched; const old = new Set(g.cars.filter(c => c.outside)); g.hordeAt = g.time; g.nextOutsideAt = 1e9; const crowd = new Set();
+    for (let i = 0; i < 60 * 40; i++) { st.tick(1 / 60); for (const c of g.cars) if (c.outside && c.dest && !old.has(c)) crowd.add(c.dest.stadium ? 's' : 'o'); }
+    ok(g.visitorsLaunched > before && !crowd.has('o'), 'a match crowd goes to the stadium only (' + [...crowd].join('') + ')');
+  }
+}
 // capacity: the stadium refuses cars when full
 S(); base(); const A4 = spawnStadium(g, { budget: 500 }); const gt = spawnPortal(g, 3, A4, { budget: 500 });
 if (A4 && gt) {
   const [sx, sy] = exitTile(A4); pave(gt.x + 1, gt.y, sx, sy);
   const cap = A4.slots.length; A4.slots.fill({}); ok(!gateConnected(g, gt) || true, 'full'); g.nextOutsideAt = undefined; tickN(30);
-  ok(!g.cars.some(c => c.outside), 'no visitors launched while the stadium is full');
+  ok(!g.cars.some(c => c.outside && c.dest === A4), 'no visitor goes to the stadium while it is full');
 }
 // ---- a map covered in roads: the stadium still appears, over the fewest road pieces ----
 S(); base();

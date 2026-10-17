@@ -1,5 +1,6 @@
-// The outside world: side-road gates on the map edge send visitors of any colour to the stadium, faster and faster.
-// A visitor is a car with no house (`car.outside`): it drives gate -> stadium gate, stays a while, drives back to its gate and is gone.
+// The outside world: side-road gates on the map edge send visitors of any colour to the stadium or any destination that takes their colour,
+// faster and faster (a match crowd goes to the stadium only).
+// A visitor is a car with no house (`car.outside`): it drives gate -> destination, stays a while, drives back to its gate and is gone.
 import { tuning } from './tuning.js';
 import { launchOutside, sendHouseCarToStadium } from './cars.js';
 import { findPath } from './pathfind.js';
@@ -34,11 +35,11 @@ const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = (M
 const rand = (a, b) => a + Math.random() * (b - a);
 
 // Send one visitor out of a random gate that has a road to the stadium and a clear driveway. Returns the car or null.
-function launchOne(g, gates) {
+function launchOne(g, gates, stadiumOnly = false) {
   const colors = g.palette.slice(0, Math.max(1, g.colorsUsed));
   for (const gate of shuffle(gates.slice())) {
     if (g.cars.some(c => c.house === gate && c.state === 'out' && c.idx === 0 && c.s < 0.7)) continue;      // the previous visitor is still pulling out
-    const car = launchOutside(g, gate, colors[(Math.random() * colors.length) | 0]);
+    const car = launchOutside(g, gate, colors[(Math.random() * colors.length) | 0], stadiumOnly);
     if (car) return car;
   }
   return null;
@@ -52,7 +53,7 @@ function stepHorde(g, gates, notify) {
     if (g.time >= g.hordeDeadline) { g.hordeLeft = 0; }                                    // the stadium filled up or the roads would not take them: the rest turn back
     else if (g.time >= g.hordeNextCar) {
       // some of the crowd come from the player's own houses, the rest from outside
-      const car = (Math.random() < h.houseShare && sendHouseCarToStadium(g)) || launchOne(g, gates);
+      const car = (Math.random() < h.houseShare && sendHouseCarToStadium(g)) || launchOne(g, gates, true);
       if (car) { g.hordeLeft--; g.hordeNextCar = g.time + h.spacingSeconds * (0.7 + Math.random() * 0.6); }
       else g.hordeNextCar = g.time + 0.5;
     }

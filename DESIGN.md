@@ -316,3 +316,6 @@ A stadium's parked cars are out of sight, so its gate pieces are plain straight 
 
 ### Lights on bridges
 `placeSpecial` allows `light` (only) on a bridge tile, and only where it already has 3 or more connections (a road meeting the span from the side). Nothing else changes: the junction/light logic is per road tile and a bridge tile is a normal road entry with a `bridge` flag. Demolishing a bridge returns any light on its tiles (`demolish`, state.js). Roundabouts, overpasses and everything on tunnel tiles stay blocked. `tests/bridgelight.test.mjs` covers placement, cycling and the refund.
+
+### Where visitors go
+A steady visitor from a side-road gate (`car.outside`, not `forceStadium`) picks at random among every destination with room that takes its colour, plus the stadium (`planOut`, cars.js). A match crowd (`stepHorde` in outside.js, `launchOutside(..., stadiumOnly = true)`) and house cars sent to a match still go to the stadium only. If the stadium is full, visitors go to the other destinations instead of waiting. They return to their gate when done, as before.

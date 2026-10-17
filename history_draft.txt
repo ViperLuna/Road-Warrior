@@ -38,3 +38,5 @@
 - Fixed: on 4-lane roads (highways) cars picked the inner or outer lane at random, so half of them swerved across the road to make a turn, most visibly at a stadium gate. Now a car takes the lane its turn needs: outer lane for right turns, inner lane for left turns, and it moves over early instead of at the last moment. A car coming out of a gate turns into the nearest lane.
 
 - Traffic lights can now go on a bridge, on the tile where a road meets the span from the side (a plain stretch of bridge still has no junction to light). Roundabouts and overpasses still can't go on a bridge, and a light on a bridge comes back to your stock if you demolish the bridge.
+
+- Cars from the side roads no longer only head for the stadium. A visitor now goes to any destination it can reach that takes its colour, the stadium included (the stadium takes every colour). A match crowd still goes to the stadium only.
