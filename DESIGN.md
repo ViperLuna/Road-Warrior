@@ -298,5 +298,5 @@ If a map is packed with road, new houses and destinations find no free land and 
 ### Light gap-out and 40 s accidents
 A light's green gives way when the cross street has demand and either (a) the green axis has had no demand for `trafficLight.gapOutSeconds` (2 s, after the 2 s minimum green) or (b) the green has run `maxGreenSeconds` (10 s) while still busy. Both axes use the same rules (`stepLight` in signals.js; `sig.gap` is the quiet time). Accidents last `accidents.durationSeconds` (40 s). The queue behind a wreck counts like any other jam (warning, jam log), but it can never reach `gridlock.gameOverAfterSeconds` (40 s) before the wreck clears, so an accident alone can't end a game. Whatever happens after it clears is up to the player.
 
-### Jam lock reaches the neighbours
-`jammedTiles` (cars.js) locks the tile under every car stuck for `warnAfterSeconds` **and the four tiles touching it**, so the junction a queue is waiting to enter can't be deleted to dissolve the jam. Roads further away stay free; the lock lifts the moment the car moves.
+### Jam lock covers the tile ahead
+`jammedTiles` (cars.js) locks the tile under every car stuck for `warnAfterSeconds` and the next road tile on its route (the one it is waiting to enter; with no route left, the tile it is facing), so the junction a queue is waiting for can't be deleted to dissolve the jam. Roads beside or behind it stay free, and the lock lifts the moment the car moves.

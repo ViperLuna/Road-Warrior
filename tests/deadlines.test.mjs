@@ -99,9 +99,11 @@ ok(D.chipsOf(g).length === 0, 'no chip once connected');
 S(); const d7 = addBuilding(g, 'dest', blue, 20, 8, 3); const [jx, jy] = lotTile(d7, 0); const h7 = addBuilding(g, 'house', blue, 6, jy - 1, 2); g.cars.push(createCar(h7)); pave(6, jy, jx - 1, jy);
 const car = g.cars[0]; car.state = 'out'; car.stuck = tuning.gridlock.warnAfterSeconds + 1; car.x = 10.5; car.y = jy + 0.5; car.route = []; car.idx = 0;
 events.length = 0; ok(st.demolish(10, jy) === false && g.roads.has(jy * g.cols + 10) && events.some(e => e.type === 'jam-locked'), 'a road under a blinking jammed car cannot be demolished');
-events.length = 0; ok(st.demolish(9, jy) === false && st.demolish(11, jy) === false && events.some(e => e.type === 'jam-locked'), 'and so can neither road touching it (the tile it is waiting to enter)');
-ok(st.demolish(12, jy) === true && st.demolish(8, jy) === true, 'but roads further along are free');
-car.stuck = 1; ok(st.demolish(10, jy) === true && st.demolish(9, jy) === true, 'and they can once the car is not jammed');
+events.length = 0; ok(st.demolish(11, jy) === false && events.some(e => e.type === 'jam-locked'), 'and so cannot the road ahead of it (the tile it is waiting to enter)');
+pave(10, jy + 1, 11, jy + 1);
+ok(st.demolish(9, jy) === true && st.demolish(13, jy) === true, 'but the road behind it and further along are free');
+ok(st.demolish(10, jy + 1) === true && st.demolish(11, jy + 1) === true, 'and a road running alongside it is not touched by the lock');
+car.stuck = 1; ok(st.demolish(10, jy) === true && st.demolish(11, jy) === true, 'and the lock lifts once the car is not jammed');
 
 // ---- saves keep the clocks and a pending popup ----
 S(maps.find(m => m.id === 'highlands')); const d8 = addBuilding(g, 'dest', blue, 30, 20, 3); const h8 = addBuilding(g, 'house', blue, 10, 20, 1); g.cars.push(createCar(h8));

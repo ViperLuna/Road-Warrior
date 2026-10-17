@@ -103,20 +103,22 @@ export function razeBuilding(g, b) {
 }
 
 // Road tiles that cannot be demolished because of a jam: the tile under a jammed car (a car stuck long enough to blink,
-// tuning.gridlock.warnAfterSeconds) and every tile touching it, so the tile it is waiting to enter is covered as well.
+// tuning.gridlock.warnAfterSeconds) and the next tile along its way, the one it is waiting to enter. Roads merely beside it stay free.
 // Pulling the road out from under a jam sends every car onto a ghost track and "solves" it, which is too easy.
 export function jammedTiles(g) {
-  const out = new Set(), warn = tuning.gridlock.warnAfterSeconds;
-  const lock = (x, y) => {
-    if (x < 0 || y < 0 || x >= g.cols || y >= g.rows) return;
-    out.add(y * g.cols + x);
-    for (const [dx, dy] of DIR) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < g.cols && ny < g.rows) out.add(ny * g.cols + nx); }
-  };
+  const out = new Set(), warn = tuning.gridlock.warnAfterSeconds, inside = (x, y) => x >= 0 && y >= 0 && x < g.cols && y < g.rows;
   for (const c of g.cars) {
     if (c.stuck < warn || (c.state !== 'out' && c.state !== 'back')) continue;
-    const p = c.route[c.idx];
-    if (p && p.kind === 'road') lock(p.tx, p.ty);
-    lock(Math.floor(c.x), Math.floor(c.y));
+    const p = c.route[c.idx], cx = Math.floor(c.x), cy = Math.floor(c.y);
+    const here = p && p.kind === 'road' ? [p.tx, p.ty] : [cx, cy];
+    for (const [x, y] of [here, [cx, cy]]) if (inside(x, y)) out.add(y * g.cols + x);
+    let ahead = null;
+    for (let j = c.idx + 1; j < Math.min(c.route.length, c.idx + 4) && !ahead; j++) {          // the next road tile on its route
+      const q = c.route[j];
+      if (q && q.kind === 'road' && (q.tx !== here[0] || q.ty !== here[1])) ahead = [q.tx, q.ty];
+    }
+    if (!ahead) { const k = ((Math.round(c.a / (Math.PI / 2)) % 4) + 4) % 4, d = [[1, 0], [0, 1], [-1, 0], [0, -1]][k]; ahead = [cx + d[0], cy + d[1]]; }
+    if (inside(ahead[0], ahead[1])) out.add(ahead[1] * g.cols + ahead[0]);
   }
   return out;
 }
