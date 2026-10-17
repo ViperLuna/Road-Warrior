@@ -1,3 +1,14 @@
+10.16.2026
+
+- Houses and destinations now keep two tiles away from the edge of the map, so the side-road gates always have room. They only go there if nothing else fits.
+
+- Traffic lights now wait for a real gap: the green only gives way after its street has been empty for 2 seconds (a one-car hole in a stream no longer flips it), or at the 10 second cap whatever is still coming. Both streets follow the same rules.
+- Accidents now last 40 seconds. A car that stops behind one can't reach the 40 second game-over time before it clears, so the queue just gets to move again.
+
+- A jam now also locks the road tile ahead of the stuck car: you can't demolish the tile under it or the one it is waiting to enter, so you can't clear a jam by deleting the junction it is waiting for. Roads beside it are still free.
+
+- Construction zones: from 1,500 trips, the accident timer sometimes brings road works instead of a crash. One straight road tile gets little orange cones down one lane. The cars on that side wait for the oncoming traffic to clear, then swing into the open lane, so the tile works like a one-lane bridge. It lasts 40 seconds, can land on either side of the road, and never puts a wreck and road works on the map together.
+
 10.14.2026
   Building Patience - Now ON. A house with no road to a destination of its colour, a destination no house of its colours can reach, the stadium, and the side roads all get a countdown: 60 seconds of quiet, then a warning toast, a pulsing red ring and 60 more seconds. If it still isn't connected when that runs out, the game is over. Connect it in time and the clock resets. If you break a connection later, the clock starts over. Pausing stops every clock, so you can pause and build.
 
