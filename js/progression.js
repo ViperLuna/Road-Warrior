@@ -6,7 +6,7 @@ export const prog = {
   specials: [{ id: 'bridge', name: 'Bridge', enabled: true, weight: 1, cost: 40, description: 'Drag a road across water.' }],
 };
 // The trip ladder (config/milestones.json): trips a run needs before each feature switches on.
-export const milestones = { accidents: { afterTrips: 1000 }, dual: { afterTrips: 2000 }, stadium: { afterTrips: 3000, maps: ['highlands', 'metro'] }, portals: { waves: [{ afterTrips: 4000, count: 2 }, { afterTrips: 5000, count: 2 }] } };
+export const milestones = { accidents: { afterTrips: 1000 }, construction: { afterTrips: 1500 }, dual: { afterTrips: 2000 }, stadium: { afterTrips: 3000, maps: ['highlands', 'metro'] }, portals: { waves: [{ afterTrips: 4000, count: 2 }, { afterTrips: 5000, count: 2 }] } };
 export function setMilestones(obj) {
   for (const k of Object.keys(milestones)) if (obj && typeof obj[k] === 'object') Object.assign(milestones[k], obj[k]);
 }

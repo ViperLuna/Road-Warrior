@@ -32,6 +32,7 @@
   },
   "accidents": {
     "durationSeconds": 40,
+    "switchAfterSeconds": 30,
     "firstDelaySeconds": 90,
     "minGapSeconds": 150,
     "maxGapSeconds": 300,
@@ -39,6 +40,12 @@
     "rampShrink": 0.5,
     "minSpeed": 0.5,
     "closeTiles": 0.8
+  },
+  "construction": {
+    "durationSeconds": 40,
+    "workFactor": 0.6,
+    "pathPenalty": 3,
+    "cones": 5
   },
   "stadium": {
     "capacity": 40,

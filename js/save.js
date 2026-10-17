@@ -90,7 +90,7 @@ export function restore(data, g = game) {
   clearPieceCache();
   reindex(g);
 
-  g.accident = null; g.nextAccidentAt = undefined; resetOutside(g); if (data.outside) { const o = data.outside; g.outsideSince = o.since; g.nextOutsideAt = o.nextAt; g.hordeAt = o.hordeAt; g.hordeLeft = o.hordeLeft || 0; g.hordeCount = o.hordeCount || 0; g.hordeNextCar = o.hordeNextCar || 0; g.hordeDeadline = o.hordeDeadline || 0; if (o.match) g.match = o.match; }                 // no accident carries over a save: the schedule starts fresh
+  g.accident = null; g.work = null; g.pendingKind = null; g.nextAccidentAt = undefined; resetOutside(g); if (data.outside) { const o = data.outside; g.outsideSince = o.since; g.nextOutsideAt = o.nextAt; g.hordeAt = o.hordeAt; g.hordeLeft = o.hordeLeft || 0; g.hordeCount = o.hordeCount || 0; g.hordeNextCar = o.hordeNextCar || 0; g.hordeDeadline = o.hordeDeadline || 0; if (o.match) g.match = o.match; }                 // no accident carries over a save: the schedule starts fresh
   g.jams = [];
   g.log = data.log || []; g.nextLogId = data.nextLogId || (g.log.length ? g.log[g.log.length - 1].id + 1 : 1);
   g.watches = (data.watches || []).map(w => ({ ...w, ok: false, fresh: false })); g.seenNet = undefined; g.netEditedAt = g.time; g.watchKey = '';

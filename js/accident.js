@@ -3,10 +3,11 @@
 // The wreck blocks its lane like any stopped car, so traffic behind it queues and its patience keeps running: that is the point.
 import { tuning } from './tuning.js';
 import { milestones } from './progression.js';
+import { startConstruction, stepConstruction, resetConstruction } from './construction.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
-export function resetAccidents(g) { g.accident = null; g.nextAccidentAt = undefined; for (const c of g.cars) c.crash = false; }
+export function resetAccidents(g) { resetConstruction(g); g.pendingKind = null; g.accident = null; g.nextAccidentAt = undefined; for (const c of g.cars) c.crash = false; }
 
 // Two moving cars on one plain road piece (not a junction, lot, driveway, overpass or tunnel), both rolling: the rear one hits the front one.
 function findPair(g) {
@@ -47,6 +48,11 @@ function startAccident(g, rear, front, notify) {
 // Called every tick while playing.
 export function stepAccidents(g, dt, notify) {
   const cfg = tuning.accidents, a = g.accident;
+  const schedule = () => {
+    const k = Math.min(1, Math.max(0, (g.trips - milestones.accidents.afterTrips) / cfg.rampTrips));
+    g.nextAccidentAt = g.time + rand(cfg.minGapSeconds, cfg.maxGapSeconds) * (1 - cfg.rampShrink * k);
+  };
+  if (g.work) { if (stepConstruction(g, dt, notify)) schedule(); return; }          // (road works share this schedule: one event at a time)
   if (a) {
     a.age += dt; a.left -= dt;
     if (a.left <= 0) {
@@ -61,7 +67,17 @@ export function stepAccidents(g, dt, notify) {
   if (g.trips < milestones.accidents.afterTrips) return;
   if (g.nextAccidentAt === undefined) g.nextAccidentAt = g.time + cfg.firstDelaySeconds + rand(0, cfg.firstDelaySeconds);
   if (g.time < g.nextAccidentAt) return;
-  const pair = findPair(g);
-  if (pair) startAccident(g, pair[0], pair[1], notify);
-  else g.nextAccidentAt = g.time + 2;                                  // nobody close enough right now: look again shortly
+  // Past the second milestone it is a coin flip between an accident and road works. The pick sticks: if it can't happen right now (no two cars
+  // close together, no quiet straight tile) it is retried every couple of seconds, and only after a while does the other kind step in.
+  const both = g.trips >= milestones.construction.afterTrips;
+  if (!g.pendingKind) { g.pendingKind = both && Math.random() < 0.5 ? 'construction' : 'accident'; g.pendingSince = g.time; }
+  const attempt = kind => {
+    if (kind === 'construction') return startConstruction(g, notify);
+    const pair = findPair(g);
+    if (!pair) return false;
+    startAccident(g, pair[0], pair[1], notify); return true;
+  };
+  const other = g.pendingKind === 'accident' ? 'construction' : 'accident';
+  if (attempt(g.pendingKind) || (both && g.time - g.pendingSince > cfg.switchAfterSeconds && attempt(other))) { g.pendingKind = null; return; }
+  g.nextAccidentAt = g.time + 2;                                       // nothing suitable right now: look again shortly
 }

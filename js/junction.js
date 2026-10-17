@@ -7,8 +7,8 @@ import { lightGroups } from './signals.js';
 const kept = new WeakMap();
 export function junctionCache(g) {
   let c = kept.get(g);
-  if (!c || c.ver !== netVersion() || c.roads !== g.roads || c.ports !== g.ports || c.size !== g.roads.size) {
-    c = { ver: netVersion(), roads: g.roads, ports: g.ports, size: g.roads.size, map: new Map() };
+  if (!c || c.ver !== netVersion() || c.roads !== g.roads || c.ports !== g.ports || c.work !== g.work || c.size !== g.roads.size) {
+    c = { ver: netVersion(), roads: g.roads, ports: g.ports, work: g.work, size: g.roads.size, map: new Map() };
     kept.set(g, c);
   }
   return c.map;
@@ -30,6 +30,7 @@ export function junctionAt(g, x, y, cache) {
     if (rc.length === 3) j.stem = rc.find(d => !rc.includes(OPP[d]));
     if (c.length >= 3 && special === 'roundabout') j.round = true;
     if (c.length >= 3 && special === 'light') { j.light = true; j.groups = lightGroups(c); }
+    if (g.work && g.work.k === k) { j.junction = true; j.work = true; }      // road works: the shared lane is a tiny junction (one direction at a time)
     cache.set(k, j);
   }
   return j;

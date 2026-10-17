@@ -1,6 +1,6 @@
 // Draws buildings, ghost pieces and cars (tile units, same transform as render.js).
 import { entOf, entsOf, entTile, footprint } from './buildings.js';
-import { DIR } from './lanes.js';
+import { DIR, LANE } from './lanes.js';
 import { pieceValid, tunnelMouths } from './network.js';
 import { tuning } from './tuning.js';
 import { highlightLevel, highlight } from './camera.js';
@@ -287,6 +287,31 @@ export function drawAccident(ctx, g) {
     glow.addColorStop(0, red ? 'rgba(255,40,40,.35)' : 'rgba(40,100,255,.35)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(p.x, p.y, 0.45, 0, 6.2832); ctx.fill();
   });
+  ctx.restore();
+}
+
+// Road works: little cones down the closed lane (the lane of the cars that enter from side `closedIn`) and a striped barrier across its start.
+export function drawWorkZone(ctx, g) {
+  const w = g.work;
+  if (!w) return;
+  const h = [-DIR[w.closedIn][0], -DIR[w.closedIn][1]], r = [-h[1], h[0]], n = tuning.construction.cones, blink = Math.floor(g.time * 2) % 2 === 0;
+  const fade = Math.min(1, w.age / 0.6, Math.max(0, w.left) / 0.6), cx = w.x + 0.5, cy = w.y + 0.5;
+  ctx.save();
+  ctx.globalAlpha = fade;
+  const lx = cx + r[0] * LANE, ly = cy + r[1] * LANE;                                   // centre of the closed lane
+  ctx.fillStyle = 'rgba(255,150,40,.16)'; ctx.save(); ctx.translate(lx, ly); ctx.rotate(Math.atan2(h[1], h[0])); ctx.fillRect(-0.5, -0.1, 1, 0.2); ctx.restore();
+  for (let i = 0; i < n; i++) {
+    const t = -0.4 + (0.8 * i) / (n - 1), px = lx + h[0] * t, py = ly + h[1] * t;
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(px + 0.015, py + 0.045, 0.045, 0.018, 0, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.moveTo(px - 0.034, py + 0.03); ctx.lineTo(px - 0.01, py - 0.05); ctx.lineTo(px + 0.01, py - 0.05); ctx.lineTo(px + 0.034, py + 0.03); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.fillRect(px - 0.024, py - 0.012, 0.048, 0.016);
+  }
+  const bx = lx + h[0] * -0.46, by = ly + h[1] * -0.46;                                  // barrier across the start of the closed lane
+  ctx.save(); ctx.translate(bx, by); ctx.rotate(Math.atan2(h[1], h[0]));
+  ctx.fillStyle = '#fff'; ctx.fillRect(-0.02, -0.12, 0.04, 0.24);
+  ctx.fillStyle = '#ff7a1a'; for (let i = 0; i < 4; i += 2) ctx.fillRect(-0.02, -0.12 + i * 0.06, 0.04, 0.06);
+  ctx.fillStyle = blink ? '#ffb300' : 'rgba(255,179,0,.25)'; ctx.beginPath(); ctx.arc(0, -0.14, 0.025, 0, 6.2832); ctx.fill();
+  ctx.restore();
   ctx.restore();
 }
 

@@ -102,6 +102,18 @@ export function roadPiece(x, y, inS, outS, o = {}) {
     { ...extra, turn: right ? 'right' : 'left', taper: Math.abs(offIn - offOut) > 1e-9 });
 }
 
+// Road works: the car's own lane is coned off, so it swings across the centre line into the oncoming lane and back (one lane shared by both ways).
+// Same entry and exit points as the plain piece, so it joins the tiles either side as usual.
+export function workPiece(x, y, inS) {
+  const key = `rw:${x},${y}:${inS}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const base = roadPiece(x, y, inS, OPP[inS]), h = [-DIR[inS][0], -DIR[inS][1]], left = [-rt(h)[0], -rt(h)[1]], s = 0.31;
+  const p0 = base.pts[0], p3 = base.pts[3];
+  return make(key, 'road', p0, mad(mad(p0, h, 0.33), left, s), mad(mad(p3, h, -0.33), left, s), p3,
+    { tx: x, ty: y, in: inS, out: OPP[inS], tl: 2, ei: 2, eo: 2, li: 0, lo: 0, lanes: 2, under: false, work: true, base });
+}
+
 // ---- Roundabout: cars circulate counter-clockwise (US) around a central island ----
 export const RING_R = 0.26;                       // ring centre-line radius
 const TAU = Math.PI * 2;
@@ -235,6 +247,7 @@ export function pieceFromKey(key) {
     const opts = m[5] === undefined ? {} : { tl: +m[5], ei: +m[6], eo: +m[7], li: +m[8], lo: +m[9], under: m[10] === 'u' };
     return roadPiece(x, y, i, o, opts);
   }
+  if ((m = /^rw:(\d+),(\d+):(\d)$/.exec(key))) return workPiece(+m[1], +m[2], +m[3]);
   if ((m = /^rb:(\d+),(\d+):(\d)>(\d)$/.exec(key))) return roundPiece(+m[1], +m[2], +m[3], +m[4]);
   if ((m = /^ho:(\d+),(\d+):(\d)$/.exec(key))) return houseOutPiece(+m[1], +m[2], +m[3]);
   if ((m = /^hi:(\d+),(\d+):(\d)$/.exec(key))) return houseInPiece(+m[1], +m[2], +m[3]);

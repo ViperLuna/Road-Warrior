@@ -172,7 +172,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
       row.children[1].textContent = e.text;
       if (hasSpot) row.addEventListener('click', () => {
         $('log').hidden = true;
-        const live = e.ref === 'accident' ? !!game.accident && Math.hypot(game.accident.x - e.x, game.accident.y - e.y) < 1.5 : true;     // an accident that is gone: show where it was, faded
+        const live = e.ref === 'accident' ? !!game.accident && Math.hypot(game.accident.x - e.x, game.accident.y - e.y) < 1.5 : e.ref === 'construction' ? !!game.work && game.work.x === Math.floor(e.x) && game.work.y === Math.floor(e.y) : true;     // an accident that is gone: show where it was, faded
         flyTo(e.spots, { ghost: !live });
       });
       list.appendChild(row);
@@ -333,6 +333,8 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     if (e.type === 'horde') note(`A game is being hosted at the stadium! A crowd of ${e.size} is on its way.`, e.spots);
     if (e.type === 'whistle') note('The game is over! The crowd is heading home.', e.spots);
     if (e.type === 'accident') { const x = Math.floor(e.x), y = Math.floor(e.y); note('Accident! Police are on the scene.', [{ x0: x, y0: y, x1: x, y1: y }], { ref: 'accident', x: e.x, y: e.y }); }
+    if (e.type === 'construction') { const x = Math.floor(e.x), y = Math.floor(e.y); note('Road works! One lane is closed, so traffic takes turns.', [{ x0: x, y0: y, x1: x, y1: y }], { ref: 'construction', x: e.x, y: e.y }); }
+    if (e.type === 'construction-cleared') toast('The road works are finished.');
     if (e.type === 'jam-warn') note(`This jam is getting out of hand! ${e.seconds} seconds left!`, e.spots, { ref: 'jam' });
     if (e.type === 'jam') note('Traffic is jammed up here. The cars are getting angry!', e.spots, { ref: 'jam' });
     if (e.type === 'impatient') note(`${IMPATIENT[e.kind](e.label)} ${e.seconds} seconds left!`, e.spots);

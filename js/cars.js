@@ -1,5 +1,5 @@
 // One car per house. Round trip: house -> destination lot (park, dwell) -> house = 1 trip.
-import { DIR, OPP, CAR_LEN, lotSpace, pointAt, roadPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
+import { DIR, OPP, CAR_LEN, lotSpace, pointAt, roadPiece, workPiece, roundPiece, houseOutPiece, houseInPiece, lotInPiece, lotOutPiece } from './lanes.js';
 import { lightColor, lightHolds, signalState, stepLight } from './signals.js';
 import { entOf, entsOf, entSide, exitTile, accepts, baysOf, bayPiece, hasEnt, reindex as reindexAll } from './buildings.js';
 import { roadAt, roundAt, tidx, tileLanes, layerLanes, edgeLanes, overpassAxis, axisOf } from './network.js';
@@ -15,6 +15,7 @@ const CHAIN_LIGHT_MARGIN = 2;                 // seconds a light just beyond a p
 function pieceSpeed(p) {
   const sp = tuning.speed;
   if (p.kind === 'road') {
+    if (p.work) return sp.twoLane * tuning.construction.workFactor;
     const base = (p.lanes === 4 ? sp.fourLane : sp.twoLane) * (p.taper ? sp.taperFactor : 1);
     return base * (p.turn === 'right' ? sp.rightTurnFactor : p.turn === 'left' ? sp.leftTurnFactor : p.turn === 'round' ? sp.roundaboutFactor : 1);
   }
@@ -40,6 +41,24 @@ const roadPieces = (g, steps, lane) => steps.map(s => {
 
 // The same road tile in the opposite direction (for a car's way home over the road it came by).
 const reversePiece = p => (p.round ? roundPiece(p.tx, p.ty, p.out, p.in) : roadPiece(p.tx, p.ty, p.out, p.in, { tl: p.tl, ei: p.eo, eo: p.ei, li: p.lo, lo: p.li, under: p.under }));
+
+// Road works (g.work): cars from the coned side take the shared-lane piece through that tile; the others carry on as normal.
+const workSwap = (g, p) => { const w = g.work; return w && p.kind === 'road' && !p.round && !p.work && !p.under && p.tx === w.x && p.ty === w.y && p.in === w.closedIn && p.out === OPP[p.in] ? workPiece(w.x, w.y, w.closedIn) : p; };
+const workify = (g, list) => (g.work ? list.map(p => workSwap(g, p)) : list);
+// The works have just started / ended: switch the pieces ahead of every car (the one it is on is left alone).
+export function adoptWork(g) {
+  for (const c of g.cars) {
+    for (let j = c.idx + 1; j < c.route.length; j++) c.route[j] = workSwap(g, c.route[j]);
+    if (c.homeRoute) c.homeRoute = c.homeRoute.map(p => workSwap(g, p));
+  }
+}
+export function releaseWork(g) {
+  const back = p => (p.work ? p.base : p);
+  for (const c of g.cars) {
+    for (let j = c.idx + 1; j < c.route.length; j++) c.route[j] = back(c.route[j]);
+    if (c.homeRoute) c.homeRoute = c.homeRoute.map(back);
+  }
+}
 
 function planOut(g, car) {
   const b = car.house, D = DIR[b.rot];
@@ -75,10 +94,10 @@ function planOut(g, car) {
     car.dest = d; car.slot = slot;
     car.lot = { bx: d.x, by: d.y, rot: d.rot, ent: res.port.ent, k };
     const rp = roadPieces(g, res.steps, Math.random() < 0.5 ? 0 : 1);
-    car.route = [houseOutPiece(b.x, b.y, b.rot), ...rp, lotInPiece(d.x, d.y, d.rot, res.port.ent, k)];
+    car.route = workify(g, [houseOutPiece(b.x, b.y, b.rot), ...rp, lotInPiece(d.x, d.y, d.rot, res.port.ent, k)]);
     // Ghost roads last until the whole round trip is done: remember the way home, so if the roads are changed while this
     // car is parked it can still drive back over the road it came by (instead of sitting in its bay forever).
-    car.homeRoute = [lotOutPiece(d.x, d.y, d.rot, k, res.port.ent), ...rp.slice().reverse().map(reversePiece), houseInPiece(b.x, b.y, b.rot)];
+    car.homeRoute = workify(g, [lotOutPiece(d.x, d.y, d.rot, k, res.port.ent), ...rp.slice().reverse().map(reversePiece), houseInPiece(b.x, b.y, b.rot)]);
     return true;
   }
   return false;
@@ -167,7 +186,7 @@ function planBack(g, car, ent0 = car.lot.ent) {
   }
   if (!best) return ghostHome(car);
   const bay = car.dest && car.dest.stadium ? bayPiece(car.dest, car.slot, bestEnt) : L.k;
-  car.route = [lotOutPiece(L.bx, L.by, L.rot, bay, bestEnt), ...roadPieces(g, best.steps, Math.random() < 0.5 ? 0 : 1), houseInPiece(home.x, home.y, home.b.rot)];
+  car.route = workify(g, [lotOutPiece(L.bx, L.by, L.rot, bay, bestEnt), ...roadPieces(g, best.steps, Math.random() < 0.5 ? 0 : 1), houseInPiece(home.x, home.y, home.b.rot)]);
   return true;
 }
 

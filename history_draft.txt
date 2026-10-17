@@ -28,3 +28,5 @@
 - Accidents now last 40 seconds. A car that stops behind one can't reach the 40 second game-over time before it clears, so the queue just gets to move again.
 
 - A jam now also locks the road tile ahead of the stuck car: you can't demolish the tile under it or the one it is waiting to enter, so you can't clear a jam by deleting the junction it is waiting for. Roads beside it are still free.
+
+- Road works: from 1,500 trips, the accident timer sometimes brings road works instead of a crash. One straight road tile gets little orange cones down one lane. The cars on that side wait for the oncoming traffic to clear, then swing into the open lane, so the tile works like a one-lane bridge. It lasts 40 seconds, can land on either side of the road, and never puts a wreck and road works on the map together.

@@ -1,5 +1,6 @@
 // A* over (road tile, entry side) states. Returns the road tiles to cross and which port ends the trip.
 import { DIR, OPP } from './lanes.js';
+import { tuning } from './tuning.js';
 import { roadAt, roadConns, roundAt, portAt, tidx, overpassAxis } from './network.js';
 
 class Heap {
@@ -75,7 +76,7 @@ export function findPath(g, sx, sy, sEntry, goalPorts) {
       if (e === inS || (noExit >> e) & 1) continue;
       if (over && e !== OPP[inS]) continue;
       const nx = x + DIR[e][0], ny = y + DIR[e][1];
-      const cost = gs[id] + 1 + turnCost(inS, e) + round;
+      const cost = gs[id] + 1 + turnCost(inS, e) + round + (g.work && g.work.k === cell ? tuning.construction.pathPenalty : 0);
       let nid = -1;
       if (roadAt(g, nx, ny)) { if (g.roads.get(tidx(g, nx, ny)).cone) continue; nid = tidx(g, nx, ny) * 4 + OPP[e]; }
       else {

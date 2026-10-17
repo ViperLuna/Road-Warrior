@@ -120,6 +120,8 @@ export function newGame(seed, map = maps[0]) {
   game.money = 0;
   game.time = 0;
   game.accident = null;
+  game.work = null;
+  game.pendingKind = null;
   game.nextAccidentAt = undefined;
   resetOutside(game);
   game.watches = [];
