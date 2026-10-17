@@ -102,15 +102,21 @@ export function razeBuilding(g, b) {
   reindexAll(g);
 }
 
-// Road tiles with a jammed car on them: a car stuck long enough to blink (tuning.gridlock.warnAfterSeconds). Such a tile cannot be demolished:
-// pulling the road out from under a jam sends every car onto a ghost track and "solves" it, which is too easy.
+// Road tiles that cannot be demolished because of a jam: the tile under a jammed car (a car stuck long enough to blink,
+// tuning.gridlock.warnAfterSeconds) and every tile touching it, so the tile it is waiting to enter is covered as well.
+// Pulling the road out from under a jam sends every car onto a ghost track and "solves" it, which is too easy.
 export function jammedTiles(g) {
   const out = new Set(), warn = tuning.gridlock.warnAfterSeconds;
+  const lock = (x, y) => {
+    if (x < 0 || y < 0 || x >= g.cols || y >= g.rows) return;
+    out.add(y * g.cols + x);
+    for (const [dx, dy] of DIR) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < g.cols && ny < g.rows) out.add(ny * g.cols + nx); }
+  };
   for (const c of g.cars) {
     if (c.stuck < warn || (c.state !== 'out' && c.state !== 'back')) continue;
     const p = c.route[c.idx];
-    if (p && p.kind === 'road') out.add(p.ty * g.cols + p.tx);
-    out.add(Math.floor(c.y) * g.cols + Math.floor(c.x));
+    if (p && p.kind === 'road') lock(p.tx, p.ty);
+    lock(Math.floor(c.x), Math.floor(c.y));
   }
   return out;
 }

@@ -26,3 +26,5 @@
 
 - Traffic lights now wait for a real gap: the green only gives way after its street has been empty for 2 seconds (a one-car hole in a stream no longer flips it), or at the 10 second cap whatever is still coming. Both streets follow the same rules.
 - Accidents now last 40 seconds. A car that stops behind one can't reach the 40 second game-over time before it clears, so the queue just gets to move again.
+
+- A jam now locks the roads touching it as well: you can't demolish the tile under a stuck car or any road next to it, so you can't clear a jam by deleting the junction it is waiting for.
