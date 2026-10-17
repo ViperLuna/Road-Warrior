@@ -294,3 +294,6 @@ If a map is packed with road, new houses and destinations find no free land and 
 
 ### Buildings stay off the edge
 `spawnPair` and `spawnHouse` first try with a 2-tile margin from the map edge (`EDGE` in spawn.js) and only fall back to the whole map when nothing fits. That leaves the border free for stadium/side-road gates. Bridge/tunnel ("across") spawns are not affected.
+
+### Light gap-out and accident queues
+A light's green gives way when the cross street has demand and either (a) the green axis has had no demand for `trafficLight.gapOutSeconds` (2 s, after the 2 s minimum green) or (b) the green has run `maxGreenSeconds` (10 s) while still busy. Both axes use the same rules (`stepLight` in signals.js; `sig.gap` is the quiet time). Accidents last `accidents.durationSeconds` (40 s). A car whose leader is a wreck, or a car queued behind one (`car.behindCrash`), does not accrue `stuck`, so a queue behind an accident can't set off the jam warning or end the game; the normal timers start again when it clears.

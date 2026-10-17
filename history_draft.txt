@@ -23,3 +23,6 @@
 
 
 - Houses and destinations now keep two tiles away from the edge of the map, so the side-road gates always have room. They only go there if nothing else fits.
+
+- Traffic lights now wait for a real gap: the green only gives way after its street has been empty for 2 seconds (a one-car hole in a stream no longer flips it), or at the 10 second cap whatever is still coming. Both streets follow the same rules.
+- Accidents now last 40 seconds. Cars queued behind a wreck no longer count that wait toward a jam or game over.

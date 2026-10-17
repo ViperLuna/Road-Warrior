@@ -402,6 +402,7 @@ export function updateSim(g, dt) {
     } else {
       let p = car.route[car.idx];
       const gap = leaderGap(car);
+      car.behindCrash = !!lastLeader && (lastLeader.crash || !!lastLeader.behindCrash);      // queued behind a wreck (or behind a car that is): its wait is the accident's, not the player's
       let target = Math.min(pieceSpeed(p), Math.sqrt(2 * braking * Math.max(0, gap - minGapTiles)));
       // Everyone slows for a junction, so a fast road never outruns its stopping distance. Except straight through a green:
       // the cross street is held at red, so the light is what makes a busy highway junction flow at full speed.
@@ -436,7 +437,7 @@ export function updateSim(g, dt) {
           const m = TURN_RATE * dt;
           car.a += Math.max(-m, Math.min(m, da));
         }
-        car.stuck = car.v < 0.05 ? car.stuck + dt : 0;
+        car.stuck = car.v < 0.05 && !car.behindCrash ? car.stuck + dt : 0;
       }
     }
   }

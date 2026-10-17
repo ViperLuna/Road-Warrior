@@ -44,7 +44,10 @@ if (acc) {
   console.log('stopped behind the wreck:', queued);
   const behind = g.cars.filter(c => c.state !== 'home' && !c.crash && c.stuck > 5).length;
   console.log('cars waiting >5s:', behind);
+  ok(g.cars.every(c => c.crash || c.stuck < tuning.gridlock.warnAfterSeconds), 'cars queued behind the wreck never count it as a jam (' + Math.max(...g.cars.map(c => c.stuck)).toFixed(1) + 's)');
+  tickN(tuning.gridlock.gameOverAfterSeconds - tuning.accidents.durationSeconds + 5);
   tickN(2);
+  ok(g.mode === 'play', 'a queue behind a 40 s wreck does not end the game');
   ok(g.accident === null && !A.crash && !B.crash, 'accident clears after the duration');
   ok(events.some(e => e.type === 'cleared'), 'cleared event');
   ok(g.nextAccidentAt > g.time + tuning.accidents.minGapSeconds * 0.4, 'next accident is scheduled well ahead');

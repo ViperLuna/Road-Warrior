@@ -19,17 +19,20 @@ export function lightColor(sig, groups, side) {
 export function lightHolds(sig, side, margin) {
   if (sig.stage !== 'green' || (side & 1) !== sig.axis) return false;
   if (!sig.dem[1 - sig.axis]) return true;
-  const { minGreenSeconds: lo, maxGreenSeconds: hi } = tuning.trafficLight;
-  return sig.t + margin <= (sig.dem[sig.axis] ? hi : lo);
+  const { minGreenSeconds: lo, maxGreenSeconds: hi, gapOutSeconds: gap } = tuning.trafficLight;
+  return sig.dem[sig.axis] ? sig.t + margin <= hi : margin <= gap - (sig.gap || 0) || sig.t + margin <= lo;
 }
 
 export function stepLight(sig, dem, dt) {
-  const { minGreenSeconds: lo, maxGreenSeconds: hi, yellowSeconds: Y, allRedSeconds: R } = tuning.trafficLight;
+  const { minGreenSeconds: lo, maxGreenSeconds: hi, gapOutSeconds: gap, yellowSeconds: Y, allRedSeconds: R } = tuning.trafficLight;
   sig.dem = dem; sig.t += dt;
   const own = dem[sig.axis], cross = dem[1 - sig.axis];
+  sig.gap = own ? 0 : (sig.gap || 0) + dt;                    // how long the green axis has had nobody coming
   if (sig.stage === 'green') {
-    if (cross && sig.t >= lo && (!own || sig.t >= hi)) { sig.stage = own ? 'yellow' : 'allred'; sig.t = 0; }
+    // Gap-out: the green gives way once its own traffic has stopped for `gapOutSeconds` (a one-car hole in a stream doesn't count),
+    // or at the hard cap of `maxGreenSeconds`, whatever is still coming. The same rules apply to both streets.
+    if (cross && sig.t >= lo && (own ? sig.t >= hi : sig.gap >= gap)) { sig.stage = own ? 'yellow' : 'allred'; sig.t = 0; }
   } else if (sig.stage === 'yellow') {
     if (sig.t >= Y) { sig.stage = 'allred'; sig.t = 0; }
-  } else if (sig.t >= R) { sig.stage = 'green'; sig.axis = 1 - sig.axis; sig.t = 0; }
+  } else if (sig.t >= R) { sig.stage = 'green'; sig.axis = 1 - sig.axis; sig.t = 0; sig.gap = 0; }
 }

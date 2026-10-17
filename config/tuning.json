@@ -14,6 +14,7 @@
   "trafficLight": {
     "minGreenSeconds": 2,
     "maxGreenSeconds": 10,
+    "gapOutSeconds": 2,
     "yellowSeconds": 1.5,
     "allRedSeconds": 1
   },
@@ -30,7 +31,7 @@
     "honkFastSeconds": 1.2
   },
   "accidents": {
-    "durationSeconds": 20,
+    "durationSeconds": 40,
     "firstDelaySeconds": 90,
     "minGapSeconds": 150,
     "maxGapSeconds": 300,
