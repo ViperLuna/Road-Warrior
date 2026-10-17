@@ -103,6 +103,9 @@ events.length = 0; ok(st.demolish(11, jy) === false && events.some(e => e.type =
 pave(10, jy + 1, 11, jy + 1);
 ok(st.demolish(9, jy) === true && st.demolish(13, jy) === true, 'but the road behind it and further along are free');
 ok(st.demolish(10, jy + 1) === true && st.demolish(11, jy + 1) === true, 'and a road running alongside it is not touched by the lock');
+car.stuck = tuning.gridlock.warnAfterSeconds + 1; car.x = jx - 0.5; car.y = jy + 0.5;
+const rot0 = d7.rot, ent0 = d7.ent;
+ok(st.rotateBuildingAt(d7.x, d7.y) === true && (d7.rot !== rot0 || d7.ent !== ent0), 'a building next to a jam can still be rotated to help it');
 car.stuck = 1; ok(st.demolish(10, jy) === true && st.demolish(11, jy) === true, 'and the lock lifts once the car is not jammed');
 
 // ---- saves keep the clocks and a pending popup ----
