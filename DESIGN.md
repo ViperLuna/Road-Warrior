@@ -310,3 +310,6 @@ The tiles under an accident's wrecks and the road-works tile are locked against 
 
 ### Stadium gate lanes
 A stadium's parked cars are out of sight, so its gate pieces are plain straight lines in the right-hand lane (`lotInPiece` / `lotOutPiece` with `ent >= 8` in lanes.js, flagged `gate`), not the curve into one of the lot's two physical bays. Two gate pieces get no extra parking-lot conflict margin (`pairGeometry`, junction.js), so an exiting car doesn't hold up one going in. The gate's busy/claimed rule for leaving cars is unchanged.
+
+### Lanes follow the turn (4-lane roads)
+`roadPieces` (cars.js) gives every step of a route its lane: a right turn uses the outer lane (1), a left turn the inner lane (0). A car moves into the lane for its next turn as early as it can (the first straight tile after its previous turn) and a turn leaves it in the lane it turned into. The random inner/outer pick only applies to a run with no turn in it. 2-lane edges (and the edge to a building) always collapse to the one lane. `tests/lanes.test.mjs` runs a stadium on a highway in all four rotations.

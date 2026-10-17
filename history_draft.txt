@@ -34,3 +34,5 @@
 - The road under a wreck, and the tile with road works, can't be demolished until the police or the crew are done.
 
 - Fixed: cars coming out of a stadium gate started from the left-hand bay and swung across the whole gate, taking up both lanes and holding up traffic. Now cars go in and out of a stadium gate in a straight line in their own lane, and a car leaving no longer blocks one arriving.
+
+- Fixed: on 4-lane roads (highways) cars picked the inner or outer lane at random, so half of them swerved across the road to make a turn, most visibly at a stadium gate. Now a car takes the lane its turn needs: outer lane for right turns, inner lane for left turns, and it moves over early instead of at the last moment. A car coming out of a gate turns into the nearest lane.

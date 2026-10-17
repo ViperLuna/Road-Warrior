@@ -31,13 +31,32 @@ export function createCar(house) {
 }
 
 const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
-// Route pieces for the road tiles of a path. `lane` (0 inner, 1 outer) is this trip's lane on 4-lane roads; on 2-lane edges it collapses to the one lane.
-const roadPieces = (g, steps, lane) => steps.map(s => {
-  if (roundAt(g, s.x, s.y)) return roundPiece(s.x, s.y, s.in, s.out);
-  const ei = edgeLanes(g, s.x, s.y, s.in), eo = edgeLanes(g, s.x, s.y, s.out);
-  const ov = overpassAxis(g, s.x, s.y), under = ov >= 0 && axisOf(s.in) !== ov;          // on an overpass tile, the street runs underneath
-  return roadPiece(s.x, s.y, s.in, s.out, { tl: layerLanes(g, s.x, s.y, s.in), ei, eo, li: Math.min(lane, ei / 2 - 1), lo: Math.min(lane, eo / 2 - 1), under });
-});
+// Route pieces for the road tiles of a path. On 4-lane roads (0 inner, 1 outer) a car takes the lane its next turn needs: right turns from the
+// outer lane, left turns from the inner lane (a right turn out of the inner lane would cut across the outer one). It moves over as soon as it
+// can, in the first straight tile after the last turn, and a turn leaves it in the lane it turned into. `lane` is only the pick for a run
+// with no turn in it. On 2-lane edges the lane collapses to the one lane.
+const turnWanted = s => {
+  if (s.out === OPP[s.in]) return -1;
+  const h0 = [-DIR[s.in][0], -DIR[s.in][1]], h1 = DIR[s.out];
+  return h0[0] * h1[1] - h0[1] * h1[0] > 0 ? 1 : 0;                      // right: outer, left: inner
+};
+const roadPieces = (g, steps, lane) => {
+  const n = steps.length, want = steps.map(s => (roundAt(g, s.x, s.y) ? -1 : turnWanted(s)));
+  const laneIn = new Array(n + 1), laneOut = new Array(n);
+  let cur = lane;
+  for (let j = 0; j < n; j++) {
+    laneIn[j] = want[j] >= 0 ? want[j] : cur;
+    if (want[j] >= 0) cur = want[j];
+    else { const k = want.findIndex((w, i) => i > j && w >= 0); if (k >= 0) cur = want[k]; }      // heading for a turn: be in its lane early
+    laneOut[j] = cur;
+  }
+  return steps.map((s, j) => {
+    if (roundAt(g, s.x, s.y)) return roundPiece(s.x, s.y, s.in, s.out);
+    const ei = edgeLanes(g, s.x, s.y, s.in), eo = edgeLanes(g, s.x, s.y, s.out);
+    const ov = overpassAxis(g, s.x, s.y), under = ov >= 0 && axisOf(s.in) !== ov;          // on an overpass tile, the street runs underneath
+    return roadPiece(s.x, s.y, s.in, s.out, { tl: layerLanes(g, s.x, s.y, s.in), ei, eo, li: Math.min(laneIn[j], ei / 2 - 1), lo: Math.min(laneOut[j], eo / 2 - 1), under });
+  });
+};
 
 // The same road tile in the opposite direction (for a car's way home over the road it came by).
 const reversePiece = p => (p.round ? roundPiece(p.tx, p.ty, p.out, p.in) : roadPiece(p.tx, p.ty, p.out, p.in, { tl: p.tl, ei: p.eo, eo: p.ei, li: p.lo, lo: p.li, under: p.under }));
