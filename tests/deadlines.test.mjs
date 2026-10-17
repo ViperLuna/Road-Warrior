@@ -106,6 +106,7 @@ ok(st.demolish(10, jy + 1) === true && st.demolish(11, jy + 1) === true, 'and a 
 car.stuck = tuning.gridlock.warnAfterSeconds + 1; car.x = jx - 0.5; car.y = jy + 0.5;
 const rot0 = d7.rot, ent0 = d7.ent;
 ok(st.rotateBuildingAt(d7.x, d7.y) === true && (d7.rot !== rot0 || d7.ent !== ent0), 'a building next to a jam can still be rotated to help it');
+ok(st.setCut(10, jy, 11, jy, true) === true && st.setCut(10, jy, 11, jy, false) === true, 'cutting (and uncutting) the road at a jam is still allowed, only demolishing is locked');
 car.stuck = 1; ok(st.demolish(10, jy) === true && st.demolish(11, jy) === true, 'and the lock lifts once the car is not jammed');
 
 // ---- saves keep the clocks and a pending popup ----
