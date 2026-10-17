@@ -44,6 +44,7 @@ let started = false; for (let i = 0; i < 60 * 30 && !started; i++) { st.tick(1 /
 ok(started && !!g.work, 'works start on a busy straight tile');
 if (g.work) {
   const w = g.work, wk = w.k;
+  events.length = 0; ok(st.demolish(w.x, w.y) === false && g.roads.has(wk) && events.some(e => e.type === 'jam-locked' && e.why === 'works'), 'the road works tile cannot be demolished');
   ok(w.left <= tuning.gridlock.gameOverAfterSeconds - 1, 'their length is kept below the game-over time (' + w.left + ' s)');
   let both = 0, frames = 0, seenClosed = 0, seenOpen = 0, plainClosed = 0, maxStuck = 0;
   const trips0 = g.trips;
@@ -63,6 +64,7 @@ if (g.work) {
   ok(maxStuck < tuning.gridlock.gameOverAfterSeconds && g.mode === 'play', 'nobody is stuck long enough to end the game (' + maxStuck.toFixed(1) + ' s)');
   tickN(tuning.construction.durationSeconds);
   ok(g.work === null && events.some(e => e.type === 'construction-cleared'), 'the works clear after their time');
+  ok(st.demolish(w.x, w.y) === true, 'and the tile can be demolished again');
   ok(!g.cars.some(c => c.route.slice(c.idx + 1).some(p => p.work)), 'and no car still has the shared-lane piece planned ahead');
   ok(g.nextAccidentAt > g.time, 'the next event is scheduled');
   tickN(30); ok(g.trips > trips0 + 6, 'traffic is normal afterwards');

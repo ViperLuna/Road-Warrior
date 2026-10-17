@@ -38,6 +38,8 @@ if (acc) {
   ok(events.filter(e => e.type === 'accident').length === 1, 'one accident event');
   const [A, B] = acc.cars, pos = acc.cars.map(c => [c.x, c.y]);
   ok(A !== B && A.crash && B.crash && A.v === 0 && B.v === 0, 'both cars are stopped');
+  const [wx, wy] = [Math.floor(A.x), Math.floor(A.y)];
+  events.length = 0; ok(st.demolish(wx, wy) === false && g.roads.has(wy * g.cols + wx) && events.some(e => e.type === 'jam-locked' && e.why === 'accident'), 'the road under a wreck cannot be demolished');
   tickN(tuning.accidents.durationSeconds - 1);
   ok(g.accident === acc && acc.cars.every((c, i) => c.x === pos[i][0] && c.y === pos[i][1] && c.stuck === 0), 'they have not moved before the 15 s are up');
   const queued = g.cars.filter(c => c.state !== 'home' && c !== A && c !== B && c.v < 0.05).length;

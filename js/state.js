@@ -13,7 +13,7 @@ import {
   exitTile,
 } from "./buildings.js";
 import { spawnInitial, spawnPair } from "./spawn.js";
-import { updateSim, reseatCarsOf, jammedTiles } from "./cars.js";
+import { updateSim, reseatCarsOf, jammedTiles, sceneTiles } from "./cars.js";
 import { stepAccidents } from "./accident.js";
 import { stepOutside, resetOutside } from "./outside.js";
 import { stepJams } from "./jams.js";
@@ -853,6 +853,11 @@ export function demolish(x, y) {
     notify({ type: "jam-locked" });
     return false;
   } // cars are jammed here: it has to be cleared the hard way
+  const scene = sceneTiles(game);
+  if (span.some((k) => scene.has(k))) {
+    notify({ type: "jam-locked", why: game.work && span.includes(game.work.k) ? "works" : "accident" });
+    return false;
+  } // an accident or road works: the road stays until they clear
   if (r.tunnel) {
     // a tunnel comes out one block at a time, the piece going back to the player's stock
     game.roads.delete(tileIndex(x, y));

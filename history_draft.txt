@@ -30,3 +30,5 @@
 - A jam now also locks the road tile ahead of the stuck car: you can't demolish the tile under it or the one it is waiting to enter, so you can't clear a jam by deleting the junction it is waiting for. Roads beside it are still free.
 
 - Road works: from 1,500 trips, the accident timer sometimes brings road works instead of a crash. One straight road tile gets little orange cones down one lane. The cars on that side wait for the oncoming traffic to clear, then swing into the open lane, so the tile works like a one-lane bridge. It lasts 40 seconds, can land on either side of the road, and never puts a wreck and road works on the map together.
+
+- The road under a wreck, and the tile with road works, can't be demolished until the police or the crew are done.

@@ -142,6 +142,14 @@ export function jammedTiles(g) {
   return out;
 }
 
+// The scene of an accident (the tiles under the two wrecks) and the road-works tile: no jam timer runs on these, but they can't be demolished either.
+export function sceneTiles(g) {
+  const out = new Set();
+  if (g.accident) for (const c of g.accident.cars) { const p = c.route[c.idx]; if (p && p.kind === 'road') out.add(p.ty * g.cols + p.tx); out.add(Math.floor(c.y) * g.cols + Math.floor(c.x)); }
+  if (g.work) out.add(g.work.k);
+  return out;
+}
+
 // A visitor from the outside: a car of any colour leaves `gate` (a side-road gate) for the stadium. Returns the car, or null if
 // the gate has no road to the stadium (or the stadium is full) right now.
 export function launchOutside(g, gate, color) {

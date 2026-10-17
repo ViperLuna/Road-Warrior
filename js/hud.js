@@ -329,7 +329,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     if (e.type === 'gate-info') toast(e.demolish ? "That's the road to another city. It can't be demolished." : "This is an expansion to another city you can't see. Visitors come in through here.");
     if (e.type === 'tunnel-bonus') note(`Thanks for testing! Tunnels are dug one block at a time now. Your ${e.tunnels} old tunnel${e.tunnels > 1 ? 's were' : ' was'} converted, and here are ${e.pieces} tunnel pieces for being here early.`);
     if (e.type === 'rotate-blocked') toast("No room to turn this: it needs a free tile of land beside it (or outside its lot).");
-    if (e.type === 'jam-locked') toast("Can't demolish this: cars are jammed here. Clear the jam first.");
+    if (e.type === 'jam-locked') toast(e.why === 'works' ? "Can't demolish this: there are road works here. They'll be finished soon." : e.why === 'accident' ? "Can't demolish this: there has been an accident here. Wait for the police to clear it." : "Can't demolish this: cars are jammed here. Clear the jam first.");
     if (e.type === 'horde') note(`A game is being hosted at the stadium! A crowd of ${e.size} is on its way.`, e.spots);
     if (e.type === 'whistle') note('The game is over! The crowd is heading home.', e.spots);
     if (e.type === 'accident') { const x = Math.floor(e.x), y = Math.floor(e.y); note('Accident! Police are on the scene.', [{ x0: x, y0: y, x1: x, y1: y }], { ref: 'accident', x: e.x, y: e.y }); }
