@@ -18,6 +18,9 @@
     "yellowSeconds": 1.5,
     "allRedSeconds": 1
   },
+  "houses": {
+    "secondCarChance": 0.1
+  },
   "cars": {
     "acceleration": 5,
     "braking": 11,

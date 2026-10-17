@@ -40,3 +40,5 @@
 - Traffic lights can now go on a bridge, on the tile where a road meets the span from the side (a plain stretch of bridge still has no junction to light). Roundabouts and overpasses still can't go on a bridge, and a light on a bridge comes back to your stock if you demolish the bridge.
 
 - Cars from the side roads no longer only head for the stadium. A visitor now goes to any destination it can reach that takes its colour, the stadium included (the stadium takes every colour). A match crowd still goes to the stadium only.
+
+- Some houses now get a second car (10% of them, set in config/tuning.json as houses.secondCarChance). The two cars make their own trips and each trip counts, so a busy map gets busier. The second one waits for the first to pull out of the driveway.

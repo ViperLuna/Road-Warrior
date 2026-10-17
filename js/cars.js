@@ -30,6 +30,13 @@ export function createCar(house) {
   };
 }
 
+// A new house gets its car, and now and then (tuning.houses.secondCarChance) a second one with its own id: they make their own trips and
+// each trip counts. (Anything that looks at `car.house` already copes with several cars; the id is what has to be unique.)
+export function addCarsFor(g, house, rng = Math.random) {
+  g.cars.push(createCar(house));
+  if (rng() < tuning.houses.secondCarChance) { const second = createCar(house); second.id = g.nextId++; second.cooldown += 1.5; g.cars.push(second); }
+}
+
 const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
 // Route pieces for the road tiles of a path. On 4-lane roads (0 inner, 1 outer) a car takes the lane its next turn needs: right turns from the
 // outer lane, left turns from the inner lane (a right turn out of the inner lane would cut across the outer one). It moves over as soon as it
@@ -431,7 +438,8 @@ export function updateSim(g, dt) {
     if (car.state === 'home') {
       car.cooldown -= dt;
       if (car.cooldown <= 0) {
-        if (planOut(g, car)) start(car, 'out');
+        if (g.cars.some(o => o !== car && o.house === car.house && o.state === 'out' && o.idx === 0 && o.s < CAR_LEN + 0.15)) car.cooldown = 0.3;          // a second car from this house waits for the first to pull out
+        else if (planOut(g, car)) start(car, 'out');
         else car.cooldown = 0.5;
       }
     } else if (car.state === 'dwell') {

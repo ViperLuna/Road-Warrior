@@ -3,7 +3,7 @@ import { DIR } from './lanes.js';
 import { addBuilding, lotTile, reindex, accepts, footprint, entOf, entsOf, entrancesOf, exitTile, SPECIAL_COLORS } from './buildings.js';
 import { tuning } from './tuning.js';
 import { clearRoadTile } from './network.js';
-import { createCar, razeBuilding } from './cars.js';
+import { createCar, addCarsFor, razeBuilding } from './cars.js';
 import { mulberry32 } from './rng.js';
 import { WATER, HILL, LAND } from './terrain.js';
 
@@ -114,7 +114,7 @@ function spawnPairAt(g, color, opts) {
       dest.ent = ent; reindex(g);
       if (opts.color2) dest.color2 = opts.color2;                          // a two-colour destination: either colour's cars may park here
       const house = addBuilding(g, 'house', color, hx, hy, hrot);
-      g.cars.push(createCar(house));
+      addCarsFor(g, house, rng);
       return { dest, house, roads: n };
     }
   }
@@ -146,7 +146,7 @@ function spawnHouseAt(g, color, opts) {
     if (n < minR || n > maxR) continue;
     if (opts.budget !== undefined && buildCost(g, [hex, hey], exits, blocked, opts.budget) > opts.budget) continue;       // can the player afford the road?
     const house = addBuilding(g, 'house', color, hx, hy, hrot);
-    g.cars.push(createCar(house));
+    addCarsFor(g, house, rng);
     return house;
   }
   return null;
@@ -208,7 +208,7 @@ export function spawnHouseAcross(g, color, opts = {}) {
           const dFar = roadsNeeded(g, [hex, hey], new Set([farIdx]), blocked, 10);   // far shore -> house
           if (!Number.isFinite(dFar) || dNear + dFar + 2 > budget) continue;
           const house = addBuilding(g, 'house', color, hx, hy, hrot);
-          g.cars.push(createCar(house));
+          addCarsFor(g, house, rng);
           return { house, span: c, roads: dNear + dFar, needsBridge: !c.covered, item: c.item };
         }
       }
