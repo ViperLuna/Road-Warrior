@@ -291,3 +291,6 @@ Every hotkey is an ACTION with up to two keys (`config/keybinds.json` has the de
 ## Growth clears roads (no filling the map to stop the game)
 If a map is packed with road, new houses and destinations find no free land and the game would never get harder. So when spawning has failed for `spawns.makeRoom.afterTrips` (25) trips, `makeRoomForGrowth` (`spawn.js`) clears the road pieces in the `size` x `size` (7) patch near a destination that has the fewest of them (no building in it, never a bridge / tunnel / overpass; the pieces go back to the player's stock), says so ("The city is growing...", in the history, flies to the spot) and the next spawn uses the room. The stadium (`spawnStadiumClearing`) and the side-road gates (`spawnPortalClearing`) do the same for themselves, and razing buildings is their last resort. The "no room since" counter is reset when a game starts.
 
+
+### Buildings stay off the edge
+`spawnPair` and `spawnHouse` first try with a 2-tile margin from the map edge (`EDGE` in spawn.js) and only fall back to the whole map when nothing fits. That leaves the border free for stadium/side-road gates. Bridge/tunnel ("across") spawns are not affected.

@@ -7,6 +7,9 @@ import { createCar, razeBuilding } from './cars.js';
 import { mulberry32 } from './rng.js';
 import { WATER, HILL, LAND } from './terrain.js';
 
+// Buildings keep this many tiles off the map edge (where side-road gates go) unless nothing else fits.
+const EDGE = 2;
+
 const free = (g, x, y, blocked) =>
   x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] === LAND &&
   !g.buildingAt.has(y * g.cols + x) && !g.roads.has(y * g.cols + x) && !(blocked && blocked.has(y * g.cols + x));
@@ -67,6 +70,10 @@ export function spawnInitial(g, color) {
 
 // opts: rng, region {x0,y0,x1,y1} for the destination's top-left | anchor {x,y,rMin,rMax}, roads [min,max], color2 (make it a two-colour destination), small (a one-building, 2-bay destination), front (use the front entrance only)
 export function spawnPair(g, color, opts = {}) {
+  return spawnPairAt(g, color, { ...opts, margin: EDGE }) || spawnPairAt(g, color, { ...opts, margin: 0 });
+}
+function spawnPairAt(g, color, opts) {
+  const m = opts.margin || 0, inland = (x, y) => x >= m && y >= m && x < g.cols - m && y < g.rows - m;
   const rng = opts.rng || Math.random;
   const [minR, maxR] = opts.roads || [5, 13];
   const ri = (a, b) => a + Math.floor(rng() * (b - a + 1));
@@ -80,7 +87,7 @@ export function spawnPair(g, color, opts = {}) {
     }
     const rot = ri(0, 3), small = !!opts.small, half = small ? ri(0, 1) : 0, fake = { x: ax, y: ay, rot, small, half };
     const tiles = small ? footprint(fake) : [[ax, ay], [ax + 1, ay], [ax, ay + 1], [ax + 1, ay + 1]];
-    if (!tiles.every(([x, y]) => free(g, x, y))) continue;            // checks bounds per tile (no row wrap-around)
+    if (!tiles.every(([x, y]) => free(g, x, y) && inland(x, y))) continue;            // checks bounds per tile (no row wrap-around)
     const fp = new Set(tiles.map(([x, y]) => y * g.cols + x));
 
     // The entrance: any place round the lot that a road can reach (front first half the time, otherwise anywhere that is clear).
@@ -95,7 +102,7 @@ export function spawnPair(g, color, opts = {}) {
 
     for (let h = 0; h < 40; h++) {
       const hx = ri(0, g.cols - 1), hy = ri(0, g.rows - 1), hk = hy * g.cols + hx;
-      if (!free(g, hx, hy, fp)) continue;
+      if (!free(g, hx, hy, fp) || !inland(hx, hy)) continue;
       const hrot = ri(0, 3), hex = hx + DIR[hrot][0], hey = hy + DIR[hrot][1];
       const blocked = new Set([...fp, hk]);
       if (!passable(g, hex, hey, blocked)) continue;
@@ -117,6 +124,10 @@ export function spawnPair(g, color, opts = {}) {
 // Add one house of `color` near an existing destination that takes that colour (reachable over land within `roads`).
 // opts: near (use only this destination), apart {x, y, min} (stay at least `min` tiles from that spot), roads, budget, rng.
 export function spawnHouse(g, color, opts = {}) {
+  return spawnHouseAt(g, color, { ...opts, margin: EDGE }) || spawnHouseAt(g, color, { ...opts, margin: 0 });
+}
+function spawnHouseAt(g, color, opts) {
+  const m = opts.margin || 0;
   const rng = opts.rng || Math.random;
   const [minR, maxR] = opts.roads || [4, 14];
   const dests = opts.near ? [opts.near] : g.buildings.filter(b => b.kind === 'dest' && accepts(b, color.id));
@@ -125,7 +136,7 @@ export function spawnHouse(g, color, opts = {}) {
     const d = dests[Math.floor(rng() * dests.length)];
     const r = 3 + Math.floor(rng() * 7), th = rng() * 6.283;
     const hx = Math.round(d.x + 1 + Math.cos(th) * r), hy = Math.round(d.y + 1 + Math.sin(th) * r);
-    if (!free(g, hx, hy)) continue;
+    if (!free(g, hx, hy) || hx < m || hy < m || hx >= g.cols - m || hy >= g.rows - m) continue;
     if (opts.apart && Math.hypot(hx - opts.apart.x, hy - opts.apart.y) < opts.apart.min) continue;     // keep this house away from another one (so their routes have to merge)
     const hrot = Math.floor(rng() * 4), hex = hx + DIR[hrot][0], hey = hy + DIR[hrot][1];
     const blocked = new Set([hy * g.cols + hx]);

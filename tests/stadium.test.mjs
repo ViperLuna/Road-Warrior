@@ -300,4 +300,16 @@ if (big) {
   ok(evs.some(e => e.type === 'make-room' && e.cleared > 0), 'after ' + prog.spawns.makeRoom.afterTrips + ' trips without room the city clears a patch of road');
   ok(evs.some(e => e.type === 'spawn'), 'and the new buildings are placed in it');
 }
+// ---- buildings keep off the map edge while there is room
+{
+  const sp = await import(R + 'js/spawn.js');
+  st.newGame(5, maps[0]); g.terrain.water.fill(0); g.nextSpawnAt = 1e9; g.nextGoalAt = 1e9; g.buildings = []; g.cars = []; g.roads = new Map(); g.nextId = 1; reindex(g);
+  let edge = 0, made = 0;
+  for (let i = 0; i < 40; i++) {
+    const p = sp.spawnPair(g, palette[i % 2], { anchor: { x: g.cols >> 1, y: g.rows >> 1, rMin: 3, rMax: 14 }, roads: [3, 14] });
+    if (p) { made++; for (const b of [p.dest, p.house]) if (b.x < 2 || b.y < 2 || b.x >= g.cols - 2 || b.y >= g.rows - 2) edge++; }
+  }
+  ok(made > 5 && edge === 0, 'regular buildings stay two tiles off the edge while there is room (' + made + ' pairs, ' + edge + ' on the edge)');
+}
+
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);

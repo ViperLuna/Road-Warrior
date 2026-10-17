@@ -21,3 +21,5 @@
   Tunnels are dug one block at a time now. Each block uses one tunnel piece ($60 in the Shop, or a reward gives a few). Drag from a road into a hill and keep going; tunnels can bend and branch, can be cut like roads, and can be demolished a block at a time. A half-dug tunnel is just a road that goes nowhere yet. Anyone who already had tunnels gets 4 free pieces for each one, for testing early.
   Filling the map with road to stop the game from growing no longer works: the city clears a patch of road to make room for new buildings, and the side roads and the stadium always find a spot (clearing road first, knocking down a building only as a last resort). A wave of side roads that could not place all of its gates keeps trying for the rest.
 
+
+- Houses and destinations now keep two tiles away from the edge of the map, so the side-road gates always have room. They only go there if nothing else fits.
