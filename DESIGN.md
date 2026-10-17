@@ -319,3 +319,7 @@ A stadium's parked cars are out of sight, so its gate pieces are plain straight 
 
 ### Where visitors go
 A steady visitor from a side-road gate (`car.outside`, not `forceStadium`) picks at random among every destination with room that takes its colour, plus the stadium (`planOut`, cars.js). A match crowd (`stepHorde` in outside.js, `launchOutside(..., stadiumOnly = true)`) and house cars sent to a match still go to the stadium only. If the stadium is full, visitors go to the other destinations instead of waiting. They return to their gate when done, as before.
+
+### Parked ideas for difficulty levels (not built)
+- **Per-gate visitor schedules.** Today all side-road gates share one visitor clock (`g.nextOutsideAt`, `visitorInterval`) and one cap (`tuning.outside.maxVisitors`); each launch picks a random connected gate. A toggle could give each gate its own timer so more gates means more traffic.
+- **A second car for some houses.** A small chance (around 10%) that a house gets two cars, each making its own trips and returning home, each trip counting as a trip. Things to check before building it: a car is identified by its house (`createCar` sets `id = house.id`, saves and several lookups key on that), a house's driveway and the road outside it would be shared by two cars, and the `home` cooldown and `homeRoute` ghost logic assume one car per house.
