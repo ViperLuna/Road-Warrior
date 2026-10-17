@@ -324,6 +324,8 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
       else note(e.cleared ? `A stadium has been donated to the city! It took ${bits.join(' and ')} to fit (the road pieces are back in your stock). Connect its gates.` : 'A stadium has been donated to the city! Any colour can go there. Connect its gates.', e.spots);
     }
     if (e.type === 'portal') note(e.count > 1 ? `Side roads to other cities on the ${listOf(e.edges)} edges: connect them to the stadium and every colour.` : `A side road to another city on the ${e.edges[0]} edge: connect it to the stadium and every colour.`, e.spots);
+    if (e.type === 'portal' && (e.cleared || e.razed)) note(`${e.razed ? 'A building' : 'A road piece'} made way for ${e.cleared + e.razed > 1 ? 'the new roads' : 'the new road'} to another city.`, e.spots);
+    if (e.type === 'make-room') note(`The city is growing: ${e.cleared} road piece${e.cleared > 1 ? 's were' : ' was'} cleared to make room for new buildings.`, e.spots);
     if (e.type === 'gate-info') toast(e.demolish ? "That's the road to another city. It can't be demolished." : "This is an expansion to another city you can't see. Visitors come in through here.");
     if (e.type === 'tunnel-bonus') note(`Thanks for testing! Tunnels are dug one block at a time now. Your ${e.tunnels} old tunnel${e.tunnels > 1 ? 's were' : ' was'} converted, and here are ${e.pieces} tunnel pieces for being here early.`);
     if (e.type === 'rotate-blocked') toast("No room to turn this: it needs a free tile of land beside it (or outside its lot).");

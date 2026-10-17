@@ -2,7 +2,7 @@
 import { prog, milestones, roadsAvailable } from './progression.js';
 import { roadConns } from './network.js';
 import { accepts, destWeight } from './buildings.js';
-import { spawnPair, spawnHouse, spawnHouseAcross, spawnPairAcross, findCrossings, spawnStadiumClearing, spawnPortal, EDGE_NAMES } from './spawn.js';
+import { spawnPair, spawnHouse, spawnHouseAcross, spawnPairAcross, findCrossings, spawnStadiumClearing, spawnPortalClearing, makeRoomForGrowth, EDGE_NAMES } from './spawn.js';
 import { stadiumOf, gatesOf, gateConnected } from './outside.js';
 import { bounds } from './buildings.js';
 import { addStadiumWatch, addGateWatch } from './deadlines.js';
@@ -10,7 +10,7 @@ import { addStadiumWatch, addGateWatch } from './deadlines.js';
 export function initProgress(g) {
   g.spawnCount = 0; g.nextSpawnAt = prog.spawns.firstAtTrips;
   g.goalCount = 0; g.nextGoalAt = prog.goals.firstAtTrips; g.prevGoalAt = 0;
-  g.colorsUsed = 1; g.reward = null; g.unlocks = {}; g.portalWaves = 0; g.nextPortalAt = 0;
+  g.colorsUsed = 1; g.reward = null; g.unlocks = {}; g.portalWaves = 0; g.nextPortalAt = 0; g.spawnStuckAt = undefined; g.nextStadiumTry = undefined;
 }
 
 const houseCount = g => g.buildings.filter(b => b.kind === 'house').length;
@@ -136,20 +136,26 @@ function spawnOutsideThings(g, notify) {
     }
     return;
   }
-  const arena = stadiumOf(g), wave = ((milestones.portals || {}).waves || [])[g.portalWaves || 0];
-  if (!arena || !wave || g.trips < wave.afterTrips || g.trips < (g.nextPortalAt ?? 0)) return;
-  const used = new Set(gatesOf(g).map(p => (p.rot + 2) % 4)), free = [0, 1, 2, 3].filter(e => !used.has(e));
+  const arena = stadiumOf(g), waves = (milestones.portals || {}).waves || [];
+  if (!arena) return;
+  const gatesNow = gatesOf(g), done = Math.min(g.portalWaves || 0, waves.length);
+  // The next wave, or (if an earlier wave managed fewer gates than it was due) the gates still owed from it: a wave is never "done" with a gate missing.
+  const owed = Math.min(4, waves.slice(0, done).reduce((n, w) => n + w.count, 0)) - gatesNow.length;
+  const wave = owed > 0 ? { afterTrips: 0, count: owed, owed: true } : waves[done];
+  if (!wave || g.trips < wave.afterTrips || g.trips < (g.nextPortalAt ?? 0)) return;
+  const used = new Set(gatesNow.map(p => (p.rot + 2) % 4)), free = [0, 1, 2, 3].filter(e => !used.has(e));
   for (let i = free.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [free[i], free[j]] = [free[j], free[i]]; }
   const made = [];
   for (const edge of free) {
     if (made.length >= wave.count) break;
-    const p = spawnPortal(g, edge, arena, { budget: roadsAvailable(g) });
-    if (p) made.push({ p, edge });
+    const r = spawnPortalClearing(g, edge, arena, { budget: roadsAvailable(g) });
+    if (r) made.push({ p: r.gate, edge, cleared: r.cleared, razed: r.razed });
   }
   if (!made.length) { g.nextPortalAt = g.trips + 10; return; }
-  g.portalWaves = (g.portalWaves || 0) + 1;
+  if (!wave.owed) g.portalWaves = done + 1;
+  g.nextPortalAt = made.length < wave.count ? g.trips + 10 : 0;               // (short of the full number: try again for the rest soon)
   const names = made.map(m => EDGE_NAMES[m.edge]);
-  notify({ type: 'portal', edges: names, count: made.length, spots: made.map(m => bounds(m.p)) });
+  notify({ type: 'portal', edges: names, count: made.length, spots: made.map(m => bounds(m.p)), cleared: made.reduce((n, m) => n + m.cleared, 0), razed: made.reduce((n, m) => n + m.razed, 0) });
   addGateWatch(g, made.map(m => m.p), names);
 }
 
@@ -158,7 +164,17 @@ export function checkProgress(g, notify) {
   const sp = prog.spawns;
   while (g.trips >= g.nextSpawnAt) {
     const before = g.nextId, r = doSpawn(g);
-    if (!r) { g.nextSpawnAt += 2; break; }                // no room right now; try again soon
+    if (!r) {
+      // No room right now. If that has gone on for a while the map is packed with road: the city grows anyway and clears a patch of it.
+      if (g.spawnStuckAt === undefined) g.spawnStuckAt = g.trips;
+      const mr = sp.makeRoom;
+      if (mr && g.trips - g.spawnStuckAt >= mr.afterTrips) {
+        const made = makeRoomForGrowth(g, mr.size);
+        if (made) { g.spawnStuckAt = g.trips; g.nextSpawnAt = g.trips; notify({ type: 'make-room', cleared: made.cleared, spots: made.spots }); continue; }
+      }
+      g.nextSpawnAt += 2; break;                          // try again soon
+    }
+    g.spawnStuckAt = undefined;
     g.spawnCount++;
     g.nextSpawnAt = g.trips + Math.max(sp.minEveryTrips, Math.round(houseCount(g) * sp.tripsPerHouse));
     notify({ type: 'spawn', ...r, spots: g.buildings.filter(b => b.id >= before).map(bounds) });

@@ -323,8 +323,33 @@ export function spawnStadiumClearing(g, opts = {}) {
 export const EDGE_NAMES = ['north', 'east', 'south', 'west'];
 export const edgeTile = (g, edge, t) => (edge === 0 ? [t, 0] : edge === 2 ? [t, g.rows - 1] : edge === 1 ? [g.cols - 1, t] : [0, t]);
 
-// A side-road gate on one edge of the map, placed where the player could still lay a road from it to the stadium (existing roads are free).
-// Returns the gate or null.
+// The tile in front of a gate (or of anything that has to open onto a road) must be land with no building on it, and must lead somewhere: it is
+// already a road, or one of its other neighbours is a road or open land. So a house or gate is never boxed in by buildings.
+function exitHasRoom(g, ex, ey, gx, gy) {
+  if (ex < 0 || ey < 0 || ex >= g.cols || ey >= g.rows) return false;
+  const k = ey * g.cols + ex;
+  if (g.terrain.water[k] !== LAND || g.buildingAt.has(k)) return false;
+  if (g.roads.has(k)) return true;
+  return DIR.some(([dx, dy]) => {
+    const nx = ex + dx, ny = ey + dy, nk = ny * g.cols + nx;
+    if (nx === gx && ny === gy) return false;
+    return nx >= 0 && ny >= 0 && nx < g.cols && ny < g.rows && (g.roads.has(nk) || (g.terrain.water[nk] === LAND && !g.buildingAt.has(nk)));
+  });
+}
+
+// May this building be knocked down to make room? A destination only if every colour it serves keeps another destination (while it still has houses).
+function razeable(g, b) {
+  if (b.kind === 'portal' || b.stadium) return false;
+  if (b.kind === 'house') return true;
+  for (const c of [b.color, b.color2]) {
+    if (!c) continue;
+    if (g.buildings.some(h => h.kind === 'house' && h.color.id === c.id) && !g.buildings.some(o => o !== b && o.kind === 'dest' && !o.stadium && accepts(o, c.id))) return false;
+  }
+  return true;
+}
+
+// A side-road gate on one edge of the map, placed where the player could still lay a road from it to the stadium (existing roads are free) and
+// where the tile in front of it is free and open (exitHasRoom). Returns the gate or null.
 export function spawnPortal(g, edge, stadium, opts = {}) {
   const rng = opts.rng || Math.random, budget = opts.budget ?? Infinity, span = edge % 2 === 0 ? g.cols : g.rows, rot = (edge + 2) % 4;
   const target = new Set(entsOf(stadium).map(e => exitTile(stadium, e)).map(([x, y]) => y * g.cols + x));
@@ -332,9 +357,72 @@ export function spawnPortal(g, edge, stadium, opts = {}) {
     const [x, y] = edgeTile(g, edge, 2 + Math.floor(rng() * (span - 4)));
     if (!free(g, x, y)) continue;
     const ex = x + DIR[rot][0], ey = y + DIR[rot][1], blocked = new Set([y * g.cols + x]);
-    if (!passable(g, ex, ey, blocked)) continue;
+    if (!exitHasRoom(g, ex, ey, x, y)) continue;
     if (!Number.isFinite(buildCost(g, [ex, ey], target, blocked, budget))) continue;
     return addBuilding(g, 'portal', SPECIAL_COLORS.outside, x, y, rot);
   }
   return null;
+}
+
+// The same, but if the whole edge is taken (lined with roads, say) the gate takes the border tile that costs the least: a plain road piece (never a
+// bridge, tunnel or overpass) is cleared and goes back to the player's stock; if every border tile has a building, the cheapest one that may be
+// razed goes (houses before destinations; never a stadium, a gate, or the last destination of a colour). Returns { gate, cleared, razed } or null.
+export function spawnPortalClearing(g, edge, stadium, opts = {}) {
+  const free1 = spawnPortal(g, edge, stadium, opts);
+  if (free1) return { gate: free1, cleared: 0, razed: 0 };
+  const budget = opts.budget ?? Infinity, span = edge % 2 === 0 ? g.cols : g.rows, rot = (edge + 2) % 4;
+  const target = new Set(entsOf(stadium).map(e => exitTile(stadium, e)).map(([x, y]) => y * g.cols + x));
+  const price = b => (b.kind === 'house' ? 6 : 15);
+  // Two passes. First the careful one (see above). If it finds nothing, the LAST RESORT: the gate has to happen, so it takes whatever is cheapest,
+  // including a destination even if it is the last of its colour, and a building standing on the tile in front of it (that goes too).
+  for (const lastResort of [false, true]) {
+    let best = null;
+    for (let t = 2; t < span - 2; t++) {
+      const [x, y] = edgeTile(g, edge, t), k = y * g.cols + x;
+      if (g.terrain.water[k] !== LAND) continue;
+      const b = g.buildingAt.get(k) || null, r = g.roads.get(k) || null;
+      if (b && !(lastResort ? b.kind === 'house' || (b.kind === 'dest' && !b.stadium) : razeable(g, b))) continue;
+      if (r && (r.bridge || r.tunnel || r.overpass !== undefined)) continue;
+      const ex = x + DIR[rot][0], ey = y + DIR[rot][1];
+      if (ex < 0 || ey < 0 || ex >= g.cols || ey >= g.rows || g.terrain.water[ey * g.cols + ex] !== LAND) continue;
+      const eb = g.buildingAt.get(ey * g.cols + ex) || null;
+      if (eb && (!lastResort || !(eb.kind === 'house' || (eb.kind === 'dest' && !eb.stadium)))) continue;
+      if (!eb && !exitHasRoom(g, ex, ey, x, y)) continue;
+      const cost = (r ? 1 : 0) + (b ? price(b) : 0) + (eb ? price(eb) : 0);
+      if (best && cost >= best.cost) continue;
+      if (!eb && !b && !Number.isFinite(buildCost(g, [ex, ey], target, new Set([k]), budget)) && !Number.isFinite(buildCost(g, [ex, ey], target, new Set([k]), Infinity))) continue;
+      best = { x, y, b, eb, r, cost };
+    }
+    if (!best) continue;
+    const gone = [best.b, best.eb].filter(Boolean);
+    for (const v of gone) razeBuilding(g, v);
+    const cleared = best.r && clearRoadTile(g, best.x, best.y) ? 1 : 0;
+    return { gate: addBuilding(g, 'portal', SPECIAL_COLORS.outside, best.x, best.y, rot), cleared, razed: gone.length };
+  }
+  return null;
+}
+
+// New houses and destinations need free land. If the map is so full of roads that nothing fits, the city grows anyway: this clears the road
+// pieces in the size x size patch (near existing buildings, no building in it, no bridge / tunnel / overpass) that has the fewest of them, and
+// they go back to the player's stock. Returns { cleared, spots } or null.
+export function makeRoomForGrowth(g, size = 7, rng = Math.random) {
+  let best = null;
+  const anchors = g.buildings.filter(b => b.kind === 'dest' && !b.stadium).concat(g.buildings.filter(b => b.kind === 'dest' && !b.stadium).length ? [] : g.buildings);       // (near destinations: new houses are placed round them)
+  for (let attempt = 0; attempt < 400 && anchors.length; attempt++) {
+    const a = anchors[Math.floor(rng() * anchors.length)], r = 3 + Math.floor(rng() * 12), th = rng() * 6.283;
+    const x0 = Math.round(a.x + Math.cos(th) * r) - (size >> 1), y0 = Math.round(a.y + Math.sin(th) * r) - (size >> 1);
+    let roads = 0, ok = true;
+    for (let y = y0; y < y0 + size && ok; y++) for (let x = x0; x < x0 + size; x++) {
+      if (x < 1 || y < 1 || x >= g.cols - 1 || y >= g.rows - 1) { ok = false; break; }
+      const k = y * g.cols + x, rd = g.roads.get(k);
+      if (g.terrain.water[k] !== LAND || g.buildingAt.has(k) || (rd && (rd.bridge || rd.tunnel || rd.overpass !== undefined))) { ok = false; break; }
+      if (rd) roads++;
+    }
+    if (!ok || roads === 0) continue;
+    if (!best || roads < best.roads) best = { x0, y0, roads };
+  }
+  if (!best) return null;
+  let cleared = 0;
+  for (let y = best.y0; y < best.y0 + size; y++) for (let x = best.x0; x < best.x0 + size; x++) if (g.roads.has(y * g.cols + x) && clearRoadTile(g, x, y)) cleared++;
+  return { cleared, spots: [{ x0: best.x0, y0: best.y0, x1: best.x0 + size - 1, y1: best.y0 + size - 1 }] };
 }

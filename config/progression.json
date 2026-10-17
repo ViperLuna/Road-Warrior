@@ -30,6 +30,10 @@
     },
     "small": {
       "chance": 0.25
+    },
+    "makeRoom": {
+      "afterTrips": 25,
+      "size": 7
     }
   },
   "specials": [
