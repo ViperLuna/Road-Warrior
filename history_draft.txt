@@ -32,3 +32,5 @@
 - Road works: from 1,500 trips, the accident timer sometimes brings road works instead of a crash. One straight road tile gets little orange cones down one lane. The cars on that side wait for the oncoming traffic to clear, then swing into the open lane, so the tile works like a one-lane bridge. It lasts 40 seconds, can land on either side of the road, and never puts a wreck and road works on the map together.
 
 - The road under a wreck, and the tile with road works, can't be demolished until the police or the crew are done.
+
+- Fixed: cars coming out of a stadium gate started from the left-hand bay and swung across the whole gate, taking up both lanes and holding up traffic. Now cars go in and out of a stadium gate in a straight line in their own lane, and a car leaving no longer blocks one arriving.

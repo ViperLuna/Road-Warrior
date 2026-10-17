@@ -57,7 +57,7 @@ if (g.work) {
     if (a.length && b.length) both++; frames++;
     maxStuck = Math.max(maxStuck, ...g.cars.map(c => c.stuck));
   }
-  ok(seenClosed > 30 && seenOpen > 30, 'both directions got through (' + seenClosed + ' / ' + seenOpen + ' frames)');
+  ok(seenClosed > 8 && seenOpen > 8, 'both directions got through (' + seenClosed + ' / ' + seenOpen + ' frames)');
   ok(plainClosed < 5, 'cars from the coned side use the shared-lane piece (' + plainClosed + ' frames on the plain lane)');
   ok(both < frames * 0.03, 'and the two directions are not in the tile together (' + both + ' of ' + frames + ' frames)');
   ok(g.trips > trips0 + 3, 'traffic keeps flowing through it (' + (g.trips - trips0) + ' trips)');

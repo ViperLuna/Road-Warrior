@@ -312,4 +312,19 @@ if (big) {
   ok(made > 5 && edge === 0, 'regular buildings stay two tiles off the edge while there is room (' + made + ' pairs, ' + edge + ' on the edge)');
 }
 
+// ---- a stadium gate keeps each car in its own lane (no swinging across the gate from a left-hand bay)
+{
+  const L = await import(R + 'js/lanes.js'), { pieceConflict } = await import(R + 'js/junction.js');
+  let straight = true, apart = true;
+  for (const rot of [0, 1, 2, 3]) for (const ent of [8, 9, 10, 11]) for (const k of [0, 1]) {
+    const X = L.DIR[rot], T = L.rt(X), tile = ent - 9, ce = [30 + 1 + X[0] * 0.5 + T[0] * (tile - 0.5), 20 + 1 + X[1] * 0.5 + T[1] * (tile - 0.5)];
+    const lat = pt => (pt[0] - ce[0]) * T[0] + (pt[1] - ce[1]) * T[1];
+    const inP = L.lotInPiece(30, 20, rot, ent, 2 * tile + k), outP = L.lotOutPiece(30, 20, rot, 2 * tile + k, ent);
+    if (!inP.xy.every(pt => Math.abs(lat(pt) + L.LANE) < 1e-6) || !outP.xy.every(pt => Math.abs(lat(pt) - L.LANE) < 1e-6)) straight = false;
+    if (pieceConflict(inP, outP, 0.1) || pieceConflict(outP, inP, 0.1)) apart = false;
+  }
+  ok(straight, 'cars go into a stadium gate on the right-hand lane and come out on theirs, in a straight line');
+  ok(apart, 'and a car coming out does not hold up one going in');
+}
+
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);

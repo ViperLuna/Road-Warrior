@@ -215,6 +215,7 @@ export function lotInPiece(bx, by, rot, ent, k) {
   const h = [-out[0], -out[1]], slot = slotPos(bx, by, rot, k);
   const p0 = mad(mad(ce, out, 0.5), rt(h), LANE);
   const extra = { tx: Math.floor(ce[0]), ty: Math.floor(ce[1]), bx, by, rot, ent };
+  if (ent >= 8) return line(key, 'lot_in', p0, mad(mad(ce, out, 0.04), rt(h), LANE), { ...extra, gate: true });     // a stadium gate: straight in on the right-hand lane (the car is out of sight once parked)
   if (code === 0) {
     // Front, same side: a short curve into the bay. Other side: stay out in the aisle (clear of parked noses), then turn in.
     const near = (k >> 1) === tile;
@@ -232,6 +233,7 @@ export function lotOutPiece(bx, by, rot, k, ent) {
   const { X, out, code, tile, ce } = entrance(bx, by, rot, ent);
   const slot = slotPos(bx, by, rot, k), p3 = mad(mad(ce, out, 0.5), rt(out), LANE);
   const extra = { tx: Math.floor(ce[0]), ty: Math.floor(ce[1]), bx, by, rot, ent };
+  if (ent >= 8) return line(key, 'lot_out', mad(mad(ce, out, 0.04), rt(out), LANE), p3, { ...extra, gate: true });      // a stadium gate: straight out from the right-hand lane
   if (code === 0) {
     const near = (k >> 1) === tile;
     return make(key, 'lot_out', slot, mad(slot, X, near ? 0.27 : 0.42), mad(p3, X, near ? -0.25 : -0.16), p3, extra);
