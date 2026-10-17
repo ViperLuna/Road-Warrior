@@ -18,6 +18,7 @@
     "test:deadlines": "node tests/deadlines.test.mjs",
     "test:construction": "node tests/construction.test.mjs",
     "test:lanes": "node tests/lanes.test.mjs",
+    "test:bridgelight": "node tests/bridgelight.test.mjs",
     "test:signals": "node tests/signals.test.mjs",
     "test:tunnel": "node tests/tunnel.test.mjs",
     "test:keys": "node tests/keys.test.mjs",

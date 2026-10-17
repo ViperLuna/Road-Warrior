@@ -739,7 +739,7 @@ export function overpassFit(x, y) {
 export function placeSpecial(id, x, y) {
   if (!hasRoad(x, y)) return "none";
   const r = game.roads.get(tileIndex(x, y));
-  if (r.bridge || r.tunnel) return "badtile";
+  if (r.tunnel || (r.bridge && id !== "light")) return "badtile"; // (a bridge only takes a traffic light, and only where a road meets it: see the 3-way check below)
   if (id === "overpass" && r.overpass !== undefined) {
     // tap an overpass again: swap which road goes over
     const next = 1 - r.overpass;
@@ -870,7 +870,11 @@ export function demolish(x, y) {
   if (r.bridge) {
     // removing any bridge tile removes the whole bridge
     const id = r.bridge;
-    for (const k of game.bridges.get(id) || []) game.roads.delete(k);
+    for (const k of game.bridges.get(id) || []) {
+      const t = game.roads.get(k);
+      if (t && t.special) game.inv[t.special] = (game.inv[t.special] || 0) + 1; // a light on the bridge comes back too
+      game.roads.delete(k);
+    }
     game.bridges.delete(id);
     const item = "bridge";
     game.inv[item] = (game.inv[item] || 0) + 1;

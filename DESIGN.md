@@ -313,3 +313,6 @@ A stadium's parked cars are out of sight, so its gate pieces are plain straight 
 
 ### Lanes follow the turn (4-lane roads)
 `roadPieces` (cars.js) gives every step of a route its lane: a right turn uses the outer lane (1), a left turn the inner lane (0). A car moves into the lane for its next turn as early as it can (the first straight tile after its previous turn) and a turn leaves it in the lane it turned into. The random inner/outer pick only applies to a run with no turn in it. 2-lane edges (and the edge to a building) always collapse to the one lane. `tests/lanes.test.mjs` runs a stadium on a highway in all four rotations.
+
+### Lights on bridges
+`placeSpecial` allows `light` (only) on a bridge tile, and only where it already has 3 or more connections (a road meeting the span from the side). Nothing else changes: the junction/light logic is per road tile and a bridge tile is a normal road entry with a `bridge` flag. Demolishing a bridge returns any light on its tiles (`demolish`, state.js). Roundabouts, overpasses and everything on tunnel tiles stay blocked. `tests/bridgelight.test.mjs` covers placement, cycling and the refund.

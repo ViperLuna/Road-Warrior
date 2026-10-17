@@ -117,7 +117,7 @@ export function render(ctx, W, H, dpr, game, cam, hover) {
     else if (game.tool === 'build') ok = isHillAt(hover.x, hover.y) ? !road && (game.inv.tunnel || 0) > 0 && [[0, -1], [1, 0], [0, 1], [-1, 0]].some(([dx, dy]) => hasRoad(hover.x + dx, hover.y + dy)) : !w && !road && game.inv.road > 0;
     else if (game.tool === 'place') {
       const r = game.roads.get(tileIndex(hover.x, hover.y));
-      ok = !!r && !r.bridge && !r.tunnel && (game.placing === 'overpass' ? (r.overpass !== undefined || (!r.special && typeof overpassFit(hover.x, hover.y) === 'object')) : !r.special && roadConns(game, hover.x, hover.y).length >= 3);
+      ok = !!r && (!r.bridge || game.placing === 'light') && !r.tunnel && (game.placing === 'overpass' ? (r.overpass !== undefined || (!r.special && typeof overpassFit(hover.x, hover.y) === 'object')) : !r.special && roadConns(game, hover.x, hover.y).length >= 3);
     }
     ctx.strokeStyle = game.tool === 'pan' ? 'rgba(255,255,255,.5)' : ok ? 'rgba(255,255,255,.95)' : 'rgba(255,90,80,.95)';
     ctx.lineWidth = 2.5 / cam.z;

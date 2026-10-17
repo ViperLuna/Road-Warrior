@@ -88,7 +88,7 @@ function stepCut(st, x, y) {
 
 
 const PLACE_MSG = {
-  none: 'Tap a road tile.', badtile: "Can't go on a bridge or tunnel.", taken: 'That intersection already has one.',
+  none: 'Tap a road tile.', badtile: "Only a traffic light can go on a bridge, and nothing goes in a tunnel.", taken: 'That intersection already has one.',
   notjunction: 'Needs an intersection: 3 or more roads meeting.', empty: 'None left.',
   toonear: 'Too close to another light. Leave at least one tile between lights.',
   highway: 'Roundabouts only fit on regular streets.',
