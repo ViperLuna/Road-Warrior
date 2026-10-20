@@ -54,12 +54,12 @@ function stepHorde(g, gates, notify) {
     else if (g.time >= g.hordeNextCar) {
       // some of the crowd come from the player's own houses, the rest from outside
       const car = (Math.random() < h.houseShare && sendHouseCarToStadium(g)) || launchOne(g, gates, true);
-      if (car) { g.hordeLeft--; g.hordeNextCar = g.time + h.spacingSeconds * (0.7 + Math.random() * 0.6); }
+      if (car) { car.crowd = true; g.hordeLeft--; g.hordeNextCar = g.time + h.spacingSeconds * (0.7 + Math.random() * 0.6); }
       else g.hordeNextCar = g.time + 0.5;
     }
     if (g.hordeLeft <= 0) {
       g.hordeAt = g.time + rand(h.everyMinutes[0], h.everyMinutes[1]) * 60;
-      g.match = { phase: 'play', whistleAt: g.time + tuning.stadium.matchSeconds };           // everyone is in (or on the way): the game is on
+      g.match = { phase: 'gather', whistleAt: 0, gatherUntil: g.time + h.gatherSeconds };      // the last car has set off: wait for the stragglers, but not for ever
     }
     return;
   }
@@ -74,6 +74,9 @@ function stepHorde(g, gates, notify) {
 // The final whistle: the crowd makes some noise (`whistle` event: the sound is the listener's business) and then everyone in the stadium
 // leaves, staggered over exitSpreadSeconds, each by a random gate.
 function stepMatch(g, arena, notify) {
+  if (g.match && g.match.phase === 'gather' && (g.time >= g.match.gatherUntil || !g.cars.some(c => c.crowd && c.state === 'out'))) {
+    g.match = { phase: 'play', whistleAt: g.time + tuning.stadium.matchSeconds };           // everyone has parked, or the wait ran out: kick-off
+  }
   if (!g.match || g.match.phase !== 'play' || g.time < g.match.whistleAt) return;
   g.match = { phase: 'none', whistleAt: 0 };
   let n = 0;

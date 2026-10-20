@@ -333,3 +333,6 @@ A Difficulty section in Settings made of toggles, each a named bundle of config 
 - **Frame-time readout:** a dev pill showing drawing and simulation cost in milliseconds, so phone tests give numbers.
 - **Terrain cache for very large maps** (already parked) is the first thing to build if Metro or a larger SuperMetro stutters.
 - Testing note: the S26 Ultra is not a representative phone; ask for a mid-range or older device.
+
+### Kick-off waits for the crowd
+When the last car of a horde has been launched, the match goes into a `gather` phase (`g.match`, outside.js) for up to `outside.horde.gatherSeconds` (30). It kicks off (`play`, then the whistle after `stadium.matchSeconds`) as soon as no car of the crowd (`car.crowd`) is still driving to the stadium, or when the 30 seconds run out, whichever is first. Cars arriving after kick-off stay parked until the whistle, as before. A save keeps the phase but not the crowd marks, so a game loaded mid-gather kicks off at once.

@@ -83,6 +83,7 @@
       "sizeMax": 32,
       "spacingSeconds": 0.9,
       "giveUpSeconds": 40,
+      "gatherSeconds": 30,
       "houseShare": 0.3
     }
   },

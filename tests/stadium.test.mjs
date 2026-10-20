@@ -122,7 +122,13 @@ if (A3 && gate) {
   // a whole match: the crowd stays for the match, then the whistle sends everyone out by random gates
   { const a = stadiumOf(g); for (const c of g.cars) if (c.outside) c.dwell = 0.01; g.nextOutsideAt = 1e9; g.hordeLeft = 0; g.match = { phase: 'none', whistleAt: 0 }; tickN(150);
     events.length = 0; g.hordeAt = g.time; const inStadium = () => g.cars.filter(c => c.state === 'dwell' && c.dest === a).length;
-    for (let i = 0; i < 60 * 60 && !(g.hordeLeft === 0 && g.match.phase === 'play' && g.hordeCount > 0 && events.some(e => e.type === 'horde')); i++) st.tick(1 / 60);
+    let sawGather = false, kickoff = null;
+    for (let i = 0; i < 60 * 60 && !(g.hordeLeft === 0 && g.match.phase === 'play' && g.hordeCount > 0 && events.some(e => e.type === 'horde')); i++) {
+      const before = g.match.phase, until = g.match.gatherUntil; st.tick(1 / 60);
+      if (g.match.phase === 'gather') sawGather = true;
+      if (before === 'gather' && g.match.phase === 'play') kickoff = { straggling: g.cars.filter(c => c.crowd && c.state === 'out').length, late: g.time >= until };
+    }
+    ok(sawGather && kickoff && (kickoff.straggling === 0 || kickoff.late), 'the match kicks off once the crowd has parked, or when the wait runs out (' + JSON.stringify(kickoff) + ')');
     ok(g.match.phase === 'play' && g.match.whistleAt > g.time + 30, 'after the last arrival the game is on (whistle in ' + (g.match.whistleAt - g.time).toFixed(0) + ' s)');
     tickN(15); const full = inStadium(); ok(full >= 3, 'the crowd is inside (' + full + ' cars)');
     tickN(20); ok(inStadium() >= full - 1, 'and nobody leaves before the whistle (' + inStadium() + ' of ' + full + ')');
