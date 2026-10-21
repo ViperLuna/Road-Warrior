@@ -79,7 +79,7 @@ export function restore(data, g = game) {
   g.over = null;
   g.reward = data.reward ? { goal: data.reward.goal, options: data.reward.options.map(o => ({ ...o, special: o.special ? specialInfo(o.special) : undefined })) } : null;
   g.mode = g.reward ? 'reward' : 'play';
-  g.tool = 'build'; g.placing = null;
+  g.tool = 'pan'; g.placing = null;            // a loaded game opens in Move mode, so nothing gets built or demolished by an accidental tap
   g.speed = 0;                      // come back paused: no surprise traffic while you find your bearings
 
   const slotsById = new Map();

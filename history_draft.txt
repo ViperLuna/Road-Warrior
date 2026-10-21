@@ -44,3 +44,5 @@
 - Some houses now get a second car (10% of them, set in config/tuning.json as houses.secondCarChance). The two cars make their own trips and each trip counts, so a busy map gets busier. The second one waits for the first to pull out of the driveway.
 
 - The match at the stadium now waits for the crowd: once the last car of a crowd has set off, there is a 30 second grace period. If everyone has parked before it runs out, the game starts right away; if some are still on the road when it runs out, the game starts anyway and the stragglers wait inside when they arrive.
+
+- A saved game now opens in Move mode, so a stray tap can't build or demolish anything while you find your bearings. A new game starts in Build mode.

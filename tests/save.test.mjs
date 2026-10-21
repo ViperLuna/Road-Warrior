@@ -81,4 +81,8 @@ const L = await import(R + 'js/lanes.js');
 for (const key of ['li:41,-1:1:1>2', 'lo:-1,5:2:3>-1', 'lo:4,-1:0:-1>0']) { let p = null; try { p = L.pieceFromKey(key); } catch {} ok(p && p.key === key, `piece key ${key} round-trips`); }
 // bad data is refused, not half-loaded
 let threw = false; try { S.restore({ version: 99 }); } catch { threw = true; } ok(threw, 'unknown save version is rejected');
+// a new game starts in Build mode, a loaded one in Move mode
+{ st.newGame(9, maps[0]); st.setTool('destroy'); st.newGame(10, maps[0]); ok(g.tool === 'build' && g.placing === null, 'a new game starts in Build mode');
+  g.mode = 'play'; const snap = JSON.parse(JSON.stringify(S.serialize())); st.setTool('build'); S.restore(snap); ok(g.tool === 'pan', 'a loaded game opens in Move mode'); }
+
 console.log(pass, 'passed', fail, 'failed');
