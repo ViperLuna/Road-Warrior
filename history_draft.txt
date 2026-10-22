@@ -48,3 +48,5 @@
 - A saved game now opens in Move mode, so a stray tap can't build or demolish anything while you find your bearings. A new game starts in Build mode.
 
 - Oncoming cars that both turn left at the same junction no longer make one wait for the other. Left and right turns now cut in a little earlier (tighter curves), so the two left turns pass each other in the middle like real drivers do, and the paths of other turns that don't really cross stay clear of each other.
+
+- Fixed: on a 4-lane road, two cars side by side at a green light could hold each other up. If the straight-on car in one lane couldn't move because the road beyond was backed up, a car in the next lane that wanted to turn waited for it too, even though its own way was clear. A car that can't move off the line no longer holds anyone else up. In bot test games this cut the number of jam warnings roughly in half.

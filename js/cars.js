@@ -369,6 +369,9 @@ function analyse(g, dt) {
       // A roundabout only yields to traffic already circulating (the 'inside' check above) or about to enter right now,
       // never to a car that is merely on its way: that would make it behave like a stop sign.
       if (J.round && !o.commit && o.entry.dist - STOP_OFFSET > 0.3) continue;
+      // A car that is held because the road beyond is full (or the junction after this one) cannot move off the line, so it must not hold up a
+      // car whose own way is clear: a right turn waiting for a straight-on car in the next lane that is itself stuck behind the queue.
+      if (o !== car && !o.commit && /^(box|chain)/.test(o.why || '')) continue;
       if (o !== car && (!(car.force > 0) || (o.commit && !(o.v < 0.3 && Math.max(car.stuck, car.holdT || 0) > tuning.gridlock.warnAfterSeconds * 1.3))) && pieceConflict(q, o.entry.q, 0) && outranks(o, car, J)) { blocked = true; car.why = 'outranked:' + o.id; break; }
     }
     // Never end up waiting *inside* a junction: the whole chain of junction/lot pieces ahead must be
