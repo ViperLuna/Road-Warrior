@@ -47,4 +47,14 @@ for (const rot of [0, 1, 2, 3]) {
   ok(jump === 0, 'rot ' + rot + ': the route pieces join up (' + jump + ' jumps)');
   ok(g.trips > 3, 'rot ' + rot + ': traffic moves (' + g.trips + ' trips)');
 }
+// ---- oncoming cars both turning left pass each other instead of waiting (the turns cut in early, as real drivers do)
+{
+  const { pieceConflict } = await import(R + 'js/junction.js'), L = await import(R + 'js/lanes.js'), { default: _ } = { default: 0 };
+  const rp = (i, o, ex = {}) => L.roadPiece(10, 10, i, o, ex), four = { tl: 4, ei: 4, eo: 4, li: 0, lo: 0 };
+  ok(!pieceConflict(rp(1, 2), rp(3, 0), 0) && !pieceConflict(rp(3, 0), rp(1, 2), 0) && !pieceConflict(rp(0, 3), rp(2, 1), 0), 'oncoming left turns do not conflict (2-lane)');
+  ok(!pieceConflict(rp(1, 2, four), rp(3, 0, four), 0) && !pieceConflict(rp(2, 1, four), rp(0, 3, four), 0), 'and not on a 4-lane road either');
+  ok(!pieceConflict(rp(1, 2), rp(2, 1), 0) && !pieceConflict(rp(2, 1), rp(1, 2), 0), 'the swap-streets pair (left x right) still does not conflict');
+  ok(pieceConflict(rp(1, 2), rp(3, 1), 0), 'a left turn still waits for oncoming traffic going straight');
+  ok(pieceConflict(rp(1, 2), rp(0, 2), 0) || pieceConflict(rp(0, 2), rp(1, 2), 0), 'and for a car merging into the same lane');
+}
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);

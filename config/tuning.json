@@ -25,7 +25,9 @@
     "acceleration": 5,
     "braking": 11,
     "minGapTiles": 0.1,
-    "conflictDistance": 0.205
+    "conflictDistance": 0.205,
+    "leftTurnTightness": 0.45,
+    "rightTurnTightness": 0.45
   },
   "gridlock": {
     "warnAfterSeconds": 12,

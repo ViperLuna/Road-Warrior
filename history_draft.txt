@@ -46,3 +46,5 @@
 - The match at the stadium now waits for the crowd: once the last car of a crowd has set off, there is a 30 second grace period. If everyone has parked before it runs out, the game starts right away; if some are still on the road when it runs out, the game starts anyway and the stragglers wait inside when they arrive.
 
 - A saved game now opens in Move mode, so a stray tap can't build or demolish anything while you find your bearings. A new game starts in Build mode.
+
+- Oncoming cars that both turn left at the same junction no longer make one wait for the other. Left and right turns now cut in a little earlier (tighter curves), so the two left turns pass each other in the middle like real drivers do, and the paths of other turns that don't really cross stay clear of each other.

@@ -1,5 +1,6 @@
 // Lane geometry. Every movement is a "piece": a cubic Bezier a car follows (road tile traversal,
 // house driveway, parking-lot entry/exit). Traffic is US right-hand: lanes sit LANE to the car's right.
+import { tuning } from './tuning.js';
 export const DIR = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // N E S W (screen coords, y down)
 export const OPP = [2, 3, 0, 1];
 export const LANE = 0.115;       // lane centre offset from road centre (2-lane road)
@@ -97,7 +98,7 @@ export function roadPiece(x, y, inS, outS, o = {}) {
   const dot = (p3[0] - p0[0]) * h0[0] + (p3[1] - p0[1]) * h0[1];
   const q = mad(p0, h0, dot);
   const right = h0[0] * h1[1] - h0[1] * h1[0] > 0;
-  const k = 2 / 3;
+  const k = right ? (tuning.cars.rightTurnTightness ?? 2 / 3) : (tuning.cars.leftTurnTightness ?? 2 / 3);        // (a left turn cuts in earlier than a right one: oncoming left turns then pass each other instead of meeting in the middle)
   return make(key, 'road', p0, mad(p0, [q[0] - p0[0], q[1] - p0[1]], k), mad(p3, [q[0] - p3[0], q[1] - p3[1]], k), p3,
     { ...extra, turn: right ? 'right' : 'left', taper: Math.abs(offIn - offOut) > 1e-9 });
 }
