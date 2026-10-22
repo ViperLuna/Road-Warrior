@@ -73,7 +73,9 @@ function pairGeometry(a, b) {
   // across a neighbouring lane. Two cars making the *same* movement in side-by-side lanes simply travel together.
   const lot = (a.kind !== 'road' || b.kind !== 'road') && !(a.gate && b.gate);      // (a stadium gate's two lanes run straight, side by side: no swinging cars to allow for)
   r.together = !lot && a.in === b.in && a.out === b.out && (a.li ?? 0) !== (b.li ?? 0) && (a.lo ?? 0) !== (b.lo ?? 0) && a.tl === b.tl;
-  const wide = !lot && (a.tl === 4 || b.tl === 4);
+  // (two lanes of the SAME approach start a lane apart and either run side by side or part company, so they only conflict if they really
+  // come within a car's width: the extra margin is for streets that cross, and for lane changes, which do cross)
+  const wide = !lot && (a.tl === 4 || b.tl === 4) && a.in !== b.in;
   const thr = tuning.cars.conflictDistance + (lot ? 0.1 : wide ? 0.05 : 0), t2 = thr * thr;
   for (let j = b.xy.length - 1; j >= 0 && r.last < 0; j--) {
     const bx = b.xy[j][0], by = b.xy[j][1];

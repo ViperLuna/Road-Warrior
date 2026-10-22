@@ -47,4 +47,22 @@ ok(r.tB !== null && r.tB < 3, 'a left turn is not held up by a stuck straight-on
 // the same at a plain stop-sign junction
 setup(null); r = timeThrough({ route: straight(0) }, { route: rightTurn }, [T4(9, 10, 1, 3, 0, 0), T4(8, 10, 1, 3, 0, 0)]);
 ok(r.tB !== null && r.tB < 4, 'and at a stop-sign junction (through in ' + (r.tB && r.tB.toFixed(1)) + ' s)');
+
+// ---- a left-turner in the inner lane goes with the queue of straight-on cars in the outer lane (heading north through the junction)
+{
+  const { pieceConflict } = await import(R + 'js/junction.js');
+  ok(!pieceConflict(T4(10, 10, 2, 3, 0, 0), T4(10, 10, 2, 0, 1, 1), 0) && !pieceConflict(T4(10, 10, 2, 0, 1, 1), T4(10, 10, 2, 3, 0, 0), 0), 'an inner-lane left turn and an outer-lane straight car of the same approach do not conflict');
+  ok(!pieceConflict(T4(10, 10, 2, 1, 1, 1), T4(10, 10, 2, 0, 0, 0), 0), 'nor an outer-lane right turn and an inner-lane straight car');
+  ok(pieceConflict(T4(10, 10, 1, 3, 0, 1), T4(10, 10, 1, 3, 1, 1), 0), 'but a car changing lanes inside the junction still conflicts with the lane it moves into');
+  ok(pieceConflict(T4(10, 10, 1, 3, 0, 0), T4(10, 10, 2, 0, 1, 1), 0), 'and crossing streets keep their wider margin');
+  setup('light'); const r = g.roads.get(10 * g.cols + 10); r.sig = { axis: 0, stage: 'green', t: 0, dem: [0, 0] };
+  for (let d = -7; d <= 7; d++) { if (d && !g.roads.has((10 + d) * g.cols + 10)) { g.build4 = true; st.buildRoad(10, 10 + d); g.build4 = false; } }
+  reindex(g);
+  const north = (y0, lane) => { const rt = []; for (let y = y0; y >= 5; y--) rt.push(T4(10, y, 2, 0, lane, lane)); return rt; };
+  const lt = [T4(10, 11, 2, 0, 0, 0), T4(10, 10, 2, 3, 0, 0), T4(9, 10, 1, 3, 0, 0), T4(8, 10, 1, 3, 0, 0), T4(7, 10, 1, 3, 0, 0)];
+  const left = car(lt, 0.5), line = [0.5, 0.2, 0.9, 0.6, 0.3].map((s, i) => car(north(i < 1 ? 11 : 12 + Math.floor(i / 2), 1), s));
+  let tLeft = null, tLast = null;
+  for (let i = 0; i < 60 * 30 && (tLeft === null || tLast === null); i++) { st.tick(1 / 60); const inJ = c => c.route[c.idx] && c.route[c.idx].tx === 10 && c.route[c.idx].ty === 10; if (tLeft === null && inJ(left)) tLeft = i / 60; if (tLast === null && inJ(line[4])) tLast = i / 60; }
+  ok(tLeft !== null && tLast !== null && tLeft < tLast - 0.5, 'a left-turner at the front of the inner lane goes with the straight-on queue, not after it (it entered at ' + (tLeft && tLeft.toFixed(1)) + ' s, the last straight car at ' + (tLast && tLast.toFixed(1)) + ' s)');
+}
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);
