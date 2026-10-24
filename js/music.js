@@ -98,7 +98,7 @@ function play(idx) {
   from.gain.gain.cancelScheduledValues(now);
   from.gain.gain.setValueAtTime(from.gain.gain.value, now);
   from.gain.gain.linearRampToValueAtTime(0, now + fade);
-  // The old song stops once its fade-out is done. That timer belongs to the slot and is cancelled if the slot gets a new song first
+  // The old song stops once its fade-out is done. That timer belongs to the slot and is canceled if the slot gets a new song first
   // (skipping quickly), otherwise it would pause a song that has since been started again.
   clearTimeout(to.timer); clearTimeout(from.timer);
   fading = true; active = 1 - active;

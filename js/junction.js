@@ -70,7 +70,7 @@ function pairGeometry(a, b) {
   }
 
   // Parking-lot moves get a wider margin (cars there are swinging around); so do highway lanes, where cars cut diagonally
-  // across a neighbouring lane. Two cars making the *same* movement in side-by-side lanes simply travel together.
+  // across a neighboring lane. Two cars making the *same* movement in side-by-side lanes simply travel together.
   const lot = (a.kind !== 'road' || b.kind !== 'road') && !(a.gate && b.gate);      // (a stadium gate's two lanes run straight, side by side: no swinging cars to allow for)
   r.together = !lot && a.in === b.in && a.out === b.out && (a.li ?? 0) !== (b.li ?? 0) && (a.lo ?? 0) !== (b.lo ?? 0) && a.tl === b.tl;
   // (two lanes of the SAME approach start a lane apart and either run side by side or part company, so they only conflict if they really

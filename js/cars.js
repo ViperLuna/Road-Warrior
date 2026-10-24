@@ -8,7 +8,7 @@ import { tuning } from './tuning.js';
 import { junctionAt, junctionCache, pieceConflict, outranks } from './junction.js';
 
 const TURN_RATE = 12;
-const STOP_OFFSET = CAR_LEN / 2 + 0.12;       // where a held car's centre stops, back from the junction edge
+const STOP_OFFSET = CAR_LEN / 2 + 0.12;       // where a held car's center stops, back from the junction edge
 const CHAIN_LIGHT_MARGIN = 2;                 // seconds a light just beyond a plain junction must stay green to be worth entering
 
 // Target speed (tiles/s) for a piece: lane-count base speed x movement-type factor.
@@ -93,10 +93,10 @@ function planOut(g, car) {
   const hasRoom = d => baysOf(d).some(k => d.slots[k] === null);
   let dests;
   if (car.forceStadium) dests = g.buildings.filter(d => d.stadium && hasRoom(d));                 // a crowd for a match: the stadium only
-  else if (car.outside) dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && hasRoom(d) && (d.stadium || accepts(d, car.color.id))));      // a visitor from outside goes to any destination it can reach, the stadium included (it takes every colour)
+  else if (car.outside) dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && hasRoom(d) && (d.stadium || accepts(d, car.color.id))));      // a visitor from outside goes to any destination it can reach, the stadium included (it takes every color)
   else {
     dests = shuffle(g.buildings.filter(d => d.kind === 'dest' && !d.stadium && accepts(d, b.color.id) && hasRoom(d)));
-    const arena = g.buildings.find(d => d.stadium && hasRoom(d));                            // the stadium takes any colour: now and then a house car goes there
+    const arena = g.buildings.find(d => d.stadium && hasRoom(d));                            // the stadium takes any color: now and then a house car goes there
     if (arena && Math.random() < tuning.stadium.houseChance) dests.unshift(arena);
   }
   for (const d of dests) {
@@ -177,7 +177,7 @@ export function sceneTiles(g) {
   return out;
 }
 
-// A visitor from the outside: a car of any colour leaves `gate` (a side-road gate) for any destination that takes its colour (or the
+// A visitor from the outside: a car of any color leaves `gate` (a side-road gate) for any destination that takes its color (or the
 // stadium); `stadiumOnly` (a crowd for a match) sends it to the stadium. Returns the car, or null if nothing it could go to can be reached right now.
 export function launchOutside(g, gate, color, stadiumOnly = false) {
   const car = createCar(gate);
@@ -297,7 +297,7 @@ const tileKey = p => p.tk;
 const moving = car => car.state === 'out' || car.state === 'back';
 
 // Work out, for every car about to enter a junction/lot, whether it must hold at the stop line.
-function analyse(g, dt) {
+function analyze(g, dt) {
   const jc = junctionCache(g), inside = new Map(), waiting = new Map(), claims = new Set(), list = [];
   const { braking } = tuning.cars;
   const demand = new Map();                                     // lit tile -> cars approaching it per axis [N/S, E/W]
@@ -434,7 +434,7 @@ export function updateSim(g, dt) {
     if (p.occT !== occStep) { p.occT = occStep; p.occ.length = 0; }
     p.occ.push(car);
   }
-  const { inside, claims } = analyse(g, dt);
+  const { inside, claims } = analyze(g, dt);
   const { acceleration, braking, minGapTiles } = tuning.cars;
 
   for (const car of g.cars) {

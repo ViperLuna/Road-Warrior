@@ -1,4 +1,4 @@
-// The outside world: side-road gates on the map edge send visitors of any colour to the stadium or any destination that takes their colour,
+// The outside world: side-road gates on the map edge send visitors of any color to the stadium or any destination that takes their color,
 // faster and faster (a match crowd goes to the stadium only).
 // A visitor is a car with no house (`car.outside`): it drives gate -> destination, stays a while, drives back to its gate and is gone.
 import { tuning } from './tuning.js';

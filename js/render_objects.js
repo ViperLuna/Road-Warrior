@@ -51,7 +51,7 @@ function drawEntrance(ctx, b) {
 
 // A small destination: one building tile with its lot tile (2 bays). Same look as the big one, half the size. `half` picks the box half.
 function drawDestSmall(ctx, b) {
-  const cy = (b.half ? 1 : 0) - 0.5;                              // local y of this lot tile's centre
+  const cy = (b.half ? 1 : 0) - 0.5;                              // local y of this lot tile's center
   ctx.save();
   ctx.translate(b.x + 1, b.y + 1);
   ctx.rotate(rotAngle(b.rot));
@@ -154,7 +154,7 @@ function drawDest(ctx, b) {
   ctx.setLineDash([0.07, 0.07]); ctx.strokeStyle = 'rgba(242,201,76,.5)';
   ctx.beginPath(); ctx.moveTo(0.82, -0.85); ctx.lineTo(0.82, 0.85); ctx.stroke(); ctx.setLineDash([]);     // drive aisle joining the two ends
   ctx.fillStyle = 'rgba(0,0,0,.28)'; rrect(ctx, -0.9, -0.88, 0.84, 1.84, 0.1); ctx.fill();       // building
-  if (b.color2) {                                                  // two colours: one half each, a thin seam between them
+  if (b.color2) {                                                  // two colors: one half each, a thin seam between them
     ctx.save(); rrect(ctx, -0.92, -0.92, 0.84, 1.84, 0.1); ctx.clip();
     ctx.fillStyle = b.color.hex; ctx.fillRect(-0.92, -0.92, 0.84, 0.92);
     ctx.fillStyle = b.color2.hex; ctx.fillRect(-0.92, 0, 0.84, 0.92);
@@ -174,7 +174,7 @@ function drawDest(ctx, b) {
   }
   ctx.translate(-0.3, 0); ctx.rotate(-rotAngle(b.rot));
   ctx.fillStyle = 'rgba(255,255,255,.95)';
-  if (b.color2) {                                                  // each colour keeps its own shape (colour is never the only cue)
+  if (b.color2) {                                                  // each color keeps its own shape (color is never the only cue)
     const up = rotAngle(b.rot);                                    // the halves lie along the building's long axis (local y); undo the turn to place them
     const place = (dy, c) => { ctx.save(); ctx.rotate(up); ctx.translate(0, dy); ctx.rotate(-up); glyph(ctx, c.glyph, 0.14); ctx.restore(); };
     place(-0.46, b.color); place(0.46, b.color2);
@@ -298,7 +298,7 @@ export function drawWorkZone(ctx, g) {
   const fade = Math.min(1, w.age / 0.6, Math.max(0, w.left) / 0.6), cx = w.x + 0.5, cy = w.y + 0.5;
   ctx.save();
   ctx.globalAlpha = fade;
-  const lx = cx + r[0] * LANE, ly = cy + r[1] * LANE;                                   // centre of the closed lane
+  const lx = cx + r[0] * LANE, ly = cy + r[1] * LANE;                                   // center of the closed lane
   ctx.fillStyle = 'rgba(255,150,40,.16)'; ctx.save(); ctx.translate(lx, ly); ctx.rotate(Math.atan2(h[1], h[0])); ctx.fillRect(-0.5, -0.1, 1, 0.2); ctx.restore();
   for (let i = 0; i < n; i++) {
     const t = -0.4 + (0.8 * i) / (n - 1), px = lx + h[0] * t, py = ly + h[1] * t;

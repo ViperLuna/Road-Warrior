@@ -53,38 +53,38 @@ const w3 = g.watches.find(w => w.kind === 'house'); ok(w3.stage === 'grace' && w
 tickN(GRACE); ok(events.some(e => e.type === 'impatient' && e.kind === 'house' && e.spots.length), 'still broken after the grace period: the building complains (that one goes in the history, with its place)');
 st.buildRoad(lx - 2, ly); tickN(3); ok(g.watches.find(w => w.kind === 'house').ok, 'rebuilt: connected again');
 
-// ---- destinations: a destination no house reaches counts down too (and a two-colour one needs both colours) ----
+// ---- destinations: a destination no house reaches counts down too (and a two-color one needs both colors) ----
 S(); const dd = addBuilding(g, 'dest', blue, 20, 8, 3); dd.color2 = orange; const [dx, dy] = lotTile(dd, 0);
 const hb = addBuilding(g, 'house', blue, 6, dy - 1, 2); g.cars.push(createCar(hb)); const ho = addBuilding(g, 'house', orange, 9, dy + 4, 0); g.cars.push(createCar(ho));
 pave(6, dy, dx - 1, dy); tickN(5);
-ok(g.watches.find(w => w.kind === 'dest').ok === false, 'a two-colour destination is not connected until both colours reach it');
+ok(g.watches.find(w => w.kind === 'dest').ok === false, 'a two-color destination is not connected until both colors reach it');
 pave(9, dy + 3, 9, dy); tickN(5); ok(g.watches.find(w => w.kind === 'dest').ok, 'now both reach it');
 
 // ---- pausing stops the clocks ----
 S(); addBuilding(g, 'dest', blue, 20, 8, 3); const h5 = addBuilding(g, 'house', blue, 5, 8, 1); g.cars.push(createCar(h5));
 tickN(30); const t0 = g.watches.find(w => w.kind === 'house').t; g.mode = 'pause'; for (let i = 0; i < 600; i++) st.tick(1 / 60); ok(g.watches.find(w => w.kind === 'house').t === t0, 'a paused game does not run the clock');
 
-// ---- stadium: popup first, then the clock; "one of each colour" ----
+// ---- stadium: popup first, then the clock; "one of each color" ----
 S(maps.find(m => m.id === 'highlands'));
 const d3 = addBuilding(g, 'dest', blue, 30, 20, 3), [ax, ay] = lotTile(d3, 0), d4 = addBuilding(g, 'dest', orange, 30, 26, 3), [bx2, by2] = lotTile(d4, 0);
 const hs1 = addBuilding(g, 'house', blue, 10, ay - 1, 2), hs2 = addBuilding(g, 'house', orange, 10, by2 - 1, 2); g.cars.push(createCar(hs1), createCar(hs2));
 pave(10, ay, ax - 1, ay); pave(10, by2, bx2 - 1, by2); pave(10, ay, 10, by2); g.colorsUsed = 2;      // (one street network)
 g.trips = milestones.stadium.afterTrips; g.colorsUsed = palette.length; g.colorsUsed = 2;
 const arena = spawnStadium(g, { budget: 900 }); D.addStadiumWatch(g, arena);
-ok(g.mode === 'notice' && D.pendingNotice(g) && /every colour/.test(D.pendingNotice(g).notice.text), 'a popup explains the rule and waits for [OK]');
+ok(g.mode === 'notice' && D.pendingNotice(g) && /every color/.test(D.pendingNotice(g).notice.text), 'a popup explains the rule and waits for [OK]');
 for (let i = 0; i < 60 * 200; i++) st.tick(1 / 60); ok(g.watches.find(w => w.kind === 'stadium').t === 0 && g.mode === 'notice', 'the clock does not run while the popup is open');
 st.ackNotice(); ok(g.mode === 'play', 'OK closes it');
 const sw = () => g.watches.find(w => w.kind === 'stadium');
-tickN(2); ok(!sw().ok && sw().detail.have === 0 && sw().detail.total === 2, 'stadium not connected: 0 of 2 colours');
+tickN(2); ok(!sw().ok && sw().detail.have === 0 && sw().detail.total === 2, 'stadium not connected: 0 of 2 colors');
 const [ex, ey] = exitTile(arena, entsOf(arena)[0]); pave(10, ay, ex, ey); tickN(4);
-ok(sw().ok === true && sw().detail.have === 2, 'one road from the street reaches it for both colours (' + sw().detail.have + ' of ' + sw().detail.total + ')');
+ok(sw().ok === true && sw().detail.have === 2, 'one road from the street reaches it for both colors (' + sw().detail.have + ' of ' + sw().detail.total + ')');
 ok(D.chipsOf(g).length === 0, 'no chip once connected');
 // percentage rule
 tuning.deadlines.requiredPercent = 100; const h6 = addBuilding(g, 'house', blue, 3, 3, 1); g.cars.push(createCar(h6)); tickN(2);
 ok(sw().ok === false, 'with requiredPercent 100 a new blue house that has no road breaks the stadium rule'); tuning.deadlines.requiredPercent = 0; tickN(2);
-ok(sw().ok === true, 'at 0 one of each colour is enough again');
+ok(sw().ok === true, 'at 0 one of each color is enough again');
 
-// ---- the gates: one shared clock, each must reach the stadium and every colour ----
+// ---- the gates: one shared clock, each must reach the stadium and every color ----
 const g1 = spawnPortal(g, 0, arena, { budget: 900 }), g2 = spawnPortal(g, 2, arena, { budget: 900 });
 D.addGateWatch(g, [g1, g2], ['north', 'south']); st.ackNotice();
 const gw = () => g.watches.find(w => w.kind === 'gates');
@@ -92,7 +92,7 @@ ok(gw().ids.length === 2 && /north and south/.test(gw().notice.text), 'one watch
 const gx = g1.x, gy = g1.y + 1; pave(gx, gy, ex, ey); pave(gx, gy, 10, ay); tickN(4);
 ok(gw().ok === false, 'one gate connected, the other not: the shared watch is not satisfied');
 const hx = g2.x, hy = g2.y - 1; pave(hx, hy, ex, ey); pave(hx, hy, 10, ay); tickN(4);
-ok(gw().ok === true, 'both gates connected to the stadium and a destination of each colour');
+ok(gw().ok === true, 'both gates connected to the stadium and a destination of each color');
 ok(D.chipsOf(g).length === 0, 'no chip once connected');
 
 // ---- jam lock ----

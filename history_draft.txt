@@ -1,12 +1,12 @@
 (DRAFT for history.txt. Paste the new block at the top, under the TBD section, and delete the old "Building Patience - Currently Off" line. Trim whatever you like.)
 
 10.14.2026
-  Building Patience - Now ON. A house with no road to a destination of its colour, a destination no house of its colours can reach, the stadium, and the side roads all get a countdown: 60 seconds of quiet, then a warning toast, a pulsing red ring and 60 more seconds. If it still isn't connected when that runs out, the game is over. Connect it in time and the clock resets. If you break a connection later, the clock starts over. Pausing stops every clock, so you can pause and build.
+  Building Patience - Now ON. A house with no road to a destination of its color, a destination no house of its colors can reach, the stadium, and the side roads all get a countdown: 60 seconds of quiet, then a warning toast, a pulsing red ring and 60 more seconds. If it still isn't connected when that runs out, the game is over. Connect it in time and the clock resets. If you break a connection later, the clock starts over. Pausing stops every clock, so you can pause and build.
 
   Accidents (after 1,000 trips) - Now and then two cars bump and block their lane for 20 seconds while the police show up. Cars behind them still get angry.
   Multicolor destinations now start after 2,000 trips (was 3,000).
-  Stadium (after 3,000 trips, Highlands and Metro) - A 4x3 stadium is donated to the city. Cars of any colour can go there, and it has two gates. It must be connected to houses of every colour (at least one of each to start). If there is no room for it, it clears a 5x4 area, roads first and buildings only if it has to.
-  Side Roads (after 4,000 trips) - Two roads to other cities appear on two edges of the map. At 5,000 trips the other two edges get theirs. They can't be demolished. Each must connect to the stadium and to destinations of every colour. Once connected, cars of any colour arrive from outside to visit the stadium, more and more often as the minutes go by. Every 5 to 10 minutes a game is hosted at the stadium and a horde of them shows up at once, a little bigger each time.
+  Stadium (after 3,000 trips, Highlands and Metro) - A 4x3 stadium is donated to the city. Cars of any color can go there, and it has two gates. It must be connected to houses of every color (at least one of each to start). If there is no room for it, it clears a 5x4 area, roads first and buildings only if it has to.
+  Side Roads (after 4,000 trips) - Two roads to other cities appear on two edges of the map. At 5,000 trips the other two edges get theirs. They can't be demolished. Each must connect to the stadium and to destinations of every color. Once connected, cars of any color arrive from outside to visit the stadium, more and more often as the minutes go by. Every 5 to 10 minutes a game is hosted at the stadium and a horde of them shows up at once, a little bigger each time.
   A popup explains the stadium and the side roads and the clock only starts when you tap OK.
 
   A road with a blinking, jammed car on it can't be demolished until the jam clears.
@@ -39,7 +39,7 @@
 
 - Traffic lights can now go on a bridge, on the tile where a road meets the span from the side (a plain stretch of bridge still has no junction to light). Roundabouts and overpasses still can't go on a bridge, and a light on a bridge comes back to your stock if you demolish the bridge.
 
-- Cars from the side roads no longer only head for the stadium. A visitor now goes to any destination it can reach that takes its colour, the stadium included (the stadium takes every colour). A match crowd still goes to the stadium only.
+- Cars from the side roads no longer only head for the stadium. A visitor now goes to any destination it can reach that takes its color, the stadium included (the stadium takes every color). A match crowd still goes to the stadium only.
 
 - Some houses now get a second car (10% of them, set in config/tuning.json as houses.secondCarChance). The two cars make their own trips and each trip counts, so a busy map gets busier. The second one waits for the first to pull out of the driveway.
 
@@ -52,3 +52,6 @@
 - Fixed: on a 4-lane road, two cars side by side at a green light could hold each other up. If the straight-on car in one lane couldn't move because the road beyond was backed up, a car in the next lane that wanted to turn waited for it too, even though its own way was clear. A car that can't move off the line no longer holds anyone else up. In bot test games this cut the number of jam warnings roughly in half.
 
 - Fixed: on a 4-lane road, a car turning left from the inner lane waited until every straight-on car in the outer lane had cleared the junction, even though their paths don't cross. Cars in the two lanes of the same approach now only wait for each other if their paths really cross (for example a car changing lanes). Streets that cross keep the wider safety margin.
+
+- New houses now pick their color completely at random (one in however many colors are in play), so one color can't pile up houses by collecting destinations. There is a new Difficulty section in Settings with a "Color spawn demographics" checkbox: tick it to bring back the old balancing, where the color with the fewest houses per destination gets the next house. The choice is locked in when a game starts, and saved games that were started before this change now pick at random too.
+- The game now uses American English everywhere (color, center, neighbor).

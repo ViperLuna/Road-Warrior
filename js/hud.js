@@ -41,7 +41,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   });
   $('oneway-btn').addEventListener('click', () => { setOneWay(!game.oneway); toast(game.oneway ? 'One-way on: drag along a road to set its direction.' : 'One-way off: dragging along a road makes it two-way.'); });
   // Settings screen: cut markers, plus volume and mute for sound effects and for music.
-  const optCuts = $('opt-cuts');
+  const optCuts = $('opt-cuts'), optDemo = $('opt-demographics');
   const bind = (rangeId, muteId, volKey, muteKey) => {
     const range = $(rangeId), mute = $(muteId);
     range.addEventListener('input', () => setSetting(volKey, range.value / 100));
@@ -51,12 +51,13 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   const syncSfx = bind('opt-sfx-vol', 'opt-sfx-mute', 'sfxVolume', 'sfxMuted');
   const syncMusicA = bind('opt-music-vol', 'opt-music-mute', 'musicVolume', 'musicMuted');
   const syncMusicB = bind('music-vol', 'music-mute', 'musicVolume', 'musicMuted');       // the music panel's own copy of the same two controls
-  const syncAll = () => { optCuts.checked = settings.showCuts; syncSfx(); syncMusicA(); syncMusicB(); };
+  const syncAll = () => { optCuts.checked = settings.showCuts; optDemo.checked = !!settings.difficulty.demographics; syncSfx(); syncMusicA(); syncMusicB(); };
   const openSettings = () => { syncAll(); $('settings').hidden = false; };
   $('settings-btn').addEventListener('click', openSettings);
   $('pause-settings-btn').addEventListener('click', openSettings);
   $('settings-close').addEventListener('click', () => { $('settings').hidden = true; });
   optCuts.addEventListener('change', () => setSetting('showCuts', optCuts.checked));
+  optDemo.addEventListener('change', () => setSetting('difficulty', { ...settings.difficulty, demographics: optDemo.checked }));
   onSetting(() => { if (!$('settings').hidden || !$('music').hidden) syncAll(); });
 
   // Music panel (the note button): shown only when there are songs.
@@ -311,19 +312,19 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   onChange(render);
   const listOf = names => (names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names.at(-1) : names[0]);
   const IMPATIENT = {
-    house: l => `${l} is not connected to a destination of its colour.`,
-    dest: l => `${l} is not reached by every colour it takes.`,
-    stadium: l => `${l} is still not connected to every colour.`,
-    gates: l => `${l} still do not reach the stadium and every colour.`,
+    house: l => `${l} is not connected to a destination of its color.`,
+    dest: l => `${l} is not reached by every color it takes.`,
+    stadium: l => `${l} is still not connected to every color.`,
+    gates: l => `${l} still do not reach the stadium and every color.`,
   };
   onEvent(e => {
     if (e.type === 'cash') note(`Goal reached: +$${e.n}.`);
     if (e.type === 'stadium') {
       const bits = [e.razed && `${e.razed} building${e.razed > 1 ? 's' : ''}`, e.cleared && `${e.cleared} road piece${e.cleared > 1 ? 's' : ''}`].filter(Boolean);
       if (e.razed) note(`A generous billionaire donated a stadium to the city! (${bits.join(' and ')} made way. Connect its gates.)`, e.spots);
-      else note(e.cleared ? `A stadium has been donated to the city! It took ${bits.join(' and ')} to fit (the road pieces are back in your stock). Connect its gates.` : 'A stadium has been donated to the city! Any colour can go there. Connect its gates.', e.spots);
+      else note(e.cleared ? `A stadium has been donated to the city! It took ${bits.join(' and ')} to fit (the road pieces are back in your stock). Connect its gates.` : 'A stadium has been donated to the city! Any color can go there. Connect its gates.', e.spots);
     }
-    if (e.type === 'portal') note(e.count > 1 ? `Side roads to other cities on the ${listOf(e.edges)} edges: connect them to the stadium and every colour.` : `A side road to another city on the ${e.edges[0]} edge: connect it to the stadium and every colour.`, e.spots);
+    if (e.type === 'portal') note(e.count > 1 ? `Side roads to other cities on the ${listOf(e.edges)} edges: connect them to the stadium and every color.` : `A side road to another city on the ${e.edges[0]} edge: connect it to the stadium and every color.`, e.spots);
     if (e.type === 'portal' && (e.cleared || e.razed)) note(`${e.razed ? 'A building' : 'A road piece'} made way for ${e.cleared + e.razed > 1 ? 'the new roads' : 'the new road'} to another city.`, e.spots);
     if (e.type === 'make-room') note(`The city is growing: ${e.cleared} road piece${e.cleared > 1 ? 's were' : ' was'} cleared to make room for new buildings.`, e.spots);
     if (e.type === 'gate-info') toast(e.demolish ? "That's the road to another city. It can't be demolished." : "This is an expansion to another city you can't see. Visitors come in through here.");
@@ -345,7 +346,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
       if (e.across) note(e.needsBridge ? `New ${name} house across the water. You'll need a bridge.` : `New ${name} house across the river (bridge already built).`, e.spots);
       else if (e.kind === 'newColor') note(`New ${name} house and destination!`, e.spots);
       else if (e.kind === 'combo') note(`New ${name} destination and house.`, e.spots);
-      else if (e.kind === 'dual') note(`New ${name} and ${e.color2.id} destination: both colours park here.`, e.spots);
+      else if (e.kind === 'dual') note(`New ${name} and ${e.color2.id} destination: both colors park here.`, e.spots);
       else note(e.n > 1 ? `${e.n} new ${name} houses.` : `New ${name} house.`, e.spots);
     }
   });

@@ -3,7 +3,7 @@ import { DIR, rt } from './lanes.js';
 import { tidx } from './network.js';
 
 export const SLOTS = 4;
-// Colours that are not in the palette: the stadium takes every colour; the side-road gates belong to "the outside".
+// Colors that are not in the palette: the stadium takes every color; the side-road gates belong to "the outside".
 export const SPECIAL_COLORS = {
   stadium: { id: 'stadium', hex: '#cfd8dc', glyph: 'diamond' },
   outside: { id: 'outside', hex: '#8a95a0', glyph: 'diamond' },
@@ -46,7 +46,7 @@ export function exitTile(b, ent = entOf(b)) {
   return [lx + D[0], ly + D[1]];
 }
 
-// A destination takes cars of its own colour, and of its second colour if it is a two-colour destination (color2).
+// A destination takes cars of its own color, and of its second color if it is a two-color destination (color2).
 export const accepts = (d, colorId) => d.color.id === colorId || (!!d.color2 && d.color2.id === colorId);
 
 export function footprint(b) {

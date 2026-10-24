@@ -11,7 +11,7 @@ export const roadAt = (g, x, y) => inB(g, x, y) && g.roads.has(tidx(g, x, y));
 export const portAt = (g, x, y) => (inB(g, x, y) ? g.ports.get(tidx(g, x, y)) || null : null);
 
 // How many lanes a tile has (2 = street, 4 = highway), and how many its edge on `side` has: the smaller of the two
-// neighbours' counts, and 2 where it meets a driveway or gate. A highway tile therefore tapers inside itself.
+// neighbors' counts, and 2 where it meets a driveway or gate. A highway tile therefore tapers inside itself.
 export const tileLanes = (g, x, y) => (g.roads.get(tidx(g, x, y)) || {}).lanes || 2;
 // An overpass tile carries two roads of (possibly) different sizes, so its lane count depends on which road you mean.
 export function edgeLanes(g, x, y, side) {
@@ -19,7 +19,7 @@ export function edgeLanes(g, x, y, side) {
   return roadAt(g, nx, ny) ? Math.min(t, layerLanes(g, nx, ny, (side + 2) % 4)) : 2;
 }
 // Lanes of the road that runs through (x,y) along the axis of `side`: for an overpass tile, that road's own size (read off its
-// neighbours); for any other tile, the tile's lanes.
+// neighbors); for any other tile, the tile's lanes.
 export function layerLanes(g, x, y, side) {
   const r = g.roads.get(tidx(g, x, y));
   if (!r || r.overpass === undefined) return (r && r.lanes) || 2;
@@ -27,7 +27,7 @@ export function layerLanes(g, x, y, side) {
   return Math.min(...a.map(d => tileLanes(g, x + DIR[d][0], y + DIR[d][1])));
 }
 
-// Sides of road tile (x,y) that connect to a neighbouring road or to a building port facing it.
+// Sides of road tile (x,y) that connect to a neighboring road or to a building port facing it.
 export function roadConns(g, x, y) {
   const res = [], cut = (g.roads.get(tidx(g, x, y)) || {}).cut || 0;       // cut seams: the two road tiles touch but do not connect
   for (let d = 0; d < 4; d++) {
@@ -66,7 +66,7 @@ export function pieceValid(g, p) {
   return !!b && b.rot === p.rot;
 }
 
-// Take a road tile off the map (game logic, not the player's tool): its seams on the neighbours are cleared and the piece goes back
+// Take a road tile off the map (game logic, not the player's tool): its seams on the neighbors are cleared and the piece goes back
 // into the player's stock as itself. Returns false if there was no plain road there.
 export function clearRoadTile(g, x, y) {
   const k = tidx(g, x, y), r = g.roads.get(k);
@@ -82,7 +82,7 @@ export function clearRoadTile(g, x, y) {
   return true;
 }
 
-// Sides of tunnel tile (x,y) where it opens out of the hill: a connected neighbour that is not tunnel (a road on open ground, or a building's gate).
+// Sides of tunnel tile (x,y) where it opens out of the hill: a connected neighbor that is not tunnel (a road on open ground, or a building's gate).
 // A tunnel tile whose connections are all other tunnel tiles is deep inside the hill (cars on it are out of sight).
 export function tunnelMouths(g, x, y) {
   const r = g.roads.get(tidx(g, x, y));

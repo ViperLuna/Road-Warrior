@@ -1,8 +1,8 @@
 // Patience. Everything the player has to keep connected is a "watch" with a countdown:
-//   a house     needs a road to a destination of its colour,
-//   a destination needs a road from a house of each colour it takes,
-//   the stadium needs a road from houses of every colour in play,
-//   the side-road gates (one shared watch for a wave of them) must reach the stadium and a destination of every colour.
+//   a house     needs a road to a destination of its color,
+//   a destination needs a road from a house of each color it takes,
+//   the stadium needs a road from houses of every color in play,
+//   the side-road gates (one shared watch for a wave of them) must reach the stadium and a destination of every color.
 // Unconnected, a watch first runs a silent grace period, then a warning period (toast + glow + countdown), then the game is over.
 // Connected again, it resets. A connection that breaks later starts the whole countdown over (with a toast).
 // A connection only counts as broken once the roads have been left alone for settleSeconds, so building a road does not nag.
@@ -79,7 +79,7 @@ function evaluate(g) {
         if (!mine.length) continue;
         total++; if (mine.filter(h => reaches(h, b)).length >= needOf(mine.length)) have++;
       }
-      w.ok = have === total; w.detail = { have, total, what: 'colours connected' };
+      w.ok = have === total; w.detail = { have, total, what: 'colors connected' };
     } else {                                                                      // gates
       let ok = !!arena, have = 0, total = 0, stadiumOk = 0;
       const gs = w.ids.map(id => byId(g, id));
@@ -92,7 +92,7 @@ function evaluate(g) {
           total++; if (all.filter(d => reaches(gate, d)).length >= needOf(all.length)) have++; else ok = false;
         }
       }
-      w.ok = ok; w.detail = { have, total, gates: gs.length, stadiumOk, what: 'colours connected' };
+      w.ok = ok; w.detail = { have, total, gates: gs.length, stadiumOk, what: 'colors connected' };
     }
     if (w.fresh) { w.fresh = false; if (w.ok) { w.stage = 'ok'; w.t = 0; } }
   }
@@ -141,14 +141,14 @@ export const remaining = w => (!w.ok && w.ack && w.stage !== 'ok' ? Math.max(0, 
 
 // ---- the stadium and the gates ask the player to read a message first ----
 const secs = k => `${tuning.deadlines[k].graceSeconds} seconds to start building, then ${tuning.deadlines[k].warnSeconds} seconds of warning`;
-const rule = () => (tuning.deadlines.requiredPercent > 0 ? `at least ${tuning.deadlines.requiredPercent}% of each colour` : 'at least one of each colour');
+const rule = () => (tuning.deadlines.requiredPercent > 0 ? `at least ${tuning.deadlines.requiredPercent}% of each color` : 'at least one of each color');
 
 export function addStadiumWatch(g, stadium) {
   sync(g);
   const w = g.watches.find(x => x.kind === 'stadium');
   if (!w) return;
   w.ack = false; w.stage = 'grace'; w.t = 0;
-  w.notice = { title: 'A stadium has been donated to the city!', text: `It takes any colour of car, and big crowds will come for it. It must be connected to houses of every colour (${rule()}). You get ${secs('stadium')}. If it is still not connected when that runs out, the game is over. Pausing the game stops the clock.` };
+  w.notice = { title: 'A stadium has been donated to the city!', text: `It takes any color of car, and big crowds will come for it. It must be connected to houses of every color (${rule()}). You get ${secs('stadium')}. If it is still not connected when that runs out, the game is over. Pausing the game stops the clock.` };
   raiseNotice(g);
 }
 
@@ -158,7 +158,7 @@ export function addGateWatch(g, gates, edgeNames) {
   if (!w) return;
   w.ack = false; w.stage = 'grace'; w.t = 0;
   const where = edgeNames.length > 1 ? edgeNames.slice(0, -1).join(', ') + ' and ' + edgeNames.at(-1) : edgeNames[0];
-  w.notice = { title: edgeNames.length > 1 ? 'New roads to other cities!' : 'A new road to another city!', text: `${edgeNames.length > 1 ? 'Side roads have' : 'A side road has'} appeared on the ${where} ${edgeNames.length > 1 ? 'edges' : 'edge'} of the map. ${edgeNames.length > 1 ? 'Each one' : 'It'} must be connected to the stadium and to destinations of every colour (${rule()}), and cars from outside will start arriving. You get ${secs('gates')}. If any of them is still not connected when that runs out, the game is over. Pausing the game stops the clock.` };
+  w.notice = { title: edgeNames.length > 1 ? 'New roads to other cities!' : 'A new road to another city!', text: `${edgeNames.length > 1 ? 'Side roads have' : 'A side road has'} appeared on the ${where} ${edgeNames.length > 1 ? 'edges' : 'edge'} of the map. ${edgeNames.length > 1 ? 'Each one' : 'It'} must be connected to the stadium and to destinations of every color (${rule()}), and cars from outside will start arriving. You get ${secs('gates')}. If any of them is still not connected when that runs out, the game is over. Pausing the game stops the clock.` };
   raiseNotice(g);
 }
 

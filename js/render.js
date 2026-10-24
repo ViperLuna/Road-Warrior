@@ -130,7 +130,7 @@ export function render(ctx, W, H, dpr, game, cam, hover) {
 }
 
 function drawRoad(ctx, game, tx, ty) {
-  const conns = roadConns(game, tx, ty);   // neighbouring roads + building driveways facing this tile
+  const conns = roadConns(game, tx, ty);   // neighboring roads + building driveways facing this tile
   const cx = tx + 0.5, cy = ty + 0.5;
   const mid = d => [cx + DIRS[d][0] * 0.5, cy + DIRS[d][1] * 0.5];
   const isCurve = conns.length === 2 && conns[1] - conns[0] !== 2;
@@ -197,7 +197,7 @@ function drawRing(ctx, cx, cy, conns, path, pass) {
   ctx.beginPath(); ctx.arc(cx, cy, RING_R, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
 }
 
-// Signal heads sit at each approach, on the driver's right, showing the live colour.
+// Signal heads sit at each approach, on the driver's right, showing the live color.
 function drawLights(ctx, road, tx, ty, conns) {
   const cx = tx + 0.5, cy = ty + 0.5, groups = lightGroups(conns), sig = signalState(road);
   for (const d of conns) {
@@ -342,7 +342,7 @@ function drawWide(ctx, game, tx, ty, conns, road, o = {}) {
     if (cur.length) runs.push(cur);
     for (const run of runs) {
       if (run.length < 2) continue;
-      if (MID < HW) { ctx.setLineDash([0.125, 0.125]); ctx.strokeStyle = COL.line; ctx.lineWidth = 0.025; strokePts(ctx, run); ctx.setLineDash([]); continue; }      // a 2-lane road: one dashed centre line
+      if (MID < HW) { ctx.setLineDash([0.125, 0.125]); ctx.strokeStyle = COL.line; ctx.lineWidth = 0.025; strokePts(ctx, run); ctx.setLineDash([]); continue; }      // a 2-lane road: one dashed center line
       ctx.setLineDash([]); ctx.strokeStyle = COL.line; ctx.lineWidth = 0.02;
       strokePts(ctx, offsetLine(run, 0.022)); strokePts(ctx, offsetLine(run, -0.022));     // double yellow median
       ctx.setLineDash([0.1, 0.1]); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 0.018;

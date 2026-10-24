@@ -68,7 +68,7 @@ export function spawnInitial(g, color) {
   });
 }
 
-// opts: rng, region {x0,y0,x1,y1} for the destination's top-left | anchor {x,y,rMin,rMax}, roads [min,max], color2 (make it a two-colour destination), small (a one-building, 2-bay destination), front (use the front entrance only)
+// opts: rng, region {x0,y0,x1,y1} for the destination's top-left | anchor {x,y,rMin,rMax}, roads [min,max], color2 (make it a two-color destination), small (a one-building, 2-bay destination), front (use the front entrance only)
 export function spawnPair(g, color, opts = {}) {
   return spawnPairAt(g, color, { ...opts, margin: EDGE }) || spawnPairAt(g, color, { ...opts, margin: 0 });
 }
@@ -112,7 +112,7 @@ function spawnPairAt(g, color, opts) {
       const dest = addBuilding(g, 'dest', color, ax, ay, rot);
       if (small) { dest.small = true; dest.half = half; }
       dest.ent = ent; reindex(g);
-      if (opts.color2) dest.color2 = opts.color2;                          // a two-colour destination: either colour's cars may park here
+      if (opts.color2) dest.color2 = opts.color2;                          // a two-color destination: either color's cars may park here
       const house = addBuilding(g, 'house', color, hx, hy, hrot);
       addCarsFor(g, house, rng);
       return { dest, house, roads: n };
@@ -121,7 +121,7 @@ function spawnPairAt(g, color, opts) {
   return null;
 }
 
-// Add one house of `color` near an existing destination that takes that colour (reachable over land within `roads`).
+// Add one house of `color` near an existing destination that takes that color (reachable over land within `roads`).
 // opts: near (use only this destination), apart {x, y, min} (stay at least `min` tiles from that spot), roads, budget, rng.
 export function spawnHouse(g, color, opts = {}) {
   return spawnHouseAt(g, color, { ...opts, margin: EDGE }) || spawnHouseAt(g, color, { ...opts, margin: 0 });
@@ -183,7 +183,7 @@ export function findCrossings(g, maxSpan = 10) {
 
 const shuffled = (arr, rng) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
-// One house of `color` on the OTHER bank of a river from a destination of that colour.
+// One house of `color` on the OTHER bank of a river from a destination of that color.
 // opts: items ({bridge, tunnel} counts the player holds), budget (road pieces they can spend), rng.
 // Both land stretches are sized so the player's roads cover them. Returns the house or null.
 export function spawnHouseAcross(g, color, opts = {}) {
@@ -217,7 +217,7 @@ export function spawnHouseAcross(g, color, opts = {}) {
   return null;
 }
 
-// A new colour whose house and destination sit on opposite banks. Falls back to nothing (caller uses a normal pair).
+// A new color whose house and destination sit on opposite banks. Falls back to nothing (caller uses a normal pair).
 export function spawnPairAcross(g, color, opts = {}) {
   const rng = opts.rng || Math.random;
   for (let attempt = 0; attempt < 60; attempt++) {
@@ -259,7 +259,7 @@ function findStadiumSpot(g, opts, clear, raze = false) {
   const roadTiles = new Set(g.roads.keys());
   if (!roadTiles.size || !g.buildings.length) return null;
   const ground = (x, y) => x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] === LAND && (!g.buildingAt.has(y * g.cols + x) || (raze && g.buildingAt.get(y * g.cols + x).kind !== 'portal'));
-  // What clearing the area would cost: road pieces, and (when razing) the buildings under it. A destination may only go if every colour it
+  // What clearing the area would cost: road pieces, and (when razing) the buildings under it. A destination may only go if every color it
   // serves keeps another destination, so nobody is left without one.
   const victims = area => {
     const set = new Set(area.map(([x, y]) => g.buildingAt.get(y * g.cols + x)).filter(Boolean));
@@ -308,7 +308,7 @@ function placeStadium(g, spot) {
   return d;
 }
 
-// A stadium (a 4x3 destination that takes every colour, with several gates in its front row) on free land near the existing roads: close
+// A stadium (a 4x3 destination that takes every color, with several gates in its front row) on free land near the existing roads: close
 // enough that the player can afford to connect it. opts: budget (road pieces they can spend), roads [min, max] new pieces to reach a road.
 // Returns the stadium or null.
 export function spawnStadium(g, opts = {}) {
@@ -317,7 +317,7 @@ export function spawnStadium(g, opts = {}) {
 }
 
 // The same, but when there is no free room anywhere (the map is covered in roads) it takes the spot with the fewest plain road pieces
-// (never a bridge, tunnel or overpass; never a building) and clears the whole 5x4 area around it first: they go back to the player's stock. Returns { stadium, cleared, razed } or null. If even that finds nothing it knocks buildings down as well (houses first, never the last destination of a colour, never a side-road gate).
+// (never a bridge, tunnel or overpass; never a building) and clears the whole 5x4 area around it first: they go back to the player's stock. Returns { stadium, cleared, razed } or null. If even that finds nothing it knocks buildings down as well (houses first, never the last destination of a color, never a side-road gate).
 export function spawnStadiumClearing(g, opts = {}) {
   const free1 = spawnStadium(g, opts);
   if (free1) return { stadium: free1, cleared: 0 };
@@ -335,7 +335,7 @@ export const EDGE_NAMES = ['north', 'east', 'south', 'west'];
 export const edgeTile = (g, edge, t) => (edge === 0 ? [t, 0] : edge === 2 ? [t, g.rows - 1] : edge === 1 ? [g.cols - 1, t] : [0, t]);
 
 // The tile in front of a gate (or of anything that has to open onto a road) must be land with no building on it, and must lead somewhere: it is
-// already a road, or one of its other neighbours is a road or open land. So a house or gate is never boxed in by buildings.
+// already a road, or one of its other neighbors is a road or open land. So a house or gate is never boxed in by buildings.
 function exitHasRoom(g, ex, ey, gx, gy) {
   if (ex < 0 || ey < 0 || ex >= g.cols || ey >= g.rows) return false;
   const k = ey * g.cols + ex;
@@ -348,7 +348,7 @@ function exitHasRoom(g, ex, ey, gx, gy) {
   });
 }
 
-// May this building be knocked down to make room? A destination only if every colour it serves keeps another destination (while it still has houses).
+// May this building be knocked down to make room? A destination only if every color it serves keeps another destination (while it still has houses).
 function razeable(g, b) {
   if (b.kind === 'portal' || b.stadium) return false;
   if (b.kind === 'house') return true;
@@ -377,7 +377,7 @@ export function spawnPortal(g, edge, stadium, opts = {}) {
 
 // The same, but if the whole edge is taken (lined with roads, say) the gate takes the border tile that costs the least: a plain road piece (never a
 // bridge, tunnel or overpass) is cleared and goes back to the player's stock; if every border tile has a building, the cheapest one that may be
-// razed goes (houses before destinations; never a stadium, a gate, or the last destination of a colour). Returns { gate, cleared, razed } or null.
+// razed goes (houses before destinations; never a stadium, a gate, or the last destination of a color). Returns { gate, cleared, razed } or null.
 export function spawnPortalClearing(g, edge, stadium, opts = {}) {
   const free1 = spawnPortal(g, edge, stadium, opts);
   if (free1) return { gate: free1, cleared: 0, razed: 0 };
@@ -385,7 +385,7 @@ export function spawnPortalClearing(g, edge, stadium, opts = {}) {
   const target = new Set(entsOf(stadium).map(e => exitTile(stadium, e)).map(([x, y]) => y * g.cols + x));
   const price = b => (b.kind === 'house' ? 6 : 15);
   // Two passes. First the careful one (see above). If it finds nothing, the LAST RESORT: the gate has to happen, so it takes whatever is cheapest,
-  // including a destination even if it is the last of its colour, and a building standing on the tile in front of it (that goes too).
+  // including a destination even if it is the last of its color, and a building standing on the tile in front of it (that goes too).
   for (const lastResort of [false, true]) {
     let best = null;
     for (let t = 2; t < span - 2; t++) {

@@ -13,6 +13,7 @@ import {
   exitTile,
 } from "./buildings.js";
 import { spawnInitial, spawnPair } from "./spawn.js";
+import { settings } from "./settings.js";
 import { updateSim, reseatCarsOf, jammedTiles, sceneTiles } from "./cars.js";
 import { stepAccidents } from "./accident.js";
 import { stepOutside, resetOutside } from "./outside.js";
@@ -107,6 +108,7 @@ export function newGame(seed, map = maps[0]) {
   game.inv = { ...START_INVENTORY };
   game.mode = "play";
   game.tool = "build"; // a new game starts in build mode
+  game.options = { demographics: !!(settings.difficulty && settings.difficulty.demographics) }; // difficulty choices are locked in when a game starts
   game.placing = null;
   game.reward = null;
   game.over = null;
@@ -493,7 +495,7 @@ export const buildBridge = (from, tiles, end) =>
   buildSpan("bridge", from, tiles, end);
 // ---- tunnels: dug one block at a time ----
 // A tunnel block goes on a HILL tile next to a road or another tunnel block, and uses one tunnel piece. Tunnel blocks are road tiles
-// (`tunnel: true`): they connect to every neighbouring road, can bend and branch, and can be cut. A half-dug tunnel is just a road that goes
+// (`tunnel: true`): they connect to every neighboring road, can bend and branch, and can be cut. A half-dug tunnel is just a road that goes
 // nowhere yet. Returns 'ok' | 'exists' | 'notunnel' | 'noroad' | 'nothill' | 'blocked' | 'oob'.
 export function buildTunnelTile(x, y) {
   if (!inBounds(x, y)) return "oob";
@@ -708,7 +710,7 @@ export function selectSpecial(id) {
 }
 
 // Put a roundabout / traffic light on an intersection (a road tile with 3+ connections).
-// Lanes of the road running through (x,y) along axis `a` (0 = north-south, 1 = east-west), read off its neighbours.
+// Lanes of the road running through (x,y) along axis `a` (0 = north-south, 1 = east-west), read off its neighbors.
 function overpassLanesAlong(x, y, a) {
   const sides = a === 0 ? [0, 2] : [1, 3];
   return Math.min(
@@ -729,7 +731,7 @@ export function overpassFit(x, y) {
   const open = (a) => [a, a + 2].filter((d) => !isRoad(d)).length; // arms of axis a that are a building's entrance, not a road
   if (open(0) && open(1)) return "driveway"; // each way has a building at one end: one of them would be the deck
   if (open(0) === 2 || open(1) === 2) return "notcrossing"; // a way with no road in it at all
-  const along = (d) => layerLanes(game, x + SIDES[d][0], y + SIDES[d][1], d); // an overpass neighbour counts by the road running our way
+  const along = (d) => layerLanes(game, x + SIDES[d][0], y + SIDES[d][1], d); // an overpass neighbor counts by the road running our way
   const deckAxes = [0, 1].filter((a) => !open(a)); // the axes made of two roads
   if (!deckAxes.every((a) => along(a) === along(a + 2))) return "mismatch";
   const lanes = [0, 1].map((a) => overpassLanesAlong(x, y, a));
@@ -770,7 +772,7 @@ export function placeSpecial(id, x, y) {
   if (roadConns(game, x, y).length < 3) return "notjunction";
   if (id === "roundabout" && (r.lanes || 2) === 4) return "highway";
   // Lights need room to queue between them: with no gap, a car cleared by one light can end up stuck inside
-  // the intersection waiting for the next, blocking everyone. So no two lights on neighbouring tiles.
+  // the intersection waiting for the next, blocking everyone. So no two lights on neighboring tiles.
   if (id === "light")
     for (const [dx, dy] of [
       [0, -1],

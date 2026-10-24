@@ -73,8 +73,8 @@ class Heap {
 }
 
 // Features beyond the basics, switched on with `--bot flip,cut` in sim/run.mjs:
-//   flip: before connecting a colour's first house, flip a destination's gate to the other end if that is the cheaper hookup
-//   cut:  now and then, cut the seam between two neighbouring junctions if every connected house still has a route
+//   flip: before connecting a color's first house, flip a destination's gate to the other end if that is the cheaper hookup
+//   cut:  now and then, cut the seam between two neighboring junctions if every connected house still has a route
 export const FEATURES = ["flip", "cut"];
 
 export const JUNCTION_POLICIES = [
@@ -327,8 +327,8 @@ export const planCost = (g, plan) =>
       )
     : Infinity;
 
-// Move a destination's entrance to the place round its lot that makes the first hookup of its colour cheapest. Only while nothing of
-// that colour is connected yet (a move would cut off houses already wired to the old entrance).
+// Move a destination's entrance to the place round its lot that makes the first hookup of its color cheapest. Only while nothing of
+// that color is connected yet (a move would cut off houses already wired to the old entrance).
 function maybeFlip(g, h, bot) {
   if (!bot.features.has("flip")) return;
   if (
@@ -371,7 +371,7 @@ export const reaches = (g, b, d) => {
 };
 export const colorsIn = (g) => g.palette.slice(0, Math.max(1, g.colorsUsed));
 
-// The stadium must be reached by a house of every colour; each side-road gate by the stadium and a destination of every colour. Lay the road
+// The stadium must be reached by a house of every color; each side-road gate by the stadium and a destination of every color. Lay the road
 // from a house (or the gate) the way a player would: over the city's own roads where it can.
 function connectOutside(g, bot) {
   const arena = stadiumOf(g);
@@ -406,7 +406,7 @@ function connectHouses(g, bot) {
   for (const d of g.buildings) {
     if (d.kind !== "dest") continue;
     for (const c of [d.color, d.color2])
-      if (c) dests.set(c.id, (dests.get(c.id) || 0) + 1); // a two-colour destination counts for both
+      if (c) dests.set(c.id, (dests.get(c.id) || 0) + 1); // a two-color destination counts for both
   }
   for (const [c, n] of dests) {
     if (bot.dests.get(c) === n) continue;
@@ -440,7 +440,7 @@ function connectHouses(g, bot) {
   }
 }
 
-// Cut the seam between two neighbouring junctions when nothing needs it: every connected house must still reach a destination.
+// Cut the seam between two neighboring junctions when nothing needs it: every connected house must still reach a destination.
 function tidyCuts(g, bot) {
   if (!bot.features.has("cut")) return;
   const homes = g.buildings.filter((b) => b.kind === "house" && b.connected);

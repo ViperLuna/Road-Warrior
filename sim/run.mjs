@@ -116,7 +116,7 @@ export function summarise(recs, opts) {
     }
     say(`Trips: ${f('trips')}`);
     say(`Houses: ${f('houses')}`);
-    say(`Colours used: ${f('colors')}`);
+    say(`Colors used: ${f('colors')}`);
     say(`Roads on map: ${f('roads')}`);
     say(`Money at end: ${f('money')}`);
     say(`Goals reached: ${f('goals')}`);

@@ -143,6 +143,7 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .vol { display: flex; align-items: center; gap: 12px; font-size: .95rem; }
 .vol span { min-width: 56px; opacity: .85; }
 .vol input[type=range] { flex: 1; min-width: 0; accent-color: #E69F00; height: 28px; }
+.vol-group .note { margin: 0; font-size: 13px; line-height: 1.35; opacity: .75; }
 .vol-group { display: flex; flex-direction: column; gap: 8px; padding: 12px 18px; background: rgba(255, 255, 255, .08); border-radius: 14px; }
 .opt.small { font-size: .95rem; padding: 8px 12px; background: rgba(255, 255, 255, .06); }
 

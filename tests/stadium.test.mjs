@@ -60,11 +60,11 @@ if (arena) {
   const exits = entsOf(arena).map(e => exitTile(arena, e)); ok(new Set(exits.map(e => e.join())).size === 2 && exits.every(([x, y]) => !g.buildingAt.has(y * g.cols + x)), 'each gate has a free tile for its road');
   ok(arena.slots.length === tuning.stadium.capacity, 'virtual capacity');
 }
-// stadium only on the listed maps and only with every colour in play, at 3000 trips
+// stadium only on the listed maps and only with every color in play, at 3000 trips
 S(); base(); g.trips = milestones.stadium.afterTrips - 1; checkProgress(g, st.onEvent ? () => {} : null);
 ok(!stadiumOf(g), 'no stadium before the threshold');
 S(); base(); g.trips = milestones.stadium.afterTrips; g.colorsUsed = 2; checkProgress(g, e => events.push(e));
-ok(!stadiumOf(g), 'no stadium until every colour is in play');
+ok(!stadiumOf(g), 'no stadium until every color is in play');
 S(); base(); g.trips = milestones.stadium.afterTrips; checkProgress(g, e => events.push(e));
 ok(!!stadiumOf(g) && events.some(e => e.type === 'stadium'), 'the stadium appears at the threshold');
 st.newGame(5, maps[0]); g.colorsUsed = palette.length; g.trips = 5000; checkProgress(g, () => {});
@@ -103,8 +103,8 @@ if (A3 && gate) {
   for (let i = 0; i < 60 * 400; i++) { st.tick(1 / 60); const v = g.cars.filter(c => c.outside); seen = Math.max(seen, v.length); inside = v.filter(c => c.state === 'dwell').length; maxInside = Math.max(maxInside, inside); }
   ok(true, 'ran'); const gatesUsed = new Set();
   ok(seen >= 2 && maxInside >= 1, `visitors come, park and wait (peak ${seen} cars, ${maxInside} parked)`);
-  ok(g.cars.some(c => c.outside) && g.cars.filter(c => c.outside).every(c => palette.some(p => p.id === c.color.id)), 'visitors carry palette colours');
-  ok(new Set(g.cars.filter(c => c.outside).map(c => c.color.id)).size >= 1, 'colour present');
+  ok(g.cars.some(c => c.outside) && g.cars.filter(c => c.outside).every(c => palette.some(p => p.id === c.color.id)), 'visitors carry palette colors');
+  ok(new Set(g.cars.filter(c => c.outside).map(c => c.color.id)).size >= 1, 'color present');
   ok(g.money > money0 && g.trips === trips0 || g.trips >= trips0, 'visitors pay a little and do not count as trips (' + (g.money - money0) + ' cash)');
   const left = g.nextId; ok(g.cars.every(c => c.outside || g.buildings.includes(c.house)), 'every non-visitor car still has its house');
   // a horde: a crowd launched one after another, much faster than the trickle
@@ -218,7 +218,7 @@ if (big) {
     ok(g.cars.every(c => g.buildings.includes(c.house)), 'every car still has a house');
     ok(g.cars.every(c => !c.dest || g.buildings.includes(c.dest)), 'no car is heading for a razed destination');
     ok(g.buildings.every(b => !b.slots || b.slots.every(c => !c || g.cars.includes(c))), 'no bay holds a car that is gone');
-    ok(g.buildings.some(b => b.kind === 'dest' && !b.stadium && b.color.id === blue.id) && g.buildings.some(b => b.kind === 'dest' && !b.stadium && b.color.id === orange.id), 'every colour still has a destination');
+    ok(g.buildings.some(b => b.kind === 'dest' && !b.stadium && b.color.id === blue.id) && g.buildings.some(b => b.kind === 'dest' && !b.stadium && b.color.id === orange.id), 'every color still has a destination');
     ok(cCount - g.cars.length <= ev.razed, 'only razed houses lost their cars (' + (cCount - g.cars.length) + ')');
     tickN(60); ok(true, 'the game runs on');
   }
@@ -286,7 +286,7 @@ if (big) {
   const r5 = spawnPortalClearing(g, 0, arena5, { budget: 500 });
   ok(!!r5 && r5.razed >= 1 && g.buildings.filter(b => b.kind === 'house').length === houses0 - r5.razed, 'with a wall of houses in front, the gate takes one down (last resort) and happens anyway');
   ok(r5 && !g.buildingAt.has(idx0(r5.gate.x, r5.gate.y + 1)), 'and the tile in front of it is free');
-  // the last destination of a colour may go too, when it is the only way
+  // the last destination of a color may go too, when it is the only way
   S(); base(); const arena6 = spawnStadium(g, { budget: 500 });
   for (let x = 0; x < g.cols; x += 2) { const dd = addBuilding(g, 'dest', blue, x, 0, 2); }
   for (const b of g.buildings.slice()) if (b.kind === 'dest' && !b.stadium && b.y !== 0) b.y = b.y;     // (keep the others)

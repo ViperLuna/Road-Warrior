@@ -28,7 +28,7 @@ const S = (trips = 0) => {
   g.trips = trips; events.length = 0;
 };
 
-// ---- the piece: same ends as the plain lane, crossing the centre line in between, and saved by key
+// ---- the piece: same ends as the plain lane, crossing the center line in between, and saved by key
 {
   const plain = roadPiece(10, 10, 3, 1), w = workPiece(10, 10, 3);
   const e = (p, i) => p.pts[i];

@@ -39,6 +39,7 @@ export function serialize(g = game) {
     seed: g.seed, map: g.map.id, mode: g.mode === 'reward' ? 'reward' : 'play',
     time: g.time, trips: g.trips, money: g.money, nextId: g.nextId, nextBridge: g.nextBridge, bestAtStart: g.bestAtStart,
     inv: { ...g.inv }, unlocks: { ...g.unlocks }, oneway: !!g.oneway, build4: !!g.build4,
+    options: g.options,
     progress: { portalWaves: g.portalWaves, spawnCount: g.spawnCount, nextSpawnAt: g.nextSpawnAt, goalCount: g.goalCount, nextGoalAt: g.nextGoalAt, prevGoalAt: g.prevGoalAt, colorsUsed: g.colorsUsed },
     reward: g.reward ? { goal: g.reward.goal, options: g.reward.options.map(o => ({ ...o, special: o.special ? o.special.id : undefined })) } : null,
     terrain: { water: encodeGrid(g.terrain.water), start: g.terrain.start },
@@ -79,6 +80,7 @@ export function restore(data, g = game) {
   g.over = null;
   g.reward = data.reward ? { goal: data.reward.goal, options: data.reward.options.map(o => ({ ...o, special: o.special ? specialInfo(o.special) : undefined })) } : null;
   g.mode = g.reward ? 'reward' : 'play';
+  g.options = { demographics: false, ...(data.options || {}) };                   // (a game saved before this option existed picks colors at random)
   g.tool = 'pan'; g.placing = null;            // a loaded game opens in Move mode, so nothing gets built or demolished by an accidental tap
   g.speed = 0;                      // come back paused: no surprise traffic while you find your bearings
 

@@ -24,7 +24,7 @@ const { prog } = await import(R + 'js/progression.js');
 const { spawnPair, spawnHouse } = await import(R + 'js/spawn.js');
 const blue = palette[0], orange = palette[1];
 
-// ---- the two-colour destination: cars of BOTH colours drive to it and park in the same lot
+// ---- the two-color destination: cars of BOTH colors drive to it and park in the same lot
 function scene() {
   st.newGame(5, maps[0]); g.terrain.water.fill(0); g.nextSpawnAt = 1e9; g.nextGoalAt = 1e9; g.buildings = []; g.cars = []; g.roads = new Map(); g.nextId = 1; reindex(g);
   g.inv.road = 999; g.money = 999; g.mode = 'play';
@@ -37,45 +37,45 @@ function scene() {
 }
 {
   const { d } = scene();
-  ok(accepts(d, 'blue') && accepts(d, 'orange') && !accepts(d, 'pink'), 'a two-colour destination accepts exactly its two colours');
+  ok(accepts(d, 'blue') && accepts(d, 'orange') && !accepts(d, 'pink'), 'a two-color destination accepts exactly its two colors');
   const seen = new Set(), tripsBefore = g.trips;
   for (let i = 0; i < 60 * 120; i++) {
     st.tick(1 / 60);
     for (const c of d.slots) if (c) seen.add(c.color.id);
     if (seen.size === 2 && g.trips > 12) break;
   }
-  ok(seen.has('blue') && seen.has('orange'), 'cars of both colours park in the two-colour destination (saw ' + [...seen] + ')');
+  ok(seen.has('blue') && seen.has('orange'), 'cars of both colors park in the two-color destination (saw ' + [...seen] + ')');
   ok(g.trips > tripsBefore + 5, 'trips are completed (' + (g.trips - tripsBefore) + ')');
   const worst = g.cars.reduce((m, c) => Math.max(m, c.stuck), 0);
-  ok(worst < 12, 'nobody is stuck in the plain two-colour scene (worst ' + worst.toFixed(1) + ' s)');
+  ok(worst < 12, 'nobody is stuck in the plain two-color scene (worst ' + worst.toFixed(1) + ' s)');
 }
-// ---- saving and loading keeps the second colour
+// ---- saving and loading keeps the second color
 {
   const { d } = scene(); const data = JSON.parse(JSON.stringify(serialize()));
   scene(); restore(data);
   const back = g.buildings.find(b => b.kind === 'dest');
   ok(back && back.color.id === 'blue' && back.color2 && back.color2.id === 'orange', 'save/restore keeps color2');
-  ok(!g.buildings.filter(b => b.kind === 'house').some(h => h.color2), 'houses never get a second colour');
+  ok(!g.buildings.filter(b => b.kind === 'house').some(h => h.color2), 'houses never get a second color');
   scene(); const plain = addBuilding(g, 'dest', orange, 3, 3, 0);
   const d2 = JSON.parse(JSON.stringify(serialize())); scene(); restore(d2);
-  ok(g.buildings.filter(b => b.kind === 'dest').every(b => b.color2 === undefined || b.color2.id), 'a normal destination stays single-colour after a save');
+  ok(g.buildings.filter(b => b.kind === 'dest').every(b => b.color2 === undefined || b.color2.id), 'a normal destination stays single-color after a save');
 }
-// ---- spawning: spawnPair(color2) + a second-colour house placed apart from the first
+// ---- spawning: spawnPair(color2) + a second-color house placed apart from the first
 {
   st.newGame(7, maps[0]); g.terrain.water.fill(0); g.buildings = []; g.cars = []; g.roads = new Map(); g.nextId = 1; reindex(g);
   const made = spawnPair(g, blue, { region: { x0: 10, y0: 8, x1: 16, y1: 14 }, roads: [4, 14], color2: orange });
-  ok(made && made.dest.color2 && made.dest.color2.id === 'orange', 'spawnPair(color2) makes a two-colour destination');
+  ok(made && made.dest.color2 && made.dest.color2.id === 'orange', 'spawnPair(color2) makes a two-color destination');
   const h2 = made && spawnHouse(g, orange, { near: made.dest, apart: { x: made.house.x, y: made.house.y, min: 5 }, roads: [4, 14] });
-  ok(!h2 || Math.hypot(h2.x - made.house.x, h2.y - made.house.y) >= 5, 'the second colour\'s house stays at least 5 tiles from the first');
-  ok(!h2 || h2.color.id === 'orange', 'the second house is the second colour');
+  ok(!h2 || Math.hypot(h2.x - made.house.x, h2.y - made.house.y) >= 5, 'the second color\'s house stays at least 5 tiles from the first');
+  ok(!h2 || h2.color.id === 'orange', 'the second house is the second color');
   const h3 = spawnHouse(g, orange, { roads: [4, 14] });                  // no `near`: any destination that accepts orange, including this one
-  ok(!h3 || accepts(made.dest, 'orange'), 'orange houses may spawn for a destination that only lists orange as its second colour');
+  ok(!h3 || accepts(made.dest, 'orange'), 'orange houses may spawn for a destination that only lists orange as its second color');
 }
 // ---- how often they appear
 {
   const sp = prog.spawns.dual; const fake = (trips, colorsUsed) => ({ trips, colorsUsed });
   ok(dualChance(fake(0, 3)) === 0 && dualChance(fake(milestones.dual.afterTrips - 1, 3)) === 0, 'none before afterTrips');
-  ok(dualChance(fake(milestones.dual.afterTrips, 1)) === 0, 'none with only one colour in play');
+  ok(dualChance(fake(milestones.dual.afterTrips, 1)) === 0, 'none with only one color in play');
   ok(Math.abs(dualChance(fake(milestones.dual.afterTrips, 3)) - sp.startChance) < 1e-9, 'starts at startChance');
   ok(Math.abs(dualChance(fake(milestones.dual.afterTrips + sp.rampTrips * 10, 3)) - sp.maxChance) < 1e-9, 'climbs to maxChance and stays there');
   ok(dualChance(fake(milestones.dual.afterTrips + sp.rampTrips / 2, 3)) > sp.startChance && dualChance(fake(milestones.dual.afterTrips + sp.rampTrips / 2, 3)) < sp.maxChance, 'in between while ramping');

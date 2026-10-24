@@ -3,8 +3,8 @@
 import { tuning } from './tuning.js';
 export const DIR = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // N E S W (screen coords, y down)
 export const OPP = [2, 3, 0, 1];
-export const LANE = 0.115;       // lane centre offset from road centre (2-lane road)
-export const LANE4 = [0.11, 0.33];   // 4-lane road: inner and outer lane centres, each side of the median
+export const LANE = 0.115;       // lane center offset from road center (2-lane road)
+export const LANE4 = [0.11, 0.33];   // 4-lane road: inner and outer lane centers, each side of the median
 export const laneOffset = (edgeLanes, idx) => (edgeLanes === 4 ? LANE4[idx] : LANE);
 export const CAR_LEN = 0.34;
 export const rt = v => [-v[1], v[0]];                   // right-hand side of heading v
@@ -76,7 +76,7 @@ export function pointAt(p, s, out) {
 }
 
 // Car crosses road tile (x,y) entering from side `inS`, leaving through side `outS`.
-// o: tl = the tile's lane count, ei/eo = lane count at the entry/exit edge (the smaller of the two neighbours),
+// o: tl = the tile's lane count, ei/eo = lane count at the entry/exit edge (the smaller of the two neighbors),
 // li/lo = which lane (0 inner, 1 outer) the car uses at each edge. Where edge counts differ the piece tapers.
 export function roadPiece(x, y, inS, outS, o = {}) {
   const tl = o.tl ?? 2, ei = o.ei ?? 2, eo = o.eo ?? 2, li = o.li ?? 0, lo = o.lo ?? 0;
@@ -103,7 +103,7 @@ export function roadPiece(x, y, inS, outS, o = {}) {
     { ...extra, turn: right ? 'right' : 'left', taper: Math.abs(offIn - offOut) > 1e-9 });
 }
 
-// Road works: the car's own lane is coned off, so it swings across the centre line into the oncoming lane and back (one lane shared by both ways).
+// Road works: the car's own lane is coned off, so it swings across the center line into the oncoming lane and back (one lane shared by both ways).
 // Same entry and exit points as the plain piece, so it joins the tiles either side as usual.
 export function workPiece(x, y, inS) {
   const key = `rw:${x},${y}:${inS}`;
@@ -116,7 +116,7 @@ export function workPiece(x, y, inS) {
 }
 
 // ---- Roundabout: cars circulate counter-clockwise (US) around a central island ----
-export const RING_R = 0.26;                       // ring centre-line radius
+export const RING_R = 0.26;                       // ring center-line radius
 const TAU = Math.PI * 2;
 const wrap = a => ((a % TAU) + TAU) % TAU;
 
@@ -188,7 +188,7 @@ export function houseInPiece(x, y, rot) {
 }
 
 // ---- Parking lot: one connected space (2 tiles x 2 bays). Any entrance reaches any bay. ----
-// Building top-left (bx,by) facing rot. Lot tile i (0|1) centre; i grows along the building's local +y.
+// Building top-left (bx,by) facing rot. Lot tile i (0|1) center; i grows along the building's local +y.
 export function lotCenter(bx, by, rot, i) {
   const X = DIR[rot], T = rt(X);
   return [bx + 1 + X[0] * 0.5 + T[0] * (i - 0.5), by + 1 + X[1] * 0.5 + T[1] * (i - 0.5)];

@@ -14,7 +14,7 @@ export function initProgress(g) {
 }
 
 const houseCount = g => g.buildings.filter(b => b.kind === 'house').length;
-// (a two-colour destination counts as a destination for each of its colours)
+// (a two-color destination counts as a destination for each of its colors)
 // (a small destination counts as half of one)
 const count = (g, kind, color) => g.buildings.filter(b => b.kind === kind && (kind === 'dest' ? accepts(b, color.id) : b.color.id === color.id)).reduce((n, b) => n + (kind === 'dest' ? destWeight(b) : 1), 0);
 
@@ -32,7 +32,7 @@ export function crossChance(g) {
   return findCrossings(g).some(c => c.covered) ? 0.35 : 0;
 }
 
-// Chance that a new destination serves two colours: none until `afterTrips`, then `startChance`, climbing to `maxChance`
+// Chance that a new destination serves two colors: none until `afterTrips`, then `startChance`, climbing to `maxChance`
 // over the next `rampTrips`. (progression.json -> spawns.dual; chance 0 turns it off.)
 export function dualChance(g) {
   const d = prog.spawns.dual;
@@ -41,7 +41,7 @@ export function dualChance(g) {
   return d.startChance + (d.maxChance - d.startChance) * k;
 }
 
-// A two-colour destination: `color` plus another colour already in play. Both colours get a house placed well apart from each other,
+// A two-color destination: `color` plus another color already in play. Both colors get a house placed well apart from each other,
 // so their routes have to come together on the way in. Returns a description of what spawned, or null (nothing was placed).
 function spawnDual(g, color) {
   if (!(Math.random() < dualChance(g))) return null;
@@ -60,19 +60,25 @@ function spawnDual(g, color) {
   return null;
 }
 
+// Which of the colors in play gets the next house. By default it is a plain random pick (1 in however many colors there are). With the
+// "Color spawn demographics" difficulty option it is the color with the fewest houses per destination (ties at random), which keeps the
+// colors in step with their destinations. (A color with no room left still gets a new destination instead of a house: see doSpawn.)
+export function pickSpawnColor(g, rng = Math.random) {
+  const pool = g.palette.slice(0, g.colorsUsed);
+  if (!(g.options && g.options.demographics)) return pool[(rng() * pool.length) | 0];
+  const load = c => count(g, 'house', c) / Math.max(1, count(g, 'dest', c));
+  const best = Math.min(...pool.map(load));
+  const low = pool.filter(c => load(c) === best);
+  return low[(rng() * low.length) | 0];
+}
+
 // Returns a description of what spawned, or null if there was no room.
 function doSpawn(g) {
   const sp = prog.spawns, i = g.spawnCount + 1;
   let color, kind;
   if (i <= sp.sameColorSpawns) color = g.palette[0];
   else if (g.colorsUsed < g.palette.length && (i - sp.sameColorSpawns - 1) % sp.newColorEverySpawns === 0) { color = g.palette[g.colorsUsed]; kind = 'newColor'; }
-  if (!color) {                                           // existing colour with the fewest houses per destination
-    const pool = g.palette.slice(0, g.colorsUsed);
-    const load = c => count(g, 'house', c) / Math.max(1, count(g, 'dest', c));
-    const best = Math.min(...pool.map(load));
-    const low = pool.filter(c => load(c) === best);
-    color = low[(Math.random() * low.length) | 0];
-  }
+  if (!color) color = pickSpawnColor(g);
   const dests = count(g, 'dest', color), houses = count(g, 'house', color);
   const room = sp.maxHousesPerDestination * dests - houses;
   if (kind !== 'newColor') kind = room >= 1 ? 'houses' : 'combo';
@@ -88,8 +94,8 @@ function doSpawn(g) {
     }
     return made ? { kind, color, n: made, across: !!over, needsBridge: !!(over && over.needsBridge) } : null;
   }
-  if (kind === 'combo') { const r = spawnDual(g, color); if (r) return r; }       // sometimes the new destination serves two colours
-  if (Math.random() < p) {                                   // new colour with its house on the far bank
+  if (kind === 'combo') { const r = spawnDual(g, color); if (r) return r; }       // sometimes the new destination serves two colors
+  if (Math.random() < p) {                                   // new color with its house on the far bank
     const r = spawnPairAcross(g, color, { anchor: anchorNear(g), ...across() });
     if (r) { if (kind === 'newColor') g.colorsUsed++; return { kind, color, n: 2, across: true, needsBridge: r.needsBridge }; }
   }
@@ -124,7 +130,7 @@ function pickSpecial(g) {
   return list[0];
 }
 
-// The stadium (milestones.stadium: big maps, once every colour is in play), then waves of side-road gates (milestones.portals.waves, e.g. two
+// The stadium (milestones.stadium: big maps, once every color is in play), then waves of side-road gates (milestones.portals.waves, e.g. two
 // gates at 4000 trips, optionally two more at 5000). Each asks for a popup and starts a patience clock (deadlines.js).
 function spawnOutsideThings(g, notify) {
   const st = milestones.stadium;
