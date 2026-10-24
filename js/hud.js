@@ -41,6 +41,10 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   });
   $('oneway-btn').addEventListener('click', () => { setOneWay(!game.oneway); toast(game.oneway ? 'One-way on: drag along a road to set its direction.' : 'One-way off: dragging along a road makes it two-way.'); });
   // Settings screen: cut markers, plus volume and mute for sound effects and for music.
+  // The eye button in the corner hides every button, counter and message so the map can be seen (or screenshotted) bare. Popups that need an
+  // answer (the menu, rewards, game over) are not part of the HUD and still show. The setting is not saved: a reload starts with the HUD on.
+  const guiBtn = $('gui-btn');
+  guiBtn.addEventListener('click', () => { const off = document.body.classList.toggle('gui-off'); guiBtn.setAttribute('aria-pressed', String(off)); });
   const optCuts = $('opt-cuts'), optDemo = $('opt-demographics');
   const bind = (rangeId, muteId, volKey, muteKey) => {
     const range = $(rangeId), mute = $(muteId);

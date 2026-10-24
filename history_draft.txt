@@ -27,7 +27,7 @@
 - Traffic lights now wait for a real gap: the green only gives way after its street has been empty for 2 seconds (a one-car hole in a stream no longer flips it), or at the 10 second cap whatever is still coming. Both streets follow the same rules.
 - Accidents now last 40 seconds. A car that stops behind one can't reach the 40 second game-over time before it clears, so the queue just gets to move again.
 
-- A jam now also locks the road tile ahead of the stuck car: you can't demolish the tile under it or the one it is waiting to enter, so you can't clear a jam by deleting the junction it is waiting for. Roads beside it are still free.
+- A jam now also locks the road tile ahead of the stuck car: you can't demolish the tile under it or the one it is waiting to enter, so you can't clear a jam by deleting the intersection it is waiting for. Roads beside it are still free.
 
 - Road works: from 1,500 trips, the accident timer sometimes brings road works instead of a crash. One straight road tile gets little orange cones down one lane. The cars on that side wait for the oncoming traffic to clear, then swing into the open lane, so the tile works like a one-lane bridge. It lasts 40 seconds, can land on either side of the road, and never puts a wreck and road works on the map together.
 
@@ -37,7 +37,7 @@
 
 - Fixed: on 4-lane roads (highways) cars picked the inner or outer lane at random, so half of them swerved across the road to make a turn, most visibly at a stadium gate. Now a car takes the lane its turn needs: outer lane for right turns, inner lane for left turns, and it moves over early instead of at the last moment. A car coming out of a gate turns into the nearest lane.
 
-- Traffic lights can now go on a bridge, on the tile where a road meets the span from the side (a plain stretch of bridge still has no junction to light). Roundabouts and overpasses still can't go on a bridge, and a light on a bridge comes back to your stock if you demolish the bridge.
+- Traffic lights can now go on a bridge, on the tile where a road meets the span from the side (a plain stretch of bridge still has no intersection to light). Roundabouts and overpasses still can't go on a bridge, and a light on a bridge comes back to your stock if you demolish the bridge.
 
 - Cars from the side roads no longer only head for the stadium. A visitor now goes to any destination it can reach that takes its color, the stadium included (the stadium takes every color). A match crowd still goes to the stadium only.
 
@@ -47,11 +47,13 @@
 
 - A saved game now opens in Move mode, so a stray tap can't build or demolish anything while you find your bearings. A new game starts in Build mode.
 
-- Oncoming cars that both turn left at the same junction no longer make one wait for the other. Left and right turns now cut in a little earlier (tighter curves), so the two left turns pass each other in the middle like real drivers do, and the paths of other turns that don't really cross stay clear of each other.
+- Oncoming cars that both turn left at the same intersection no longer make one wait for the other. Left and right turns now cut in a little earlier (tighter curves), so the two left turns pass each other in the middle like real drivers do, and the paths of other turns that don't really cross stay clear of each other.
 
 - Fixed: on a 4-lane road, two cars side by side at a green light could hold each other up. If the straight-on car in one lane couldn't move because the road beyond was backed up, a car in the next lane that wanted to turn waited for it too, even though its own way was clear. A car that can't move off the line no longer holds anyone else up. In bot test games this cut the number of jam warnings roughly in half.
 
-- Fixed: on a 4-lane road, a car turning left from the inner lane waited until every straight-on car in the outer lane had cleared the junction, even though their paths don't cross. Cars in the two lanes of the same approach now only wait for each other if their paths really cross (for example a car changing lanes). Streets that cross keep the wider safety margin.
+- Fixed: on a 4-lane road, a car turning left from the inner lane waited until every straight-on car in the outer lane had cleared the intersection, even though their paths don't cross. Cars in the two lanes of the same approach now only wait for each other if their paths really cross (for example a car changing lanes). Streets that cross keep the wider safety margin.
 
 - New houses now pick their color completely at random (one in however many colors are in play), so one color can't pile up houses by collecting destinations. There is a new Difficulty section in Settings with a "Color spawn demographics" checkbox: tick it to bring back the old balancing, where the color with the fewest houses per destination gets the next house. The choice is locked in when a game starts, and saved games that were started before this change now pick at random too.
 - The game now uses American English everywhere (color, center, neighbor).
+
+- There is a new eye button in the bottom right corner. Tap it (or press U) to hide every button, counter and message and see the bare map, for example for a screenshot. Tap it again to bring them back. It is not saved, so a reload starts with them showing.

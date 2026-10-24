@@ -16,6 +16,7 @@
     { "id": "shop", "label": "Shop", "keys": ["s"] },
     { "id": "log", "label": "History log", "keys": ["l"] },
     { "id": "music", "label": "Music", "keys": ["n"] },
+    { "id": "gui", "label": "Hide/show interface", "keys": ["u"] },
     { "id": "speed0", "label": "Speed: pause", "keys": ["Numpad0"] },
     { "id": "speed1", "label": "Speed: 1x", "keys": ["Numpad1"] },
     { "id": "speed15", "label": "Speed: 1.5x", "keys": ["Numpad2"] },

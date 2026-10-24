@@ -229,6 +229,7 @@ export function initInput(canvas) {
     shop: press => { if (running()) clickBtn('shop-btn', press); },
     log: press => { if (running() || game.mode === 'pause') clickBtn('log-btn', press); },
     music: press => clickBtn('music-btn', press),
+    gui: press => clickBtn('gui-btn', press),
     speed0: press => { if (running()) press(() => setSpeed(0)); },
     speed1: press => { if (running()) press(() => setSpeed(1)); },
     speed15: press => { if (running()) press(() => setSpeed(1.5)); },

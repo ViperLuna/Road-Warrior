@@ -64,6 +64,13 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 #start:hover, #start:focus-visible { background: #ffb81f; }
 
 /* ---- HUD extras ---- */
+#gui-btn { position: absolute; right: calc(12px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom)); width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: rgba(10, 16, 12, .72); color: #fff; display: grid; place-items: center; cursor: pointer; }
+#gui-btn svg { width: 24px; height: 24px; }
+#gui-btn .slash { display: none; }
+body.gui-off #gui-btn { opacity: .35; }
+body.gui-off #gui-btn:hover, body.gui-off #gui-btn:focus-visible { opacity: 1; }
+body.gui-off #gui-btn .slash { display: inline; }
+body.gui-off #hud-top, body.gui-off #toolbar, body.gui-off #chips, body.gui-off #toast, body.gui-off #music, body.gui-off #log, body.gui-off #shop { display: none !important; }
 #hud[hidden], .overlay[hidden], #shop[hidden], #music[hidden], #music-btn[hidden], #opt-music-group[hidden] { display: none; }
 #specials { display: contents; }
 .chip { font: inherit; font-size: .85rem; color: #fff; background: rgba(10, 16, 12, .72); border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; }
