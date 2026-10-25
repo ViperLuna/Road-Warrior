@@ -398,6 +398,14 @@ function readBest() {
   }
 }
 export const bestFor = (id) => readBest()[id] || 0;
+export const bestScores = () => readBest();
+// Take the best scores from an imported file: a score only ever goes up.
+export function mergeBest(incoming) {
+  const b = readBest();
+  for (const [id, v] of Object.entries(incoming || {})) if (Number.isFinite(v) && v > (b[id] || 0)) b[id] = v;
+  try { localStorage.setItem(BEST_KEY, JSON.stringify(b)); } catch { /* storage unavailable */ }
+  bestDirty = false; bestCache = game.map ? bestFor(game.map.id) : bestCache;
+}
 function saveBest(id, trips) {
   try {
     const b = readBest();

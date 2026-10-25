@@ -120,6 +120,19 @@
         <label class="opt small"><input type="checkbox" id="opt-demographics"> Color spawn demographics</label>
         <p class="note">Off: every new house picks its color at random. On: the color with the fewest houses per destination gets the next house, which keeps the colors balanced. Applies to new games.</p>
       </div>
+      <div class="vol-group">
+        <b>Save file</b>
+        <div class="row">
+          <button class="big alt" id="save-export" type="button">Export</button>
+          <button class="big alt" id="save-import" type="button">Import</button>
+        </div>
+        <input type="file" id="save-file" accept=".json,application/json" hidden>
+        <p class="note" id="save-msg"></p>
+        <div class="row" id="save-confirm" hidden>
+          <button class="big" id="save-replace" type="button">Replace</button>
+          <button class="big alt" id="save-cancel" type="button">Cancel</button>
+        </div>
+      </div>
       <button class="big alt" id="keys-open" type="button">Keyboard</button>
       <button class="big" id="settings-close" type="button">Back</button>
     </div>

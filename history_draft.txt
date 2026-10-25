@@ -59,3 +59,5 @@
 - There is a new eye button in the bottom right corner. Tap it (or press U) to hide every button, counter and message and see the bare map, for example for a screenshot. Tap it again to bring them back. It is not saved, so a reload starts with them showing.
 
 - Fixed: on a highway (4-lane) intersection, two oncoming cars both going straight in the inner lanes (the ones next to the middle line) made each other wait. Oncoming cars in their own lanes never meet, so they now go through together.
+
+- Settings has a new Save file section. Export downloads your current game as a file (the file name says the map and your trips). Import loads a file back in, so you can move a game to another phone or computer or keep a backup. Import is only on the main menu, and it asks before it replaces your saved game. The file also carries your best scores, and importing never lowers one.

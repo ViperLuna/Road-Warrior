@@ -10,6 +10,9 @@ import {
   onEvent,
   flushBest,
   addLog,
+  bestScores,
+  mergeBest,
+  refresh,
 } from "./state.js";
 import { setTuning } from "./tuning.js";
 import { setKeybinds } from "./keys.js";
@@ -23,7 +26,11 @@ import {
   clearSave,
   describeSave,
   startAutosave,
+  currentSave,
+  storeSave,
+  SAVE_VERSION,
 } from "./save.js";
+import { makeExport, exportFileName, readExport } from "./savefile.js";
 import { render } from "./render.js";
 import { initInput, hover } from "./input.js";
 import { initHud, note } from "./hud.js";
@@ -141,6 +148,7 @@ const hashOf = () =>
     : "");
 function wakeBrain() {
   brain = null;
+  if (!brainMod || !brainFile) return; // (no bot unless the page was opened with #brain: otherwise this threw an error at every game start)
   // if (!brainFile) return note(`No bot: couldn't load ${brainUrl} (train one with npm run train). You're playing yourself.`);
   try {
     brain = brainMod.createBrain(brainFile, {
@@ -214,7 +222,34 @@ async function continueGame() {
   wakeBrain();
 }
 
+// Save files (Settings > Save file): export hands the player the current save as a .json; import checks a file and, once the player has
+// agreed, replaces the stored save with it (and takes its best scores if they are higher). The menu's Continue card then shows it.
+const fmtN = (n) => Number(n).toLocaleString("en-US");
+async function exportSaveFile() {
+  flushBest();
+  const save = await currentSave(view());
+  if (!save) return { ok: false, message: "There is no saved game to export yet. Play for a bit, then try again." };
+  const blob = new Blob([JSON.stringify(makeExport(save, bestScores()))], { type: "application/json" });
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = exportFileName(save); document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  const map = maps.find((m) => m.id === save.map);
+  return { ok: true, message: `Exported ${map ? map.name : "your game"}: ${fmtN(save.trips)} trips (${(blob.size / 1048576).toFixed(1)} MB). Look in your downloads.` };
+}
+const readSaveFile = (text) => readExport(text, { maps, saveVersion: SAVE_VERSION });
+async function applySaveFile(read) {
+  const stored = await storeSave(read.save);
+  if (!stored) return { ok: false, message: "Your browser would not store that save (it may be full). Nothing was changed." };
+  mergeBest(read.best);
+  await refreshSaveInfo();
+  refresh();
+  return { ok: true, message: `Imported ${read.summary.map}: ${fmtN(read.summary.trips)} trips. Close Settings and tap Continue.` };
+}
+
 initHud({
+  onExportSave: exportSaveFile,
+  onReadSaveFile: readSaveFile,
+  onApplySaveFile: applySaveFile,
   onPlay: (map) => startMap(map),
   onRestart: () => startMap(game.map),
   onToMenu: async () => {

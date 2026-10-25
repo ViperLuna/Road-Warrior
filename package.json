@@ -22,6 +22,7 @@
     "test:twocars": "node tests/twocars.test.mjs",
     "test:sidebyside": "node tests/sidebyside.test.mjs",
     "test:spawncolor": "node tests/spawncolor.test.mjs",
+    "test:savefile": "node tests/savefile.test.mjs",
     "test:signals": "node tests/signals.test.mjs",
     "test:tunnel": "node tests/tunnel.test.mjs",
     "test:keys": "node tests/keys.test.mjs",

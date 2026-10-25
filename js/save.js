@@ -157,6 +157,9 @@ export async function saveNow(extra = {}) {
   return backend.save(slotName, { ...serialize(), ...extra });
 }
 export async function loadSaved() { return backend.load(slotName); }
+// The save to hand out as a file: the running game as it is right now, or the stored one when no game is running (in the menu). null if there is none.
+export async function currentSave(extra = {}) { return PLAYABLE.has(game.mode) ? { ...serialize(), ...extra } : backend.load(slotName); }
+export async function storeSave(data) { return backend.save(slotName, data); }
 export async function clearSave() { return backend.remove(slotName); }
 
 // A one-line summary for the menu's Continue card.

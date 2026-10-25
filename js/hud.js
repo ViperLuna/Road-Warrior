@@ -27,7 +27,7 @@ export function note(msg, spots = [], extra = {}) { toast(msg); addLog(msg, spot
 
 const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, getSaveInfo = () => null }) {
+export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, getSaveInfo = () => null, onExportSave = async () => ({ ok: false, message: '' }), onReadSaveFile = () => ({ ok: false, error: '' }), onApplySaveFile = async () => ({ ok: false, message: '' }) }) {
   toastEl = $('toast');
   const buttons = document.querySelectorAll('#toolbar button[data-tool]');
   const canvas = $('game');
@@ -55,8 +55,30 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
   const syncSfx = bind('opt-sfx-vol', 'opt-sfx-mute', 'sfxVolume', 'sfxMuted');
   const syncMusicA = bind('opt-music-vol', 'opt-music-mute', 'musicVolume', 'musicMuted');
   const syncMusicB = bind('music-vol', 'music-mute', 'musicVolume', 'musicMuted');       // the music panel's own copy of the same two controls
+  // Save file: export any time; import only from the main menu (a running game keeps writing its own autosave over whatever is imported).
+  const saveMsg = $('save-msg'), saveConfirm = $('save-confirm'), saveImport = $('save-import'), saveFile = $('save-file');
+  let pendingImport = null;
+  const saySave = text => { saveMsg.textContent = text; };
+  const resetSaveUi = () => { pendingImport = null; saveConfirm.hidden = true; saveFile.value = ''; saveImport.disabled = game.mode !== 'menu'; saySave(game.mode === 'menu' ? 'Export your game to a file, or load a saved file back in.' : 'Export your game to a file. To import a file, go to the main menu first.'); };
+  $('save-export').addEventListener('click', async () => { saySave('Exporting...'); const r = await onExportSave(); saySave(r.message); });
+  saveImport.addEventListener('click', () => { if (game.mode === 'menu') saveFile.click(); });
+  saveFile.addEventListener('change', async () => {
+    const file = saveFile.files && saveFile.files[0];
+    if (!file) return;
+    let text = '';
+    try { text = await file.text(); } catch { saySave('That file could not be read.'); return; }
+    const r = onReadSaveFile(text);
+    if (!r.ok) { saySave(r.error); saveFile.value = ''; return; }
+    const sv = getSaveInfo();
+    if (!sv) { saySave('Importing...'); const done = await onApplySaveFile(r); saySave(done.message); saveFile.value = ''; return; }
+    pendingImport = r;
+    saySave(`Replace your saved game (${sv.map}, ${sv.trips.toLocaleString('en-US')} trips) with ${r.summary.map}, ${r.summary.trips.toLocaleString('en-US')} trips from this file?`);
+    saveConfirm.hidden = false;
+  });
+  $('save-replace').addEventListener('click', async () => { const r = pendingImport; if (!r) return; saveConfirm.hidden = true; pendingImport = null; saySave('Importing...'); const done = await onApplySaveFile(r); saySave(done.message); saveFile.value = ''; });
+  $('save-cancel').addEventListener('click', resetSaveUi);
   const syncAll = () => { optCuts.checked = settings.showCuts; optDemo.checked = !!settings.difficulty.demographics; syncSfx(); syncMusicA(); syncMusicB(); };
-  const openSettings = () => { syncAll(); $('settings').hidden = false; };
+  const openSettings = () => { syncAll(); resetSaveUi(); $('settings').hidden = false; };
   $('settings-btn').addEventListener('click', openSettings);
   $('pause-settings-btn').addEventListener('click', openSettings);
   $('settings-close').addEventListener('click', () => { $('settings').hidden = true; });
