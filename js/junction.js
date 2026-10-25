@@ -75,7 +75,10 @@ function pairGeometry(a, b) {
   r.together = !lot && a.in === b.in && a.out === b.out && (a.li ?? 0) !== (b.li ?? 0) && (a.lo ?? 0) !== (b.lo ?? 0) && a.tl === b.tl;
   // (two lanes of the SAME approach start a lane apart and either run side by side or part company, so they only conflict if they really
   // come within a car's width: the extra margin is for streets that cross, and for lane changes, which do cross)
-  const wide = !lot && (a.tl === 4 || b.tl === 4) && a.in !== b.in;
+  // Oncoming cars both going straight, each staying in its own lane, run in opposite directions a lane apart and never meet: on a 4-lane road the
+  // two inner lanes are only 0.22 apart, which is inside the wide margin, so without this they would make each other wait.
+  const oncoming = a.in === OPP[b.in] && a.out === OPP[a.in] && b.out === OPP[b.in] && (a.li ?? 0) === (a.lo ?? 0) && (b.li ?? 0) === (b.lo ?? 0);
+  const wide = !lot && (a.tl === 4 || b.tl === 4) && a.in !== b.in && !oncoming;
   const thr = tuning.cars.conflictDistance + (lot ? 0.1 : wide ? 0.05 : 0), t2 = thr * thr;
   for (let j = b.xy.length - 1; j >= 0 && r.last < 0; j--) {
     const bx = b.xy[j][0], by = b.xy[j][1];

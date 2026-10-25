@@ -57,3 +57,5 @@
 - The game now uses American English everywhere (color, center, neighbor).
 
 - There is a new eye button in the bottom right corner. Tap it (or press U) to hide every button, counter and message and see the bare map, for example for a screenshot. Tap it again to bring them back. It is not saved, so a reload starts with them showing.
+
+- Fixed: on a highway (4-lane) intersection, two oncoming cars both going straight in the inner lanes (the ones next to the middle line) made each other wait. Oncoming cars in their own lanes never meet, so they now go through together.

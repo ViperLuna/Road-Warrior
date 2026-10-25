@@ -351,3 +351,6 @@ The conflict check (`pairGeometry`, junction.js) uses a wider margin on 4-lane t
 
 ### Hide-the-interface button
 `#gui-btn` (bottom right of the HUD, an eye icon, hotkey `gui` = U in config/keybinds.json) toggles `body.gui-off`. In that state CSS hides the top bar, toolbar, countdown chips, toasts and the music, history and shop panels; the button itself stays (faded, crossed out). Popups that need an answer (menu, reward, game over, notices) are overlays outside `#hud` and still show. Not saved: a reload starts with the interface on. Patience warnings still draw on the map itself (`drawPatience`).
+
+### Oncoming straight cars never wait for each other
+In `pairGeometry` (junction.js) the wider 4-lane margin does not apply to two oncoming straight pieces that each stay in their own lane (`oncoming`): the two inner lanes are 0.22 apart, inside the 0.255 margin, so they used to conflict and one car waited. `tests/sidebyside.test.mjs` checks the geometry and two real cars at a light and at a stop-sign intersection.

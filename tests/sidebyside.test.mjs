@@ -53,7 +53,6 @@ ok(r.tB !== null && r.tB < 4, 'and at a stop-sign junction (through in ' + (r.tB
   const { pieceConflict } = await import(R + 'js/junction.js');
   ok(!pieceConflict(T4(10, 10, 2, 3, 0, 0), T4(10, 10, 2, 0, 1, 1), 0) && !pieceConflict(T4(10, 10, 2, 0, 1, 1), T4(10, 10, 2, 3, 0, 0), 0), 'an inner-lane left turn and an outer-lane straight car of the same approach do not conflict');
   ok(!pieceConflict(T4(10, 10, 2, 1, 1, 1), T4(10, 10, 2, 0, 0, 0), 0), 'nor an outer-lane right turn and an inner-lane straight car');
-  ok(pieceConflict(T4(10, 10, 1, 3, 0, 1), T4(10, 10, 1, 3, 1, 1), 0), 'but a car changing lanes inside the junction still conflicts with the lane it moves into');
   ok(pieceConflict(T4(10, 10, 1, 3, 0, 0), T4(10, 10, 2, 0, 1, 1), 0), 'and crossing streets keep their wider margin');
   setup('light'); const r = g.roads.get(10 * g.cols + 10); r.sig = { axis: 0, stage: 'green', t: 0, dem: [0, 0] };
   for (let d = -7; d <= 7; d++) { if (d && !g.roads.has((10 + d) * g.cols + 10)) { g.build4 = true; st.buildRoad(10, 10 + d); g.build4 = false; } }
@@ -64,5 +63,20 @@ ok(r.tB !== null && r.tB < 4, 'and at a stop-sign junction (through in ' + (r.tB
   let tLeft = null, tLast = null;
   for (let i = 0; i < 60 * 30 && (tLeft === null || tLast === null); i++) { st.tick(1 / 60); const inJ = c => c.route[c.idx] && c.route[c.idx].tx === 10 && c.route[c.idx].ty === 10; if (tLeft === null && inJ(left)) tLeft = i / 60; if (tLast === null && inJ(line[4])) tLast = i / 60; }
   ok(tLeft !== null && tLast !== null && tLeft < tLast - 0.5, 'a left-turner at the front of the inner lane goes with the straight-on queue, not after it (it entered at ' + (tLeft && tLeft.toFixed(1)) + ' s, the last straight car at ' + (tLast && tLast.toFixed(1)) + ' s)');
+}
+
+// ---- oncoming cars, both going straight in the inner lanes of a highway intersection, do not wait for each other
+{
+  const { pieceConflict } = await import(R + 'js/junction.js');
+  ok(!pieceConflict(T4(10, 10, 1, 3, 0, 0), T4(10, 10, 3, 1, 0, 0), 0) && !pieceConflict(T4(10, 10, 3, 1, 0, 0), T4(10, 10, 1, 3, 0, 0), 0), 'oncoming straight cars in the two inner lanes do not conflict');
+  for (const special of ['light', null]) {
+    setup(special); const r = g.roads.get(10 * g.cols + 10); if (special) r.sig = { axis: 1, stage: 'green', t: 0, dem: [0, 0] };
+    const west = [T4(12, 10, 1, 3, 0, 0), T4(11, 10, 1, 3, 0, 0), T4(10, 10, 1, 3, 0, 0), T4(9, 10, 1, 3, 0, 0), T4(8, 10, 1, 3, 0, 0)];
+    const east = [T4(8, 10, 3, 1, 0, 0), T4(9, 10, 3, 1, 0, 0), T4(10, 10, 3, 1, 0, 0), T4(11, 10, 3, 1, 0, 0), T4(12, 10, 3, 1, 0, 0)];
+    const A = car(west, 0.35), B = car(east, 0.35);
+    let tA = null, tB = null;
+    for (let i = 0; i < 60 * 20 && (tA === null || tB === null); i++) { st.tick(1 / 60); if (tA === null && A.idx >= 2) tA = i / 60; if (tB === null && B.idx >= 2) tB = i / 60; }
+    ok(tA !== null && tB !== null && Math.abs(tA - tB) < 0.4, 'two oncoming straight cars go through together at ' + (special ? 'a light' : 'a stop-sign intersection') + ' (' + (tA && tA.toFixed(1)) + ' s and ' + (tB && tB.toFixed(1)) + ' s)');
+  }
 }
 console.log(pass, 'passed', fail, 'failed'); process.exit(fail ? 1 : 0);
