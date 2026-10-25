@@ -50,7 +50,7 @@ const dirty = readExport(JSON.stringify({ ...makeExport(save), best: { riverbend
 ok(dirty.ok && JSON.stringify(dirty.best) === JSON.stringify({ riverbend: 10 }), 'best scores: only real maps, only positive numbers, whole trips (' + JSON.stringify(dirty.best) + ')');
 
 // the file name
-ok(exportFileName({ map: 'metro', trips: 9775 }) === 'road-warrior-metro-9775-trips.json', 'the file name says the map and the trips');
+ok(exportFileName({ map: 'metro', trips: 9775 }) === 'rw-metro-9775-trips.json', 'the file name says the map and the trips');
 ok(!/[\/\\ ]/.test(exportFileName({ map: '../evil map', trips: 1 })), 'and cannot carry a path or spaces');
 
 // taking best scores: they only go up

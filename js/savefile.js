@@ -9,7 +9,7 @@ export function makeExport(save, best = {}, now = Date.now()) {
   return { kind: FILE_KIND, formatVersion: FORMAT_VERSION, exportedAt: now, save, best };
 }
 
-export const exportFileName = save => `road-warrior-${String(save.map || 'game').replace(/[^a-z0-9_-]/gi, '')}-${Math.max(0, save.trips | 0)}-trips.json`;
+export const exportFileName = save => `rw-${String(save.map || 'game').replace(/[^a-z0-9_-]/gi, '')}-${Math.max(0, save.trips | 0)}-trips.json`;
 
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
 
