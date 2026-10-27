@@ -16,11 +16,15 @@ export function timed(name, fn) {
   return (...a) => { const t0 = performance.now(); try { return fn(...a); } finally { timers.push(`${name} ${(performance.now() - t0).toFixed(1)}`); } };
 }
 
+export const note = {};                                   // set by main.js: what the page looks like (canvas size, zoom, speed)
+let honks = 0, huds = 0;
+export const count = what => { if (what === 'honk') honks++; else huds++; };
+
 export function end(gap, game) {
-  if (gap < limitMs) { timers.length = 0; return; }
+  if (gap < limitMs) { timers.length = 0; honks = 0; return; }
   const used = performance.now() - lastStart;
-  const line = `${game.time.toFixed(0)}s  frame ${gap.toFixed(0)} ms  (sim ${simMs.toFixed(1)}, draw ${drawMs.toFixed(1)}, rest of frame ${(used - simMs - drawMs).toFixed(1)})  cars ${game.cars.length}  roads ${game.roads.size}${timers.length ? '  timers: ' + timers.join(', ') : ''}`;
-  timers.length = 0;
+  const line = `${game.time.toFixed(0)}s  frame ${gap.toFixed(0)} ms  (sim ${simMs.toFixed(1)}, draw ${drawMs.toFixed(1)}, rest of frame ${(used - simMs - drawMs).toFixed(1)})  cars ${game.cars.length}  roads ${game.roads.size}  speed ${game.speed}x  honks ${honks}  ${note.info ? note.info() : ''}${timers.length ? '  timers: ' + timers.join(', ') : ''}`;
+  timers.length = 0; honks = 0;
   show(line);
 }
 
@@ -37,5 +41,13 @@ function show(line) {
 }
 
 if (on && 'PerformanceObserver' in globalThis) {
+  // Chrome's long animation frames say where a slow frame went: our scripts, or the browser's own style / layout / painting.
+  try {
+    new PerformanceObserver(l => { for (const e of l.getEntries()) {
+      if (e.duration < limitMs) continue;
+      const sc = (e.scripts || []).map(x => `${x.invoker || x.sourceFunctionName || 'script'} ${x.duration.toFixed(0)}`).join(', ');
+      show(`slow frame ${e.duration.toFixed(0)} ms: scripts ${(e.renderStart - e.startTime).toFixed(0)}, style+layout ${(e.renderStart ? e.styleAndLayoutStart && e.renderStart ? (e.startTime + e.duration - e.styleAndLayoutStart).toFixed(0) : '?' : '?')}, blocked ${(e.blockingDuration || 0).toFixed(0)}${sc ? '  [' + sc + ']' : ''}`);
+    } }).observe({ type: 'long-animation-frame', buffered: false });
+  } catch { /* not supported */ }
   try { new PerformanceObserver(l => { for (const e of l.getEntries()) show(`browser long task ${e.duration.toFixed(0)} ms`); }).observe({ entryTypes: ['longtask'] }); } catch { /* not supported */ }
 }

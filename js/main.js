@@ -1,4 +1,4 @@
-import { unlock, play, playFirst } from "./audio.js";
+import { unlock, play, playFirst, getContext } from "./audio.js";
 import * as hitch from "./hitches.js";
 import { loadConfig as loadMusic, start as startMusic } from "./music.js";
 import {
@@ -64,6 +64,7 @@ onEvent((e) => {
   if (e.type === "accident") play("crash");
   if (e.type === "impatient") play("unserved");
   if (e.type === "whistle") play("crowd");
+  if (e.type === "honk") hitch.count("honk");
   if (e.type === "honk") play("honk", { volume: 0.7 + 0.3 * e.k }); // angrier cars are a bit louder
 }); // sound effects hook into game events here
 
@@ -282,6 +283,7 @@ game.time = 1; // let the backdrop's buildings finish their pop-in
 fitView(game.cols, game.rows);
 setMode("menu");
 
+hitch.note.info = () => `canvas ${canvas.width}x${canvas.height} dpr ${dpr} zoom ${cam.z.toFixed(1)} audio ${getContext()?.state}`;
 const STEP = 1 / 60;
 let last = performance.now(),
   acc = 0;
