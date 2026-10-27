@@ -146,7 +146,8 @@ const hashOf = () =>
         ? ""
         : "=" + encodeURIComponent(brainUrl)) +
       (brainLook ? "&look" : "")
-    : "");
+    : "") +
+  (hitch.on ? "&perf" : "");
 function wakeBrain() {
   brain = null;
   if (!brainMod || !brainFile) return; // (no bot unless the page was opened with #brain: otherwise this threw an error at every game start)
