@@ -1,4 +1,5 @@
 import { unlock, play, playFirst } from "./audio.js";
+import * as hitch from "./hitches.js";
 import { loadConfig as loadMusic, start as startMusic } from "./music.js";
 import {
   game,
@@ -284,13 +285,18 @@ const STEP = 1 / 60;
 let last = performance.now(),
   acc = 0;
 (function frame(now) {
-  acc += Math.min(0.1, (now - last) / 1000) * game.speed;
+  const gap = now - last;
+  acc += Math.min(0.1, gap / 1000) * game.speed;
   last = now;
+  if (hitch.on) hitch.begin(performance.now());
+  const t0 = hitch.on ? performance.now() : 0;
   while (acc >= STEP) {
     if (brain) brainMod.brainTick(game, brain);
     tick(STEP);
     acc -= STEP;
   }
+  const t1 = hitch.on ? performance.now() : 0;
   render(ctx, W, H, dpr, game, cam, hover);
+  if (hitch.on) { hitch.addSim(t1 - t0); hitch.addDraw(performance.now() - t1); if (game.mode === "play") hitch.end(gap, game); }
   requestAnimationFrame(frame);
 })(last);

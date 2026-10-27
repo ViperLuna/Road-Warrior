@@ -5,6 +5,7 @@
 //
 //   backend = { id, load(slot) -> data|null, save(slot, data) -> bool, remove(slot) -> bool, list() -> [{ slot, savedAt }] }
 //   (every method may be async; the manager awaits them)
+import { timed } from './hitches.js';
 import { game, refresh, syncBest, bestFor, announce } from './state.js';
 import { maps, specialInfo, prog } from './progression.js';
 import { tuning } from './tuning.js';
@@ -175,7 +176,7 @@ export async function describeSave() {
 // Keep the save fresh while playing, and write once more as the page goes away. getExtra() adds UI state (e.g. the camera).
 export function startAutosave(getExtra = () => ({})) {
   const write = () => { if (PLAYABLE.has(game.mode)) saveNow(getExtra()); };
-  setInterval(write, config.intervalSeconds * 1000);
+  setInterval(timed('autosave', write), config.intervalSeconds * 1000);
   addEventListener('pagehide', write);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') write(); });
 }

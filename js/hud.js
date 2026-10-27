@@ -1,4 +1,5 @@
 // DOM overlay: inventory pills, goal bar, shop, toolbar, toasts, and the menu / reward / pause / game-over screens.
+import { timed } from './hitches.js';
 import { game, onChange, onEvent, setTool, setMode, setOneWay, setBuild4, selectSpecial, chooseReward, finishRun, buy, bestFor, isUnlocked, cycleSpeed, addLog, ackNotice, refreshWatches } from './state.js';
 import { chipsOf, pendingNotice } from './deadlines.js';
 import { flyTo } from './camera.js';
@@ -184,7 +185,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
       box.appendChild(b);
     }
   }
-  setInterval(() => { if (game.mode === 'play') paintChips(); }, 500);
+  setInterval(timed('chips', () => { if (game.mode === 'play') paintChips(); }), 500);
   $('notice-ok').addEventListener('click', ackNotice);
 
   // Message history (the Log button): newest first; tap an entry to fly to the places it is about.
@@ -335,7 +336,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     $('shop-btn').classList.toggle('afford', prog.specials.some(s => s.enabled && s.cost && game.money >= s.cost && !(s.unlock && game.unlocks[s.id])));
   }
 
-  onChange(render);
+  onChange(timed('hud', render));
   const listOf = names => (names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names.at(-1) : names[0]);
   const IMPATIENT = {
     house: l => `${l} is not connected to a destination of its color.`,

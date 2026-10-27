@@ -365,3 +365,10 @@ Budget-phone check (headless Chromium, phone-sized view, CPU throttled 3x / 4x /
 - **Where the time goes:** zoomed out, about 75% is ground, roads and buildings and 25% is cars; zoomed in, about 63% is cars even though only a few are on screen, because `drawCars` (render_objects.js) draws every car on the map with about five drawing steps each (shadow, body, windshield, glint, outline) and never skips off-screen ones.
 - **Input stays responsive:** a key press waits for the current frame, then the game stops stepping at once. Pause latency measured at a median 63 ms normally, 172 ms at 4x and 231 ms at 6x slower, worst 380 ms (these include the pessimistic software painting).
 - **If it is ever needed, two invisible fixes:** (1) skip cars outside the view (and the cheap per-car steps when a car is only a few pixels), the big win zoomed in; (2) draw the ground and roads once into an offscreen picture and reuse it until the map changes (the terrain cache already parked above), the big win zoomed out. Re-run the same test afterwards to show the gain. A simpler-car-when-zoomed-out change on its own would help little.
+
+## Hitch recorder (#perf)
+Open the game as `index.html#perf` and every frame over 25 ms is listed in a small panel at the bottom left (tap it to copy) and in the console:
+the frame gap, how much of it was the sim steps, the drawing and the rest of the frame, plus any timer that ran meanwhile (hud update, chips,
+autosave) and the browser's own long tasks. Built to find the "freezes about every second in Metro" report: the sim (0.5-4 ms per step on a
+340-car city), autosave (~10 ms every 10 s), best-score writes and garbage collection (5-7 ms, twice in 12 s) measured too small to explain
+30 ms, and nothing in the code fires on a one-second beat. Needs a trace from the machine that has the hitch.
