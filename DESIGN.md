@@ -379,3 +379,7 @@ and each failed search scans the whole edge: 200-300 ms on a phone-class CPU. No
 while the roads and buildings are unchanged. The #perf recorder found nothing because the time was in the sim step it did not time per call;
 loading the player's save (Settings > Save file) in Node and running `--cpu-prof` found it in one go. Lesson: when a hitch will not show in the
 browser, get the save and profile it headless.
+
+The gate that could never be placed (Metro, north edge): the "can a road reach the stadium" search only walked over land, but the river splits Metro in two and
+the stadium was on the other side, so every spot on that edge looked unreachable, even though the player's own bridges already crossed the river. The search
+(`passable` in spawn.js) now also walks over existing road tiles, bridges and tunnels included.

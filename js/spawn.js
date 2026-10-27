@@ -14,9 +14,9 @@ const free = (g, x, y, blocked) =>
   x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] === LAND &&
   !g.buildingAt.has(y * g.cols + x) && !g.roads.has(y * g.cols + x) && !(blocked && blocked.has(y * g.cols + x));
 
-// Land that isn't covered by a building (existing roads are fine to route over).
+// Land that isn't covered by a building (existing roads are fine to route over, a bridge or tunnel included: they are how a road gets across a river).
 const passable = (g, x, y, blocked) =>
-  x >= 0 && y >= 0 && x < g.cols && y < g.rows && g.terrain.water[y * g.cols + x] === LAND &&
+  x >= 0 && y >= 0 && x < g.cols && y < g.rows && (g.terrain.water[y * g.cols + x] === LAND || g.roads.has(y * g.cols + x)) &&
   !g.buildingAt.has(y * g.cols + x) && !(blocked && blocked.has(y * g.cols + x));
 
 // Shortest land path (in road tiles) from `from` to any tile in `targets`, or Infinity.
