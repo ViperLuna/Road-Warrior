@@ -1,6 +1,6 @@
 // Spawn schedule, goals and rewards. Pure game logic: no DOM.
 import { prog, milestones, roadsAvailable } from './progression.js';
-import { roadConns } from './network.js';
+import { roadConns, netVersion } from './network.js';
 import { accepts, destWeight } from './buildings.js';
 import { spawnPair, spawnHouse, spawnHouseAcross, spawnPairAcross, findCrossings, spawnStadiumClearing, spawnPortalClearing, makeRoomForGrowth, EDGE_NAMES } from './spawn.js';
 import { stadiumOf, gatesOf, gateConnected } from './outside.js';
@@ -148,7 +148,9 @@ function spawnOutsideThings(g, notify) {
   // The next wave, or (if an earlier wave managed fewer gates than it was due) the gates still owed from it: a wave is never "done" with a gate missing.
   const owed = Math.min(4, waves.slice(0, done).reduce((n, w) => n + w.count, 0)) - gatesNow.length;
   const wave = owed > 0 ? { afterTrips: 0, count: owed, owed: true } : waves[done];
-  if (!wave || g.trips < wave.afterTrips || g.trips < (g.nextPortalAt ?? 0)) return;
+  if (!wave || g.trips < wave.afterTrips || g.trips < (g.nextPortalAt ?? 0) || g.time < (g.portalTryAt ?? 0)) return;
+  const key = netVersion() + ':' + g.buildings.length;
+  if (g.portalFailKey === key) { g.portalTryAt = g.time + 60; return; }          // (it failed last time and nothing has been built or removed since: do not repeat the slow search)
   const used = new Set(gatesNow.map(p => (p.rot + 2) % 4)), free = [0, 1, 2, 3].filter(e => !used.has(e));
   for (let i = free.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [free[i], free[j]] = [free[j], free[i]]; }
   const made = [];
@@ -157,7 +159,8 @@ function spawnOutsideThings(g, notify) {
     const r = spawnPortalClearing(g, edge, arena, { budget: roadsAvailable(g) });
     if (r) made.push({ p: r.gate, edge, cleared: r.cleared, razed: r.razed });
   }
-  if (!made.length) { g.nextPortalAt = g.trips + 10; return; }
+  if (!made.length) { g.nextPortalAt = g.trips + 10; g.portalBackoff = Math.min(600, (g.portalBackoff || 15) * 2); g.portalTryAt = g.time + g.portalBackoff; g.portalFailKey = key; return; }      // (a failed search is slow on a big map: wait longer each time, in seconds as well as trips)
+  g.portalBackoff = 0; g.portalTryAt = 0; g.portalFailKey = null;
   if (!wave.owed) g.portalWaves = done + 1;
   g.nextPortalAt = made.length < wave.count ? g.trips + 10 : 0;               // (short of the full number: try again for the rest soon)
   const names = made.map(m => EDGE_NAMES[m.edge]);

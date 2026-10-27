@@ -372,3 +372,10 @@ the frame gap, how much of it was the sim steps, the drawing and the rest of the
 autosave) and the browser's own long tasks. Built to find the "freezes about every second in Metro" report: the sim (0.5-4 ms per step on a
 340-car city), autosave (~10 ms every 10 s), best-score writes and garbage collection (5-7 ms, twice in 12 s) measured too small to explain
 30 ms, and nothing in the code fires on a one-second beat. Needs a trace from the machine that has the hitch.
+
+### The once-a-second freeze (found)
+A side-road gate that was owed but could not be placed (Metro: the top edge) was searched for again every 10 trips, about every 1.5 s in a busy city,
+and each failed search scans the whole edge: 200-300 ms on a phone-class CPU. Now a failed search waits (15 s, doubling to 10 min) and is skipped
+while the roads and buildings are unchanged. The #perf recorder found nothing because the time was in the sim step it did not time per call;
+loading the player's save (Settings > Save file) in Node and running `--cpu-prof` found it in one go. Lesson: when a hitch will not show in the
+browser, get the save and profile it headless.

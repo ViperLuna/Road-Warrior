@@ -401,7 +401,7 @@ export function spawnPortalClearing(g, edge, stadium, opts = {}) {
       if (!eb && !exitHasRoom(g, ex, ey, x, y)) continue;
       const cost = (r ? 1 : 0) + (b ? price(b) : 0) + (eb ? price(eb) : 0);
       if (best && cost >= best.cost) continue;
-      if (!eb && !b && !Number.isFinite(buildCost(g, [ex, ey], target, new Set([k]), budget)) && !Number.isFinite(buildCost(g, [ex, ey], target, new Set([k]), Infinity))) continue;
+      if (!eb && !b && !Number.isFinite(buildCost(g, [ex, ey], target, new Set([k]), Infinity))) continue;       // (a way that costs anything at all will do; if even that is impossible, skip)
       best = { x, y, b, eb, r, cost };
     }
     if (!best) continue;
