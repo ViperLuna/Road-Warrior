@@ -383,3 +383,8 @@ browser, get the save and profile it headless.
 The gate that could never be placed (Metro, north edge): the "can a road reach the stadium" search only walked over land, but the river splits Metro in two and
 the stadium was on the other side, so every spot on that edge looked unreachable, even though the player's own bridges already crossed the river. The search
 (`passable` in spawn.js) now also walks over existing road tiles, bridges and tunnels included.
+
+## Parked: stadium capacity setting
+`tuning.stadium.capacity` (40 cars) is the size of the stadium's invisible parking. Idea: a Difficulty option to raise it (40 by default, bigger sizes on request).
+Notes: match crowds are sized from the capacity, so a bigger stadium means bigger hordes (a difficulty knob as well as a capacity one); more cars arrive at the
+2 gates at once; the bays inside the picture stay fixed, the extra cars are invisible like the current ones. Belongs with the difficulty panel / star rating idea.
