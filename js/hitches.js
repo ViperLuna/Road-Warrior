@@ -6,7 +6,8 @@ export const on = typeof location !== 'undefined' && /[#&]perf\b/.test(location.
 
 let panel = null, lines = [], simMs = 0, drawMs = 0, lastStart = 0, timers = [];
 
-export function begin(now) { lastStart = now; simMs = 0; drawMs = 0; }
+let delay = 0, lastShowMs = 0;
+export function begin(now, frameTime) { lastStart = now; delay = now - frameTime; simMs = 0; drawMs = 0; }
 export function addSim(ms) { simMs += ms; }
 export function addDraw(ms) { drawMs += ms; }
 
@@ -22,13 +23,14 @@ export const count = what => { if (what === 'honk') honks++; else huds++; };
 
 export function end(gap, game) {
   if (gap < limitMs) { timers.length = 0; honks = 0; return; }
-  const used = performance.now() - lastStart;
-  const line = `${game.time.toFixed(0)}s  frame ${gap.toFixed(0)} ms  (sim ${simMs.toFixed(1)}, draw ${drawMs.toFixed(1)}, rest of frame ${(used - simMs - drawMs).toFixed(1)})  cars ${game.cars.length}  roads ${game.roads.size}  speed ${game.speed}x  honks ${honks}  ${note.info ? note.info() : ''}${timers.length ? '  timers: ' + timers.join(', ') : ''}`;
+  const used = performance.now() - lastStart, since = delay;
+  const line = `${game.time.toFixed(0)}s  frame ${gap.toFixed(0)} ms  (sim ${simMs.toFixed(1)}, draw ${drawMs.toFixed(1)}, rest of frame ${(used - simMs - drawMs).toFixed(1)})  cars ${game.cars.length}  roads ${game.roads.size}  speed ${game.speed}x  honks ${honks}  late-start ${since.toFixed(0)} last-panel ${lastShowMs.toFixed(0)}  ${note.info ? note.info() : ''}${timers.length ? '  timers: ' + timers.join(', ') : ''}`;
   timers.length = 0; honks = 0;
   show(line);
 }
 
 function show(line) {
+  const t0 = performance.now();
   console.log('[hitch]', line);
   lines.push(line); if (lines.length > keep) lines.shift();
   if (!panel) {
@@ -38,6 +40,7 @@ function show(line) {
     document.body.appendChild(panel);
   }
   panel.textContent = 'hitches (tap to copy)\n' + lines.join('\n');
+  lastShowMs = performance.now() - t0;
 }
 
 if (on && 'PerformanceObserver' in globalThis) {

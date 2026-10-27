@@ -291,7 +291,7 @@ let last = performance.now(),
   const gap = now - last;
   acc += Math.min(0.1, gap / 1000) * game.speed;
   last = now;
-  if (hitch.on) hitch.begin(performance.now());
+  if (hitch.on) hitch.begin(performance.now(), now);
   const t0 = hitch.on ? performance.now() : 0;
   while (acc >= STEP) {
     if (brain) brainMod.brainTick(game, brain);
