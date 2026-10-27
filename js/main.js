@@ -300,6 +300,6 @@ let last = performance.now(),
   }
   const t1 = hitch.on ? performance.now() : 0;
   render(ctx, W, H, dpr, game, cam, hover);
-  if (hitch.on) { hitch.addSim(t1 - t0); hitch.addDraw(performance.now() - t1); if (game.mode === "play") hitch.end(gap, game); }
+  if (hitch.on) { hitch.addSim(t1 - t0); hitch.addDraw(performance.now() - t1); if (game.mode === "play" || game.mode === "pause") hitch.end(gap, game); }
   requestAnimationFrame(frame);
 })(last);
