@@ -1,6 +1,7 @@
 {
   "_note": "Pacing + rewards. Trip thresholds scale with the number of houses so the rhythm stays steady as traffic grows: next = trips now + max(min, houses x tripsPerHouse). Flip a special's \"enabled\" to true once it is built.",
   "goals": {
+    "maxGoals": 10,
     "firstAtTrips": 10,
     "minIncrement": 10,
     "tripsPerHouse": 8,

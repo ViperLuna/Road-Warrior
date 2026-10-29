@@ -65,3 +65,5 @@
 Fixed a freeze (a few tenths of a second, every second or two) that could hit a big city when a side-road gate had nowhere to go.
 
 Fixed: a parked car whose road home had been cut could be stranded in its bay forever if you then rotated its destination or flipped its parking lot. It now keeps its remembered way home.
+
+Goals stop after the 10th (goals.maxGoals in config/progression.json): no more reward pauses, and the goal bar is hidden. Special pieces still come from the shop.

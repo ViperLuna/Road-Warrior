@@ -189,7 +189,7 @@ export function checkProgress(g, notify) {
     notify({ type: 'spawn', ...r, spots: g.buildings.filter(b => b.id >= before).map(bounds) });
   }
   spawnOutsideThings(g, notify);
-  if (g.mode === 'play' && g.trips >= g.nextGoalAt) {
+  if (g.mode === 'play' && g.goalCount < (prog.goals.maxGoals ?? Infinity) && g.trips >= g.nextGoalAt) {          // (after the last goal there are no more: they stop being worth a pause)
     const special = pickSpecial(g);
     g.goalCount++;
     g.prevGoalAt = g.trips;

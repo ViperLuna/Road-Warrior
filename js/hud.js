@@ -314,6 +314,7 @@ export function initHud({ onPlay, onRestart, onToMenu, onContinue = () => {}, ge
     // goal progress
     const span = Math.max(1, game.nextGoalAt - game.prevGoalAt);
     $('goal-bar').firstElementChild.style.width = Math.min(100, ((game.trips - game.prevGoalAt) / span) * 100) + '%';
+    $('goal').hidden = game.goalCount >= (prog.goals.maxGoals ?? Infinity);                                   // (no goals after the last one)
     $('goal-text').textContent = `Goal ${game.goalCount + 1}: ${game.trips}/${game.nextGoalAt} trips`;
 
     // shop

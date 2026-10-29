@@ -71,7 +71,7 @@ body.gui-off #gui-btn { opacity: .35; }
 body.gui-off #gui-btn:hover, body.gui-off #gui-btn:focus-visible { opacity: 1; }
 body.gui-off #gui-btn .slash { display: inline; }
 body.gui-off #hud-top, body.gui-off #toolbar, body.gui-off #chips, body.gui-off #toast, body.gui-off #music, body.gui-off #log, body.gui-off #shop { display: none !important; }
-#hud[hidden], .overlay[hidden], #shop[hidden], #music[hidden], #music-btn[hidden], #opt-music-group[hidden] { display: none; }
+#hud[hidden], #goal[hidden], .overlay[hidden], #shop[hidden], #music[hidden], #music-btn[hidden], #opt-music-group[hidden] { display: none; }
 #specials { display: contents; }
 .chip { font: inherit; font-size: .85rem; color: #fff; background: rgba(10, 16, 12, .72); border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; }
 .chip:hover, .chip:focus-visible { background: rgba(40, 60, 46, .9); }
