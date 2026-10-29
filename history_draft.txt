@@ -63,3 +63,5 @@
 - Settings has a new Save file section. Export downloads your current game as a file (the file name starts with rw and says the map and your trips). Import loads a file back in, so you can move a game to another phone or computer or keep a backup. Import is only on the main menu, and it asks before it replaces your saved game. The file also carries your best scores, and importing never lowers one.
 
 Fixed a freeze (a few tenths of a second, every second or two) that could hit a big city when a side-road gate had nowhere to go.
+
+Fixed: a parked car whose road home had been cut could be stranded in its bay forever if you then rotated its destination or flipped its parking lot. It now keeps its remembered way home.

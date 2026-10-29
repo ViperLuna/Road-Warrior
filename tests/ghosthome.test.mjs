@@ -16,12 +16,15 @@ const scenes = {
   demolish: () => { for (let x = 3; x <= 17; x++) st.demolish(x, g.ly); },
   cut: () => { st.setCut(10, g.ly, 11, g.ly, true); st.setCut(11, g.ly, 12, g.ly, true); },
   demolishMiddle: () => { st.demolish(10, g.ly); st.demolish(11, g.ly); },
+  demolishThenRotate: () => { for (let x = 3; x <= 17; x++) st.demolish(x, g.ly); st.rotateBuildingAt(g.dest.x, g.dest.y); },      // the parked car must keep its way home when its building turns
+  demolishThenFlipLot: () => { for (let x = 3; x <= 17; x++) st.demolish(x, g.ly); st.flipLotAt(...g.lot); },
 };
 for (const [name, act] of Object.entries(scenes)) for (const when of ['dwell', 'back']) {
+  if (when === 'back' && /Rotate|FlipLot/.test(name)) continue;
   st.newGame(5, maps[0]); g.terrain.water.fill(0); g.nextSpawnAt = 1e9; g.nextGoalAt = 1e9; g.buildings = []; g.cars = []; g.roads = new Map(); g.nextId = 1; reindex(g);
   g.inv.road = 999; g.mode = 'play';
   const blue = palette[0];
-  const dest = addBuilding(g, 'dest', blue, 20, 10, 3); const [lx, ly] = lotTile(dest, 0); g.ly = ly;
+  const dest = addBuilding(g, 'dest', blue, 20, 10, 3); const [lx, ly] = lotTile(dest, 0); g.ly = ly; g.dest = dest; g.lot = [lx, ly];
   const h = addBuilding(g, 'house', blue, 3, ly - 1, 2); const car = createCar(h); g.cars.push(car);
   for (let x = 3; x <= lx - 1; x++) st.buildRoad(x, ly);
   let t = 0; while (t++ < 60 * 120 && car.state !== (when === 'dwell' ? 'dwell' : 'back')) st.tick(1 / 60);

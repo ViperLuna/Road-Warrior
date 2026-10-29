@@ -228,9 +228,11 @@ function planBack(g, car, ent0 = car.lot.ent) {
 // A destination was rotated or its gate flipped: put its cars on the new lot. Parked cars sit in their bay on the new layout;
 // cars still driving in finish their (ghost) route and are re-seated on arrival (see updateSim).
 export function reseatCar(car, d) {
-  car.homeRoute = null;                                          // the old way home no longer fits the new lot
   const ent = d.stadium && car.lot && hasEnt(d, car.lot.ent) ? car.lot.ent : entOf(d);       // (a stadium car stays at the gate it came in by)
   car.lot = { bx: d.x, by: d.y, rot: d.rot, ent, k: bayPiece(d, car.slot, ent) };
+  // The remembered way home (the ghost road) is kept: only its first piece, out of the lot, is swapped for one that fits the new lot. Without
+  // it a parked car whose road was cut and whose building was then turned (or its lot flipped) sat in its bay forever.
+  if (car.homeRoute && car.homeRoute.length > 1) car.homeRoute = [lotOutPiece(d.x, d.y, d.rot, car.lot.k, ent), ...car.homeRoute.slice(1)];
   const p = lotInPiece(d.x, d.y, d.rot, ent, car.lot.k);
   car.route = [p]; car.idx = 0; car.s = p.len; car.v = 0; car.stuck = 0;
   pointAt(p, p.len, car);
